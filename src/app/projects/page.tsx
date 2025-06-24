@@ -4,24 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Calendar, DollarSign, User, Building, CheckCircle, Clock, AlertCircle, Star, Edit3 } from 'lucide-react';
 import Link from 'next/link';
-
-// [R5.3] Interface for project data from actual Supabase schema
-interface Project {
-  project_id: string; // Fixed to match actual database schema
-  project_title: string;
-  project_description?: string;
-  project_type?: string;
-  client_id?: string;
-  expected_deadline?: string;
-  key_skills_required?: string;
-  initial_vendor_rating?: number;
-  industry_experience?: string;
-  status: string;
-  team_member?: string;
-  assigned_vendor_id?: string;
-  contact_date?: string;
-  updated_at?: string;
-}
+import { Project, ProjectsApiResponse } from '@/types';
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -40,7 +23,7 @@ export default function ProjectsPage() {
         const response = await fetch(`/api/projects?${params.toString()}`);
         if (!response.ok) throw new Error('Failed to fetch projects');
         
-        const data = await response.json();
+        const data: ProjectsApiResponse = await response.json();
         setProjects(data.projects || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch projects');

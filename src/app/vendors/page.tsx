@@ -2,23 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Search, MapPin, Star, Eye, Filter } from 'lucide-react';
-
-// [R7.1] Interface for vendor data from actual Supabase schema
-interface Vendor {
-  vendor_id: number;
-  vendor_name: string;
-  contact_name?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  location?: string;
-  time_zone?: string;
-  service_categories?: string;
-  specialties?: string;
-  pricing_notes?: string;
-  status?: string;
-  onboarding_date?: string;
-  vendor_notes?: string;
-}
+import { Vendor, VendorsApiResponse } from '@/types';
 
 export default function VendorsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -42,7 +26,7 @@ export default function VendorsPage() {
         const response = await fetch(`/api/vendors?${params.toString()}`);
         if (!response.ok) throw new Error('Failed to fetch vendors');
         
-        const data = await response.json();
+        const data: VendorsApiResponse = await response.json();
         setVendors(data.vendors || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch vendors');

@@ -3,19 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Search, Building, Plus, Eye, Calendar, MapPin, Phone } from 'lucide-react';
-
-// [R7.7] Interface for client data from actual Supabase schema
-interface Client {
-  client_id: number;
-  client_name: string;
-  industry?: string;
-  time_zone?: string;
-  total_projects?: number;
-  preferred_contact?: string;
-  client_notes?: string;
-  created_date: string;
-  updated_at?: string;
-}
+import { Client, ClientsApiResponse } from '@/types';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -37,7 +25,7 @@ export default function ClientsPage() {
         const response = await fetch(`/api/clients?${params.toString()}`);
         if (!response.ok) throw new Error('Failed to fetch clients');
         
-        const data = await response.json();
+        const data: ClientsApiResponse = await response.json();
         setClients(data.clients || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch clients');

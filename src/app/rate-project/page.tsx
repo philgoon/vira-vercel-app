@@ -6,25 +6,7 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Star, CheckCircle, Calendar, User, Building } from 'lucide-react';
-
-// [R4.1] Interface for completed projects - REVERTED to match actual database schema
-interface Project {
-  project_id: string; // Database uses project_id as primary key (text)
-  project_title: string; // Database uses project_title field
-  project_description?: string;
-  project_type?: string;
-  client_id?: string;
-  expected_deadline?: string;
-  status?: string;
-  assigned_vendor_id?: string; // Database uses text vendor_id
-}
-
-// [R4.1] Interface for vendors - REVERTED to match actual database schema
-interface Vendor {
-  vendor_id: string; // Database uses vendor_id as primary key (text)
-  vendor_name: string; // Database uses vendor_name field
-  service_categories?: string;
-}
+import { Project, Vendor, ProjectsApiResponse, VendorsApiResponse } from '@/types';
 
 // [R4.1] Rating form inputs matching HTML form behavior (strings from selects)
 type RatingFormInputs = {
@@ -69,8 +51,8 @@ export default function RateProjectPage() {
         ]);
 
         if (projectsResponse.ok && vendorsResponse.ok) {
-          const projectsData = await projectsResponse.json();
-          const vendorsData = await vendorsResponse.json();
+          const projectsData: ProjectsApiResponse = await projectsResponse.json();
+          const vendorsData: VendorsApiResponse = await vendorsResponse.json();
 
           console.log('Loaded projects:', projectsData.projects?.length || 0, 'projects');
           console.log('Loaded vendors:', vendorsData.vendors?.length || 0, 'vendors');

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Send, MessageSquare, Star, MapPin, Mail } from 'lucide-react';
+import { VendorSearchResult } from '@/types';
 
 interface Message {
   id: number;
@@ -9,17 +10,10 @@ interface Message {
   isUser: boolean;
   timestamp: Date;
   intent?: string;
-  vendorData?: VendorCard[];
+  vendorData?: VendorSearchResult[];
 }
 
-interface VendorCard {
-  vendor_name: string;
-  service_categories: string;
-  specialties?: string;
-  location?: string;
-  contact_name?: string;
-  contact_email?: string;
-}
+type VendorCard = VendorSearchResult;
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);

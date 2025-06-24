@@ -4,21 +4,7 @@
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Star, TrendingUp, CheckCircle, AlertCircle, ArrowLeft, Mail, Trophy } from 'lucide-react';
-
-// [R7.1] Enhanced recommendation structure
-interface EnhancedRecommendation {
-  vendorName: string;
-  viraScore: number;
-  reason: string;
-  keyStrengths: string[];
-  considerations: string;
-}
-
-// [R7.1] Legacy recommendation structure for backward compatibility
-interface LegacyRecommendation {
-  vendorName: string;
-  reason: string;
-}
+import { EnhancedRecommendation, LegacyRecommendation } from '@/types';
 
 export default function RecommendationsPage() {
   const searchParams = useSearchParams();

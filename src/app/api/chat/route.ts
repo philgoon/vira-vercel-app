@@ -2,31 +2,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { genAI } from '@/lib/ai';
-
-// [R6.1] Interface for chat message structure
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
-// [R6.2] Interface for vendor search results
-interface VendorSearchResult {
-  vendor_name: string;
-  service_categories: string;
-  specialties?: string;
-  location?: string;
-  contact_name?: string;
-  contact_email?: string;
-}
-
-// [R6.9] Interface for message intent analysis
-interface MessageIntent {
-  type: 'vendor_recommendation' | 'vendor_search' | 'general';
-  searchTerm?: string;
-  serviceCategory?: string;
-  projectScope?: string;
-}
+import { ChatMessage, VendorSearchResult, MessageIntent } from '@/types';
 
 // [R6.10] Interface for recommendation response
 interface RecommendationData {

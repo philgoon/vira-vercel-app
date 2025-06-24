@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Vendor, VendorsApiResponse } from '@/types';
 
 // [R3.1] Simplified form inputs - only 2 fields
 type FormInputs = {
@@ -32,13 +33,13 @@ export default function ViRAMatchPage() {
       try {
         const response = await fetch('/api/vendors');
         if (response.ok) {
-          const data = await response.json();
+          const data: VendorsApiResponse = await response.json();
           console.log('Vendors API response:', data); // DEBUG
           console.log('First vendor service_categories:', data.vendors?.[0]?.service_categories); // DEBUG
           
           const categories = [...new Set(
             data.vendors
-              ?.map((vendor: any) => {
+              ?.map((vendor: Vendor) => {
                 const serviceCategories = vendor.service_categories;
                 // Handle both array and string formats
                 if (Array.isArray(serviceCategories)) {
@@ -48,8 +49,8 @@ export default function ViRAMatchPage() {
                 }
                 return null;
               })
-              ?.filter((cat: any) => cat && typeof cat === 'string' && cat.trim() !== '')
-          )].sort();
+              ?.filter((cat: string | null): cat is string => cat !== null && cat.trim() !== '')
+          )].sort() as string[];
           
           console.log('Extracted categories:', categories); // DEBUG
           setServiceCategories(categories);
