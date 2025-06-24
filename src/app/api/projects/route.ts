@@ -89,8 +89,8 @@ export async function PUT(request: Request) {
     }
 
     // [R5.2] Validate workflow transition logic
-    const currentStatus = currentProject.status;
-    const validWorkflowTransitions = {
+    const currentStatus = currentProject.status as string;
+    const validWorkflowTransitions: Record<string, string[]> = {
       'active': ['completed'],
       'completed': ['archived'], // This happens via rate-project API
       'archived': ['archived'] // Allow re-archiving (no-op)
