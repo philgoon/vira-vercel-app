@@ -1,7 +1,7 @@
 // [R5.4] Enhanced Rate Project page with edit mode support
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -23,7 +23,8 @@ type RatingFormInputs = {
   recommend_again: 'Yes' | 'No';
 };
 
-export default function RateProjectPage() {
+// [R5.4] Separate component for the main content to use useSearchParams
+function RateProjectContent() {
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<RatingFormInputs>();
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('project_id');
@@ -804,5 +805,39 @@ export default function RateProjectPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+// [R1] Main page component with Suspense boundary for useSearchParams
+export default function RateProjectPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
+        <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
+          <div style={{ padding: '1.5rem' }}>
+            <h1 style={{
+              fontSize: '1.875rem',
+              fontFamily: 'var(--font-headline)',
+              fontWeight: 'bold',
+              color: '#1A5276'
+            }}>Rate Project</h1>
+          </div>
+        </div>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <div style={{
+            width: '2rem',
+            height: '2rem',
+            border: '2px solid #1A5276',
+            borderTop: '2px solid transparent',
+            borderRadius: '50%',
+            margin: '0 auto 1rem',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+          <p style={{ color: '#6b7280' }}>Loading page...</p>
+        </div>
+      </div>
+    }>
+      <RateProjectContent />
+    </Suspense>
   );
 }
