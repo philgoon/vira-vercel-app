@@ -20,6 +20,23 @@ interface VendorSearchResult {
   contact_email?: string;
 }
 
+// [R6.9] Interface for message intent analysis
+interface MessageIntent {
+  type: 'vendor_recommendation' | 'vendor_search' | 'general';
+  searchTerm?: string;
+  serviceCategory?: string;
+  projectScope?: string;
+}
+
+// [R6.10] Interface for recommendation response
+interface RecommendationData {
+  vendorName: string;
+  viraScore: number;
+  reason: string;
+  keyStrengths: string[];
+  considerations?: string;
+}
+
 // [R6.3] In-memory conversation storage (session-based)
 // Note: For production, this could be moved to database for persistence
 const conversationHistory = new Map<string, ChatMessage[]>();
@@ -62,7 +79,7 @@ export async function POST(request: Request) {
     console.log('Message intent:', intent);
 
     let response: string;
-    let vendorData: any = null;
+    let vendorData: VendorSearchResult[] | null = null;
 
     if (intent.type === 'vendor_recommendation') {
       // [R6.5] Handle vendor recommendation requests using existing enhanced API
@@ -108,12 +125,7 @@ export async function POST(request: Request) {
 }
 
 // [R6.4] Analyze user message to determine intent and extract key information
-async function analyzeMessageIntent(message: string): Promise<{
-  type: 'vendor_recommendation' | 'vendor_search' | 'general';
-  searchTerm?: string;
-  serviceCategory?: string;
-  projectScope?: string;
-}> {
+async function analyzeMessageIntent(message: string): Promise<MessageIntent> {
   const lowerMessage = message.toLowerCase();
 
   // [R6.4] Enhanced vendor recommendation patterns
@@ -218,7 +230,7 @@ function extractSearchTerms(message: string): string {
 }
 
 // [R6.5] Handle vendor recommendation using existing enhanced API
-async function handleVendorRecommendation(message: string, intent: any): Promise<string> {
+async function handleVendorRecommendation(message: string, intent: MessageIntent): Promise<string> {
   try {
     // [R6.5] Construct proper URL for internal API call
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
@@ -258,7 +270,7 @@ async function handleVendorRecommendation(message: string, intent: any): Promise
     const topRecommendations = data.recommendations.slice(0, 3);
     let response = `Based on your request for ${intent.serviceCategory} services, here are my top recommendations:\n\n`;
 
-    topRecommendations.forEach((rec: any, index: number) => {
+    topRecommendations.forEach((rec: RecommendationData, index: number) => {
       response += `**${index + 1}. ${rec.vendorName}** (${rec.viraScore}% match)\n`;
       response += `${rec.reason.substring(0, 150)}...\n`;
       response += `Key strengths: ${rec.keyStrengths.join(', ')}\n\n`;

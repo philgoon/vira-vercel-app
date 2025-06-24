@@ -2,7 +2,7 @@
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
+export async function POST(_request: Request) {
   try {
     // [R8.1] Sample vendor data with service categories
     const sampleVendors = [

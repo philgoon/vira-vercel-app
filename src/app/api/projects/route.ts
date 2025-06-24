@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const clientName = searchParams.get('client');
     const status = searchParams.get('status');
 
     let query = supabase

@@ -123,7 +123,7 @@ export async function POST(request: Request) {
         }
 
         // [R5.3] Calculate ratings analytics
-        let analytics = {
+        const analytics = {
           total_ratings: 0,
           avg_project_success: 0,
           avg_overall_rating: 0,

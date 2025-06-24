@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Building, Plus, Eye, Calendar, MapPin, Phone, Mail } from 'lucide-react';
+import { Search, Building, Plus, Eye, Calendar, MapPin, Phone } from 'lucide-react';
 
 // [R7.7] Interface for client data from actual Supabase schema
 interface Client {

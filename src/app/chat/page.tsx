@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Send, MessageSquare, Users, Star, MapPin, Mail } from 'lucide-react';
+import { Send, MessageSquare, Star, MapPin, Mail } from 'lucide-react';
 
 interface Message {
   id: number;
@@ -9,7 +9,7 @@ interface Message {
   isUser: boolean;
   timestamp: Date;
   intent?: string;
-  vendorData?: any;
+  vendorData?: VendorCard[];
 }
 
 interface VendorCard {
