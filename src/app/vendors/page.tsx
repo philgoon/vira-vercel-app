@@ -38,9 +38,28 @@ export default function VendorsPage() {
     fetchVendors();
   }, [searchTerm, selectedType, selectedStatus]);
 
-  // [R7.3] Get unique types for filter dropdown
-  const uniqueTypes = ['all', ...new Set(vendors.map(v => v.service_categories).filter(Boolean))];
-  const uniqueStatuses = ['all', ...new Set(vendors.map(v => v.status).filter(Boolean))];
+  // [R7.3] Get unique types for filter dropdown - handle both string and array formats
+  const uniqueTypes = ['all', ...new Set(
+    vendors
+      .map(v => {
+        const categories = v.service_categories;
+        if (Array.isArray(categories)) {
+          return categories[0] || ''; // Get first category from array
+        }
+        return categories || '';
+      })
+      .filter((category): category is string => 
+        typeof category === 'string' && category.trim() !== ''
+      )
+  )];
+  
+  const uniqueStatuses = ['all', ...new Set(
+    vendors
+      .map(v => v.status || '')
+      .filter((status): status is string => 
+        typeof status === 'string' && status.trim() !== ''
+      )
+  )];
 
   return (
     <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
