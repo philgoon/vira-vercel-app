@@ -2,11 +2,13 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { Star, TrendingUp, CheckCircle, AlertCircle, ArrowLeft, Mail, Trophy } from 'lucide-react';
 import { EnhancedRecommendation, LegacyRecommendation } from '@/types';
 
-export default function RecommendationsPage() {
+// [R1] Separate component for content that uses useSearchParams
+function RecommendationsContent() {
   const searchParams = useSearchParams();
   const data = searchParams.get('data');
   const isEnhanced = searchParams.get('enhanced') === 'true';
@@ -431,5 +433,45 @@ export default function RecommendationsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// [R1] Main page component with Suspense boundary for useSearchParams
+export default function RecommendationsPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
+        <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
+          <div style={{ padding: '1.5rem' }}>
+            <h1 style={{
+              fontSize: '1.875rem',
+              fontFamily: 'var(--font-headline)',
+              fontWeight: 'bold',
+              color: '#1A5276'
+            }}>Vendor Recommendations</h1>
+          </div>
+        </div>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <div style={{
+            width: '2rem',
+            height: '2rem',
+            border: '2px solid #1A5276',
+            borderTop: '2px solid transparent',
+            borderRadius: '50%',
+            margin: '0 auto 1rem',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+          <p style={{ color: '#6b7280' }}>Loading recommendations...</p>
+        </div>
+        <style jsx>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    }>
+      <RecommendationsContent />
+    </Suspense>
   );
 }
