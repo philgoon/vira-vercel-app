@@ -86,7 +86,7 @@ export async function POST(request: Request) {
       response = await handleVendorRecommendation(message, intent);
     } else if (intent.type === 'vendor_search') {
       // [R6.6] Handle direct vendor database searches
-      const searchResults = await searchVendorDatabase(intent.searchTerm);
+      const searchResults = await searchVendorDatabase(intent.searchTerm || message);
       response = await formatVendorSearchResults(searchResults, message);
       vendorData = searchResults;
     } else {
