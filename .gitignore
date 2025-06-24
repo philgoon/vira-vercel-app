@@ -52,3 +52,9 @@ windsurf_deployment.yaml
 *.backup
 *.bak
 *.tmp
+
+# documentation and data files
+*.md
+*.csv
+*.txt
+!README.md
