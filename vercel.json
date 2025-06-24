@@ -1,0 +1,5 @@
+{
+  "framework": "nextjs",
+  "name": "vira",
+  "regions": ["iad1"]
+}

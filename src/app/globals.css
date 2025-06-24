@@ -1,26 +1,117 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Brand Colors */
+  --color-single: #1A5276;
+  --color-single-50: #E8F4F8;
+  --color-single-100: #D1E9F1;
+  --color-single-500: #1A5276;
+  --color-single-600: #154466;
+  --color-single-700: #103355;
+  
+  --color-throw: #6B8F71;
+  --color-throw-50: #F0F4F1;
+  --color-throw-100: #E1E9E3;
+  --color-throw-500: #6B8F71;
+  --color-throw-600: #567259;
+  --color-throw-700: #415641;
+  
+  --color-marketing: #6E6F71;
+  --color-marketing-50: #F1F1F1;
+  --color-marketing-100: #E3E3E4;
+  --color-marketing-500: #6E6F71;
+  --color-marketing-600: #58595A;
+  --color-marketing-700: #424243;
+  
+  /* Sidebar Colors */
+  --color-sidebar: #2C3E50;
+  --color-sidebar-foreground: #ECF0F1;
+  --color-sidebar-primary: #6B8F71;
+  --color-sidebar-primary-foreground: #FFFFFF;
+  --color-sidebar-accent: #34495E;
+  --color-sidebar-accent-foreground: #ECF0F1;
+  --color-sidebar-border: #34495E;
+  
+  /* Font families */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-headline: var(--font-poppins), system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: #f9fafb;
+    color: #111827;
+    font-family: var(--font-sans);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Professional card styling */
+  .professional-card {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    border: 1px solid #e5e7eb;
+    transition-property: box-shadow;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+  
+  .professional-card:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+  
+  /* Professional form styling */
+  .form-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+  
+  .form-input::placeholder {
+    color: #9ca3af;
+  }
+  
+  .form-input:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    border-color: var(--color-single);
+    box-shadow: 0 0 0 2px var(--color-single-100);
+  }
+  
+  .form-textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    resize: none;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+  
+  .form-textarea::placeholder {
+    color: #9ca3af;
+  }
+  
+  .form-textarea:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    border-color: var(--color-single);
+    box-shadow: 0 0 0 2px var(--color-single-100);
+  }
+  
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.25rem;
+  }
 }
