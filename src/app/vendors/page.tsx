@@ -1,33 +1,43 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, MapPin, Star, Eye, Filter } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Star, Eye } from 'lucide-react';
 import { Vendor, VendorsApiResponse } from '@/types';
 
 export default function VendorsPage() {
+  const router = useRouter();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // Filter states
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [allCategories, setAllCategories] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   // [R7.2] Fetch vendors from Supabase API
   useEffect(() => {
     async function fetchVendors() {
       try {
-        const params = new URLSearchParams();
-        if (searchTerm) params.set('search', searchTerm);
-        if (selectedType !== 'all') params.set('type', selectedType);
-        if (selectedStatus !== 'all') params.set('status', selectedStatus);
-
-        const response = await fetch(`/api/vendors?${params.toString()}`);
+        const response = await fetch('/api/vendors');
         if (!response.ok) throw new Error('Failed to fetch vendors');
         
         const data: VendorsApiResponse = await response.json();
-        setVendors(data.vendors || []);
+        let vendorList = data.vendors || [];
+        
+        // Client-side filtering for categories
+        if (selectedCategories.length > 0) {
+          vendorList = vendorList.filter(vendor => {
+            const categories = Array.isArray(vendor.service_categories) 
+              ? vendor.service_categories 
+              : [vendor.service_categories].filter(Boolean);
+            return selectedCategories.some(selectedCat => 
+              categories.some(vendorCat => vendorCat?.toLowerCase().includes(selectedCat.toLowerCase()))
+            );
+          });
+        }
+        
+        setVendors(vendorList);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch vendors');
       } finally {
@@ -36,30 +46,48 @@ export default function VendorsPage() {
     }
 
     fetchVendors();
-  }, [searchTerm, selectedType, selectedStatus]);
+  }, [selectedCategories]);
 
-  // [R7.3] Get unique types for filter dropdown - handle both string and array formats
-  const uniqueTypes = ['all', ...new Set(
-    vendors
-      .map(v => {
-        const categories = v.service_categories;
-        if (Array.isArray(categories)) {
-          return categories[0] || ''; // Get first category from array
+  // Fetch all categories on component mount
+  useEffect(() => {
+    async function fetchAllCategories() {
+      try {
+        const response = await fetch('/api/vendors');
+        if (response.ok) {
+          const data: VendorsApiResponse = await response.json();
+          const allVendors = data.vendors || [];
+          
+          const categorySet = new Set<string>();
+          allVendors.forEach(vendor => {
+            const categories = Array.isArray(vendor.service_categories) 
+              ? vendor.service_categories 
+              : [vendor.service_categories].filter(Boolean);
+            categories.forEach(cat => {
+              if (cat && typeof cat === 'string' && cat.trim()) {
+                categorySet.add(cat.trim());
+              }
+            });
+          });
+          
+          setAllCategories(Array.from(categorySet).sort());
         }
-        return categories || '';
-      })
-      .filter((category): category is string => 
-        typeof category === 'string' && category.trim() !== ''
-      )
-  )];
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+      }
+    }
+    
+    fetchAllCategories();
+  }, []);
+
+  // Toggle category selection
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
   
-  const uniqueStatuses = ['all', ...new Set(
-    vendors
-      .map(v => v.status || '')
-      .filter((status): status is string => 
-        typeof status === 'string' && status.trim() !== ''
-      )
-  )];
 
   return (
     <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
@@ -81,82 +109,52 @@ export default function VendorsPage() {
       {/* Filters */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ padding: '1rem 1.5rem' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
-            {/* Search */}
-            <div style={{ flex: '1', minWidth: '16rem' }}>
-              <div style={{ position: 'relative' }}>
-                <Search style={{ 
-                  position: 'absolute', 
-                  left: '0.75rem', 
-                  top: '50%', 
-                  transform: 'translateY(-50%)', 
-                  color: '#9ca3af', 
-                  width: '1rem', 
-                  height: '1rem' 
-                }} />
-                <input
-                  type="text"
-                  placeholder="Search by name or specialties..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="form-input"
-                  style={{ paddingLeft: '2.5rem' }}
-                />
-              </div>
-            </div>
-
-            {/* Type Filter */}
-            <div style={{ minWidth: '12rem' }}>
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="form-input"
+          {/* Category Filter Buttons */}
+          <div style={{ marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
+              Filter by Category
+            </h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <button
+                onClick={() => setSelectedCategories([])}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '9999px',
+                  border: '1px solid',
+                  borderColor: selectedCategories.length === 0 ? '#1A5276' : '#d1d5db',
+                  backgroundColor: selectedCategories.length === 0 ? '#1A5276' : 'white',
+                  color: selectedCategories.length === 0 ? 'white' : '#374151',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease'
+                }}
               >
-                {uniqueTypes.map(type => (
-                  <option key={type} value={type}>
-                    {type === 'all' ? 'All Categories' : type}
-                  </option>
-                ))}
-              </select>
+                All Categories
+              </button>
+              {allCategories.map(category => (
+                <button
+                  key={category}
+                  onClick={() => toggleCategory(category)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '9999px',
+                    border: '1px solid',
+                    borderColor: selectedCategories.includes(category) ? '#1A5276' : '#d1d5db',
+                    backgroundColor: selectedCategories.includes(category) ? '#1A5276' : 'white',
+                    color: selectedCategories.includes(category) ? 'white' : '#374151',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {category}
+                </button>
+              ))}
             </div>
-
-            {/* Status Filter */}
-            <div style={{ minWidth: '12rem' }}>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="form-input"
-              >
-                {uniqueStatuses.map(status => (
-                  <option key={status} value={status}>
-                    {status === 'all' ? 'All Statuses' : status}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Clear Filters */}
-            <button 
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedType('all');
-                setSelectedStatus('all');
-              }}
-              style={{ 
-                padding: '0.5rem 1rem', 
-                color: '#6b7280', 
-                border: 'none', 
-                background: 'none', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <Filter style={{ width: '1rem', height: '1rem' }} />
-              Clear Filters
-            </button>
           </div>
+
         </div>
       </div>
 
@@ -195,142 +193,93 @@ export default function VendorsPage() {
           </div>
         )}
 
-        {/* Vendor Grid */}
+        {/* Vendor List - 2 Column Layout */}
         {!loading && !error && vendors.length > 0 && (
           <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', 
-            gap: '1.5rem' 
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '1rem',
+            maxWidth: '1600px',
+            margin: '0 auto'
           }}>
             {vendors.map((vendor) => (
-              <div key={vendor.vendor_id} className="professional-card" style={{ overflow: 'hidden' }}>
-                {/* Vendor Header */}
+              <div key={vendor.vendor_id} className="professional-card" style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                padding: '1rem 1.5rem',
+                minHeight: '5rem'
+              }}>
+                {/* Vendor Avatar */}
                 <div style={{
-                  height: '8rem',
-                  background: `linear-gradient(135deg, #1A5276 0%, #6B8F71 100%)`,
-                  position: 'relative',
+                  width: '3rem',
+                  height: '3rem',
+                  backgroundColor: '#1A5276',
+                  borderRadius: '0.5rem',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  marginRight: '1rem',
+                  flexShrink: 0
                 }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{
-                      width: '4rem',
-                      height: '4rem',
-                      backgroundColor: 'white',
-                      borderRadius: '0.5rem',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 0.75rem'
-                    }}>
-                      <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1A5276' }}>
-                        {vendor.vendor_name.charAt(0)}
-                      </span>
-                    </div>
-                    <div style={{
-                      color: 'white',
-                      fontWeight: '600',
-                      backgroundColor: 'rgba(0,0,0,0.2)',
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '9999px',
-                      fontSize: '0.875rem'
-                    }}>
-                      {vendor.service_categories || 'Service Provider'}
-                    </div>
-                  </div>
+                  <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'white' }}>
+                    {vendor.vendor_name.charAt(0)}
+                  </span>
                 </div>
 
-                {/* Vendor Info */}
-                <div style={{ padding: '1.5rem' }}>
-                  <div style={{ marginBottom: '1rem' }}>
+                {/* Main Vendor Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
                     <h3 style={{ 
                       fontSize: '1.125rem', 
                       fontWeight: '600', 
                       color: '#111827',
-                      marginBottom: '0.25rem'
+                      margin: 0
                     }}>
                       {vendor.vendor_name}
                     </h3>
                     
-                    {vendor.contact_name && (
-                      <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                        Contact: {vendor.contact_name}
-                      </p>
-                    )}
+                    {/* Placeholder for ratings - will be added when rating data is available */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Star style={{ width: '1rem', height: '1rem', color: '#d1d5db' }} />
+                      <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>No ratings</span>
+                    </div>
+                  </div>
 
-                    {vendor.location && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem' }}>
-                        <MapPin style={{ width: '0.875rem', height: '0.875rem', color: '#6b7280' }} />
-                        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{vendor.location}</span>
-                      </div>
-                    )}
-
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                    <span style={{ fontWeight: '500', color: '#1A5276' }}>
+                      {Array.isArray(vendor.service_categories) 
+                        ? vendor.service_categories[0] 
+                        : vendor.service_categories || 'Service Provider'}
+                    </span>
+                    
+                    {/* Status Badge */}
                     <div style={{
-                      display: 'inline-block',
-                      padding: '0.25rem 0.5rem',
+                      padding: '0.125rem 0.5rem',
                       backgroundColor: vendor.status === 'Active' ? '#dcfce7' : '#f3f4f6',
                       color: vendor.status === 'Active' ? '#166534' : '#6b7280',
-                      borderRadius: '0.375rem',
+                      borderRadius: '9999px',
                       fontSize: '0.75rem',
                       fontWeight: '500'
                     }}>
                       {vendor.status || 'Unknown'}
                     </div>
                   </div>
+                </div>
 
-                  {/* Specialties */}
-                  {vendor.specialties && (
-                    <div style={{ marginBottom: '1rem' }}>
-                      <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                        Specialties:
-                      </p>
-                      <p style={{ 
-                        fontSize: '0.875rem', 
-                        color: '#6b7280', 
-                        fontStyle: 'italic',
-                        lineHeight: '1.4'
-                      }}>
-                        {vendor.specialties.length > 120 ? `${vendor.specialties.substring(0, 120)}...` : vendor.specialties}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Service Info */}
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: '1fr', 
-                    gap: '0.5rem', 
-                    marginBottom: '1rem',
-                    fontSize: '0.875rem'
-                  }}>
-                    {vendor.pricing_notes && (
-                      <div>
-                        <span style={{ color: '#6b7280' }}>Pricing: </span>
-                        <span style={{ fontWeight: '500', color: '#374151' }}>{vendor.pricing_notes}</span>
-                      </div>
-                    )}
-                    {vendor.contact_email && (
-                      <div>
-                        <span style={{ color: '#6b7280' }}>Email: </span>
-                        <a 
-                          href={`mailto:${vendor.contact_email}`}
-                          style={{ fontWeight: '500', color: '#1A5276', textDecoration: 'none' }}
-                        >
-                          {vendor.contact_email}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button style={{
-                      flex: 1,
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginLeft: '1rem' }}>
+                  <button 
+                    onClick={() => {
+                      try {
+                        console.log('View button clicked for vendor:', vendor.vendor_id, vendor.vendor_name);
+                        router.push(`/vendors/${vendor.vendor_id}`);
+                      } catch (error) {
+                        console.error('Error navigating to vendor view:', error);
+                      }
+                    }}
+                    style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
                       gap: '0.5rem',
                       padding: '0.5rem 1rem',
                       backgroundColor: '#1A5276',
@@ -339,33 +288,45 @@ export default function VendorsPage() {
                       borderRadius: '0.375rem',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
-                      fontWeight: '500'
-                    }}>
-                      <Eye style={{ width: '1rem', height: '1rem' }} />
-                      View Details
-                    </button>
-                    
-                    {vendor.contact_email && (
-                      <a
-                        href={`mailto:${vendor.contact_email}`}
-                        style={{
-                          padding: '0.5rem',
-                          backgroundColor: '#6B8F71',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.375rem',
-                          textDecoration: 'none',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                      </a>
-                    )}
-                  </div>
+                      fontWeight: '500',
+                      minWidth: '120px',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Eye style={{ width: '1rem', height: '1rem' }} />
+                    View Vendor
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      try {
+                        console.log('Edit button clicked for vendor:', vendor.vendor_id, vendor.vendor_name);
+                        router.push(`/vendors/${vendor.vendor_id}/edit`);
+                      } catch (error) {
+                        console.error('Error navigating to vendor edit:', error);
+                      }
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#6B8F71',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      minWidth: '120px',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit Vendor
+                  </button>
                 </div>
               </div>
             ))}

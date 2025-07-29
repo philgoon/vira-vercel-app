@@ -71,7 +71,7 @@ function RateProjectContent() {
             filteredProjects = (projectsData.projects || []).filter(
               (p: Project & { status?: string }) => {
                 const status = p.status?.toLowerCase() || '';
-                return status === 'completed' || status === 'complete' || status === 'finished' || status === 'done';
+                return status === 'completed' || status === 'complete' || status === 'finished' || status === 'done' || status === 'closed';
               }
             );
           }

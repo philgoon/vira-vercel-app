@@ -7,6 +7,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
     const status = searchParams.get('status');
+    const id = searchParams.get('id');
+    const industry = searchParams.get('industry');
 
     let query = supabase
       .from('clients')
@@ -14,12 +16,20 @@ export async function GET(request: Request) {
       .order('client_name');
 
     // Apply filters if provided
-    if (search) {
-      query = query.or(`client_name.ilike.%${search}%,industry.ilike.%${search}%`);
-    }
-    
-    if (status && status !== 'all') {
-      query = query.eq('status', status);
+    if (id) {
+      query = query.eq('client_id', id);
+    } else {
+      if (search) {
+        query = query.or(`client_name.ilike.%${search}%,industry.ilike.%${search}%`);
+      }
+      
+      if (status && status !== 'all') {
+        query = query.eq('status', status);
+      }
+      
+      if (industry && industry !== 'all') {
+        query = query.eq('industry', industry);
+      }
     }
 
     const { data: clients, error } = await query;
@@ -55,5 +65,45 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Failed to create client:', error);
     return NextResponse.json({ error: 'Failed to create client' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { client_id, ...updateData } = body;
+
+    // Validate required fields
+    if (!client_id) {
+      return NextResponse.json(
+        { error: 'Missing required field: client_id' }, 
+        { status: 400 }
+      );
+    }
+
+    // Update client with all provided fields
+    const { data: updatedClient, error: updateError } = await supabase
+      .from('clients')
+      .update(updateData)
+      .eq('client_id', client_id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Client update error:', updateError);
+      return NextResponse.json({ 
+        error: 'Failed to update client',
+        details: updateError
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({ 
+      client: updatedClient,
+      message: 'Client updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Failed to update client:', error);
+    return NextResponse.json({ error: 'Failed to update client' }, { status: 500 });
   }
 }

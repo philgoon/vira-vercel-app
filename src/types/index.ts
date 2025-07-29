@@ -30,6 +30,11 @@ export interface Project {
   assigned_vendor_id?: string;
   contact_date?: string;
   updated_at?: string;
+  vendors?: {
+    vendor_id: number | string;
+    vendor_name: string;
+    service_categories: string | string[];
+  };
 }
 
 export interface Client {

@@ -2,23 +2,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Calendar, DollarSign, User, Building, CheckCircle, Clock, AlertCircle, Star, Edit3 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, Calendar, DollarSign, User, Building, CheckCircle, Clock, AlertCircle, Star, Edit3, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { Project, ProjectsApiResponse } from '@/types';
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState('All');
   const [actionLoading, setActionLoading] = useState<string | null>(null); // Track which project action is loading
+  
+  // Vendor category filter states
+  const [allVendorCategories, setAllVendorCategories] = useState<string[]>([]);
+  const [selectedVendorCategory, setSelectedVendorCategory] = useState('all');
 
   // [R7.5] Fetch projects from Supabase API
   useEffect(() => {
     async function fetchProjects() {
       try {
         const params = new URLSearchParams();
-        if (filter !== 'All') params.set('status', filter);
+        if (selectedVendorCategory !== 'all') params.set('vendor_category', selectedVendorCategory);
 
         const response = await fetch(`/api/projects?${params.toString()}`);
         if (!response.ok) throw new Error('Failed to fetch projects');
@@ -33,7 +38,7 @@ export default function ProjectsPage() {
     }
 
     fetchProjects();
-  }, [filter]);
+  }, [selectedVendorCategory]);
 
   // [R5.3] Clear error after some time
   useEffect(() => {
@@ -42,6 +47,39 @@ export default function ProjectsPage() {
       return () => clearTimeout(timer);
     }
   }, [error]);
+
+  // Fetch all vendor categories from projects on component mount
+  useEffect(() => {
+    async function fetchAllVendorCategories() {
+      try {
+        const response = await fetch('/api/projects');
+        if (response.ok) {
+          const data: ProjectsApiResponse = await response.json();
+          const allProjects = data.projects || [];
+          
+          const categorySet = new Set<string>();
+          allProjects.forEach(project => {
+            if (project.vendors?.service_categories) {
+              const categories = Array.isArray(project.vendors.service_categories) 
+                ? project.vendors.service_categories 
+                : [project.vendors.service_categories].filter(Boolean);
+              categories.forEach(cat => {
+                if (cat && typeof cat === 'string' && cat.trim()) {
+                  categorySet.add(cat.trim());
+                }
+              });
+            }
+          });
+          
+          setAllVendorCategories(Array.from(categorySet).sort());
+        }
+      } catch (err) {
+        console.error('Failed to fetch vendor categories:', err);
+      }
+    }
+    
+    fetchAllVendorCategories();
+  }, []);
 
   // [R7.6] Helper functions
   const getStatusIcon = (status: string) => {
@@ -175,6 +213,8 @@ export default function ProjectsPage() {
         );
         
       case 'completed':
+      case 'closed':
+      case 'Closed':
         return (
           <Link 
             href={`/rate-project?project_id=${project.project_id}`}
@@ -263,7 +303,6 @@ export default function ProjectsPage() {
     }
   };
 
-  const uniqueStatuses = ['All', ...new Set(projects.map(p => p.status).filter(Boolean))];
 
   return (
     <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
@@ -304,38 +343,54 @@ export default function ProjectsPage() {
       {/* Filters */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ padding: '1rem 1.5rem' }}>
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            {uniqueStatuses.map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: '0.5rem',
-                  fontWeight: '500',
-                  border: 'none',
-                  cursor: 'pointer',
-                  backgroundColor: filter === status ? '#1A5276' : 'transparent',
-                  color: filter === status ? 'white' : '#6b7280',
-                  transition: 'all 150ms'
-                }}
-                onMouseEnter={(e) => {
-                  if (filter !== status) {
-                    e.currentTarget.style.backgroundColor = '#f3f4f6';
-                    e.currentTarget.style.color = '#111827';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (filter !== status) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = '#6b7280';
-                  }
-                }}
-              >
-                {status}
-              </button>
-            ))}
-          </div>
+          {/* Vendor Category Filter Buttons */}
+          {allVendorCategories.length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
+                Filter by Vendor Category
+              </h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setSelectedVendorCategory('all')}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '9999px',
+                    border: '1px solid',
+                    borderColor: selectedVendorCategory === 'all' ? '#1A5276' : '#d1d5db',
+                    backgroundColor: selectedVendorCategory === 'all' ? '#1A5276' : 'white',
+                    color: selectedVendorCategory === 'all' ? 'white' : '#374151',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  All Categories
+                </button>
+                {allVendorCategories.map(category => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedVendorCategory(category)}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      borderRadius: '9999px',
+                      border: '1px solid',
+                      borderColor: selectedVendorCategory === category ? '#1A5276' : '#d1d5db',
+                      backgroundColor: selectedVendorCategory === category ? '#1A5276' : 'white',
+                      color: selectedVendorCategory === category ? 'white' : '#374151',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -386,7 +441,7 @@ export default function ProjectsPage() {
               No projects found
             </h3>
             <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
-              {filter === 'All' ? 'No projects exist yet.' : `No projects match the "${filter}" filter.`}
+              {selectedVendorCategory === 'all' ? 'No projects exist yet.' : `No projects found for "${selectedVendorCategory}" category.`}
             </p>
             <button style={{
               padding: '0.5rem 1rem',
@@ -402,147 +457,147 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        {/* Projects Grid */}
+        {/* Project List - 2 Column Layout matching vendor page style */}
         {!loading && !error && projects.length > 0 && (
           <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', 
-            gap: '1.5rem' 
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '1rem',
+            maxWidth: '1600px',
+            margin: '0 auto'
           }}>
             {projects.map((project) => (
-              <div key={project.project_id} className="professional-card">
-                <div style={{ padding: '1.5rem' }}>
-                  {/* Project Header */}
-                  <div style={{ marginBottom: '1rem' }}>
+              <div key={project.project_id} className="professional-card" style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                padding: '1rem 1.5rem',
+                minHeight: '5rem'
+              }}>
+                {/* Project Avatar */}
+                <div style={{
+                  width: '3rem',
+                  height: '3rem',
+                  backgroundColor: '#1A5276',
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '1rem',
+                  flexShrink: 0
+                }}>
+                  <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'white' }}>
+                    {project.project_title.charAt(0)}
+                  </span>
+                </div>
+
+                {/* Main Project Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
                     <h3 style={{ 
                       fontSize: '1.125rem', 
                       fontWeight: '600', 
-                      color: '#111827', 
-                      marginBottom: '0.5rem',
-                      lineHeight: '1.4'
+                      color: '#111827',
+                      margin: 0,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxWidth: '200px'
                     }}>
                       {project.project_title}
                     </h3>
-                    <p style={{ 
-                      color: '#6b7280', 
-                      fontSize: '0.875rem',
-                      marginBottom: '0.75rem'
-                    }}>
-                      Client ID: <span style={{ fontWeight: '500', color: '#374151' }}>
-                        {project.client_id || 'Not assigned'}
-                      </span>
-                    </p>
                     
-                    {project.project_description && (
-                      <p style={{ 
-                        color: '#6b7280', 
-                        fontSize: '0.875rem', 
-                        lineHeight: '1.4',
-                        marginBottom: '0.75rem'
-                      }}>
-                        {project.project_description.length > 100 ? `${project.project_description.substring(0, 100)}...` : project.project_description}
-                      </p>
-                    )}
-
-                    {project.project_type && (
-                      <div style={{
-                        display: 'inline-block',
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#E8F4F8',
-                        color: '#1A5276',
-                        borderRadius: '0.375rem',
-                        fontSize: '0.75rem',
-                        fontWeight: '500',
-                        marginBottom: '0.75rem'
-                      }}>
-                        {project.project_type}
-                      </div>
-                    )}
+                    {/* Due date */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Calendar style={{ width: '1rem', height: '1rem', color: '#d1d5db' }} />
+                      <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{formatDate(project.expected_deadline)}</span>
+                    </div>
                   </div>
 
-                  {/* Status Badge */}
-                  <div style={{ marginBottom: '1rem' }}>
-                    <span style={{
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                    <span style={{ fontWeight: '500', color: '#1A5276' }}>
+                      {(() => {
+                        if (project.vendors?.service_categories) {
+                          const categories = Array.isArray(project.vendors.service_categories) 
+                            ? project.vendors.service_categories 
+                            : [project.vendors.service_categories];
+                          return categories[0] || 'Unassigned';
+                        }
+                        return 'Unassigned';
+                      })()}
+                    </span>
+                    
+                    {/* Status Badge */}
+                    <div style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.25rem',
-                      padding: '0.25rem 0.75rem',
+                      padding: '0.125rem 0.5rem',
                       borderRadius: '9999px',
-                      fontSize: '0.875rem',
+                      fontSize: '0.75rem',
                       fontWeight: '500',
-                      border: '1px solid',
                       ...getStatusColor(project.status)
                     }}>
                       {getStatusIcon(project.status)}
-                      Status: {project.status || 'Unknown'}
-                    </span>
-                  </div>
-
-                  {/* Project Details */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem' }}>
-                      <Calendar style={{ width: '1rem', height: '1rem', color: '#9ca3af' }} />
-                      <span style={{ color: '#6b7280' }}>Due Date:</span>
-                      <span style={{ fontWeight: '500', color: '#374151' }}>
-                        {formatDate(project.expected_deadline)}
-                      </span>
+                      {project.status || 'Unknown'}
                     </div>
-
-                    {project.key_skills_required && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem' }}>
-                        <User style={{ width: '1rem', height: '1rem', color: '#9ca3af' }} />
-                        <span style={{ color: '#6b7280' }}>Skills:</span>
-                        <span style={{ fontWeight: '500', color: '#374151' }}>
-                          {project.key_skills_required.length > 30 ? 
-                            `${project.key_skills_required.substring(0, 30)}...` : 
-                            project.key_skills_required}
-                        </span>
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem' }}>
-                      <Building style={{ width: '1rem', height: '1rem', color: '#9ca3af' }} />
-                      <span style={{ color: '#6b7280' }}>Vendor ID:</span>
-                      <span style={{ fontWeight: '500', color: '#374151' }}>
-                        {project.assigned_vendor_id || 'Not assigned'}
-                      </span>
-                    </div>
-
-                    {project.team_member && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem' }}>
-                        <User style={{ width: '1rem', height: '1rem', color: '#9ca3af' }} />
-                        <span style={{ color: '#6b7280' }}>Team Member:</span>
-                        <span style={{ fontWeight: '500', color: '#374151' }}>
-                          {project.team_member}
-                        </span>
-                      </div>
-                    )}
-
-                    {project.initial_vendor_rating && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem' }}>
-                        <svg style={{ width: '1rem', height: '1rem', color: '#9ca3af' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                        </svg>
-                        <span style={{ color: '#6b7280' }}>Rating:</span>
-                        <span style={{ fontWeight: '500', color: '#374151' }}>
-                          {project.initial_vendor_rating}/10
-                        </span>
-                      </div>
-                    )}
-
-                    {project.industry_experience && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem' }}>
-                        <Building style={{ width: '1rem', height: '1rem', color: '#9ca3af' }} />
-                        <span style={{ color: '#6b7280' }}>Industry:</span>
-                        <span style={{ fontWeight: '500', color: '#374151' }}>
-                          {project.industry_experience}
-                        </span>
-                      </div>
-                    )}
                   </div>
+                </div>
 
-                  {/* Actions - Workflow Buttons */}
-                  {getWorkflowButton(project)}
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginLeft: '1rem' }}>
+                  <button 
+                    onClick={() => {
+                      console.log('View button clicked for project:', project.project_id, project.project_title);
+                      router.push(`/projects/${project.project_id}`);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#1A5276',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      minWidth: '120px',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Eye style={{ width: '1rem', height: '1rem' }} />
+                    View Project
+                  </button>
+                  
+                  <Link 
+                    href={`/projects/${project.project_id}/edit`}
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <button 
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#6B8F71',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.375rem',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        minWidth: '120px',
+                        justifyContent: 'center',
+                        width: '100%'
+                      }}
+                    >
+                      <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit Project
+                    </button>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -554,7 +609,7 @@ export default function ProjectsPage() {
           <div style={{ marginTop: '2rem', textAlign: 'center' }}>
             <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
               Showing {projects.length} projects
-              {filter !== 'All' && ` with status "${filter}"`}
+              {selectedVendorCategory !== 'all' && ` for "${selectedVendorCategory}" category`}
             </p>
           </div>
         )}

@@ -2,16 +2,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Building, Plus, Eye, Calendar, MapPin, Phone } from 'lucide-react';
+import { Building, Plus, Eye, Calendar, MapPin, Phone } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Client, ClientsApiResponse } from '@/types';
 
 export default function ClientsPage() {
+  const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // Filter states
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('all');
 
   // [R7.8] Fetch clients from Supabase API
@@ -19,7 +20,6 @@ export default function ClientsPage() {
     async function fetchClients() {
       try {
         const params = new URLSearchParams();
-        if (searchTerm) params.set('search', searchTerm);
         if (selectedIndustry !== 'all') params.set('industry', selectedIndustry);
 
         const response = await fetch(`/api/clients?${params.toString()}`);
@@ -35,9 +35,9 @@ export default function ClientsPage() {
     }
 
     fetchClients();
-  }, [searchTerm, selectedIndustry]);
+  }, [selectedIndustry]);
 
-  const uniqueIndustries = ['all', ...new Set(clients.map(c => c.industry).filter(Boolean))];
+  const uniqueIndustries = ['all', ...new Set(clients.map(c => c.industry).filter(Boolean) as string[])];
 
   return (
     <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
@@ -78,64 +78,50 @@ export default function ClientsPage() {
       {/* Filters */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ padding: '1rem 1.5rem' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
-            {/* Search */}
-            <div style={{ flex: '1', minWidth: '16rem' }}>
-              <div style={{ position: 'relative' }}>
-                <Search style={{ 
-                  position: 'absolute', 
-                  left: '0.75rem', 
-                  top: '50%', 
-                  transform: 'translateY(-50%)', 
-                  color: '#9ca3af', 
-                  width: '1rem', 
-                  height: '1rem' 
-                }} />
-                <input
-                  type="text"
-                  placeholder="Search clients..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="form-input"
-                  style={{ paddingLeft: '2.5rem' }}
-                />
-              </div>
-            </div>
-
-            {/* Industry Filter */}
-            <div style={{ minWidth: '12rem' }}>
-              <select
-                value={selectedIndustry}
-                onChange={(e) => setSelectedIndustry(e.target.value)}
-                className="form-input"
+          {/* Industry Filter Buttons */}
+          <div style={{ marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
+              Filter by Industry
+            </h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <button
+                onClick={() => setSelectedIndustry('all')}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '9999px',
+                  border: '1px solid',
+                  borderColor: selectedIndustry === 'all' ? '#1A5276' : '#d1d5db',
+                  backgroundColor: selectedIndustry === 'all' ? '#1A5276' : 'white',
+                  color: selectedIndustry === 'all' ? 'white' : '#374151',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease'
+                }}
               >
-                {uniqueIndustries.map(industry => (
-                  <option key={industry} value={industry}>
-                    {industry === 'all' ? 'All Industries' : industry}
-                  </option>
-                ))}
-              </select>
+                All Industries
+              </button>
+              {uniqueIndustries.filter(industry => industry !== 'all').map(industry => (
+                <button
+                  key={industry}
+                  onClick={() => setSelectedIndustry(industry)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '9999px',
+                    border: '1px solid',
+                    borderColor: selectedIndustry === industry ? '#1A5276' : '#d1d5db',
+                    backgroundColor: selectedIndustry === industry ? '#1A5276' : 'white',
+                    color: selectedIndustry === industry ? 'white' : '#374151',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {industry}
+                </button>
+              ))}
             </div>
-
-            {/* Clear Filters */}
-            <button 
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedIndustry('all');
-              }}
-              style={{ 
-                padding: '0.5rem 1rem', 
-                color: '#6b7280', 
-                border: 'none', 
-                background: 'none', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              Clear Filters
-            </button>
           </div>
         </div>
       </div>
@@ -187,7 +173,7 @@ export default function ClientsPage() {
               No clients found
             </h3>
             <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
-              {searchTerm ? 'No clients match your search criteria.' : 'No clients exist yet.'}
+              {selectedIndustry !== 'all' ? `No clients found in ${selectedIndustry} industry.` : 'No clients exist yet.'}
             </p>
             <button style={{
               padding: '0.5rem 1rem',
@@ -203,157 +189,89 @@ export default function ClientsPage() {
           </div>
         )}
 
-        {/* Clients Grid */}
+        {/* Client List - 2 Column Layout matching vendor page style */}
         {!loading && !error && clients.length > 0 && (
           <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', 
-            gap: '1.5rem' 
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '1rem',
+            maxWidth: '1600px',
+            margin: '0 auto'
           }}>
             {clients.map((client) => (
-              <div key={client.client_id} className="professional-card">
-                <div style={{ padding: '1.5rem' }}>
-                  {/* Client Header */}
-                  <div style={{ display: 'flex', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
-                    <div style={{
-                      width: '3rem',
-                      height: '3rem',
-                      backgroundColor: '#E8F4F8',
-                      borderRadius: '0.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
+              <div key={client.client_id} className="professional-card" style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                padding: '1rem 1.5rem',
+                minHeight: '5rem'
+              }}>
+                {/* Client Avatar */}
+                <div style={{
+                  width: '3rem',
+                  height: '3rem',
+                  backgroundColor: '#1A5276',
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '1rem',
+                  flexShrink: 0
+                }}>
+                  <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'white' }}>
+                    {client.client_name.charAt(0)}
+                  </span>
+                </div>
+
+                {/* Main Client Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                    <h3 style={{ 
+                      fontSize: '1.125rem', 
+                      fontWeight: '600', 
+                      color: '#111827',
+                      margin: 0
                     }}>
-                      <span style={{ 
-                        fontSize: '1.25rem', 
-                        fontWeight: 'bold', 
-                        color: '#1A5276' 
-                      }}>
-                        {client.client_name.charAt(0)}
-                      </span>
-                    </div>
+                      {client.client_name}
+                    </h3>
                     
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ 
-                        fontSize: '1.125rem', 
-                        fontWeight: '600', 
-                        color: '#111827', 
-                        marginBottom: '0.25rem',
-                        lineHeight: '1.4'
-                      }}>
-                        {client.client_name}
-                      </h3>
-                      
-                      {client.industry && (
-                        <p style={{ 
-                          fontSize: '0.875rem', 
-                          color: '#6b7280',
-                          marginBottom: '0.5rem'
-                        }}>
-                          {client.industry}
-                        </p>
-                      )}
-                      
-                      <div style={{
-                        display: 'inline-block',
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#dcfce7',
-                        color: '#166534',
-                        borderRadius: '0.375rem',
-                        fontSize: '0.75rem',
-                        fontWeight: '500'
-                      }}>
-                        Active Client
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Client Information */}
-                  <div style={{ marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-                    {client.time_zone && (
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '0.5rem', 
-                        marginBottom: '0.5rem' 
-                      }}>
-                        <MapPin style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
-                        <span style={{ color: '#6b7280' }}>Time Zone: </span>
-                        <span style={{ fontWeight: '500', color: '#374151' }}>{client.time_zone}</span>
-                      </div>
-                    )}
-                    
-                    {client.preferred_contact && (
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '0.5rem', 
-                        marginBottom: '0.5rem' 
-                      }}>
-                        <Phone style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
-                        <span style={{ color: '#6b7280' }}>Preferred Contact: </span>
-                        <span style={{ fontWeight: '500', color: '#374151' }}>{client.preferred_contact}</span>
-                      </div>
-                    )}
-
+                    {/* Projects count */}
                     {client.total_projects !== undefined && (
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '0.5rem', 
-                        marginBottom: '0.5rem' 
-                      }}>
-                        <Building style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
-                        <span style={{ color: '#6b7280' }}>Total Projects: </span>
-                        <span style={{ fontWeight: '500', color: '#374151' }}>
-                          {client.total_projects}
-                        </span>
-                      </div>
-                    )}
-
-                    {client.client_notes && (
-                      <div style={{ marginTop: '0.75rem' }}>
-                        <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>
-                          Notes:
-                        </p>
-                        <p style={{ 
-                          fontSize: '0.875rem', 
-                          color: '#6b7280', 
-                          fontStyle: 'italic',
-                          lineHeight: '1.4',
-                          backgroundColor: '#f9fafb',
-                          padding: '0.5rem',
-                          borderRadius: '0.375rem'
-                        }}>
-                          {client.client_notes.length > 120 ? 
-                            `${client.client_notes.substring(0, 120)}...` : 
-                            client.client_notes}
-                        </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Building style={{ width: '1rem', height: '1rem', color: '#d1d5db' }} />
+                        <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{client.total_projects} projects</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Client Since */}
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.5rem', 
-                    marginBottom: '1.5rem',
-                    fontSize: '0.875rem',
-                    color: '#6b7280'
-                  }}>
-                    <Calendar style={{ width: '1rem', height: '1rem' }} />
-                    <span>Client since: {new Date(client.created_date).toLocaleDateString()}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                    <span style={{ fontWeight: '500', color: '#1A5276' }}>
+                      {client.industry || 'Industry Not Set'}
+                    </span>
+                    
+                    {/* Status Badge */}
+                    <div style={{
+                      padding: '0.125rem 0.5rem',
+                      backgroundColor: '#dcfce7',
+                      color: '#166534',
+                      borderRadius: '9999px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500'
+                    }}>
+                      Active
+                    </div>
                   </div>
+                </div>
 
-                  {/* Action Buttons */}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button style={{
-                      flex: 1,
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginLeft: '1rem' }}>
+                  <button 
+                    onClick={() => {
+                      console.log('View button clicked for client:', client.client_id, client.client_name);
+                      router.push(`/clients/${client.client_id}`);
+                    }}
+                    style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
                       gap: '0.5rem',
                       padding: '0.5rem 1rem',
                       backgroundColor: '#1A5276',
@@ -362,28 +280,41 @@ export default function ClientsPage() {
                       borderRadius: '0.375rem',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
-                      fontWeight: '500'
-                    }}>
-                      <Eye style={{ width: '1rem', height: '1rem' }} />
-                      View Projects
-                    </button>
-                    
-                    <button style={{
-                      padding: '0.5rem',
+                      fontWeight: '500',
+                      minWidth: '120px',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Eye style={{ width: '1rem', height: '1rem' }} />
+                    View Client
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      console.log('Edit button clicked for client:', client.client_id, client.client_name);
+                      router.push(`/clients/${client.client_id}/edit`);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
                       backgroundColor: '#6B8F71',
                       color: 'white',
                       border: 'none',
                       borderRadius: '0.375rem',
                       cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      minWidth: '120px',
                       justifyContent: 'center'
-                    }}>
-                      <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                  </div>
+                    }}
+                  >
+                    <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit Client
+                  </button>
                 </div>
               </div>
             ))}
@@ -395,7 +326,6 @@ export default function ClientsPage() {
           <div style={{ marginTop: '2rem', textAlign: 'center' }}>
             <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
               Showing {clients.length} clients
-              {searchTerm && ` matching "${searchTerm}"`}
               {selectedIndustry !== 'all' && ` in ${selectedIndustry}`}
             </p>
           </div>

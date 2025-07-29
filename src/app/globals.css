@@ -1,6 +1,8 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
+:root {
   /* Brand Colors */
   --color-single: #1A5276;
   --color-single-50: #E8F4F8;
