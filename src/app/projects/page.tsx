@@ -2,18 +2,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, Calendar, DollarSign, User, Building, CheckCircle, Clock, AlertCircle, Star, Edit3, Eye } from 'lucide-react';
-import Link from 'next/link';
+import { Plus, Calendar, Building, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { Project, ProjectsApiResponse } from '@/types';
+import ProjectModal from '../../components/modals/ProjectModal';
 
 export default function ProjectsPage() {
-  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null); // Track which project action is loading
-  
+
+  // Modal state
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   // Vendor category filter states
   const [allVendorCategories, setAllVendorCategories] = useState<string[]>([]);
   const [selectedVendorCategory, setSelectedVendorCategory] = useState('all');
@@ -27,7 +28,7 @@ export default function ProjectsPage() {
 
         const response = await fetch(`/api/projects?${params.toString()}`);
         if (!response.ok) throw new Error('Failed to fetch projects');
-        
+
         const data: ProjectsApiResponse = await response.json();
         setProjects(data.projects || []);
       } catch (err) {
@@ -56,12 +57,12 @@ export default function ProjectsPage() {
         if (response.ok) {
           const data: ProjectsApiResponse = await response.json();
           const allProjects = data.projects || [];
-          
+
           const categorySet = new Set<string>();
           allProjects.forEach(project => {
             if (project.vendors?.service_categories) {
-              const categories = Array.isArray(project.vendors.service_categories) 
-                ? project.vendors.service_categories 
+              const categories = Array.isArray(project.vendors.service_categories)
+                ? project.vendors.service_categories
                 : [project.vendors.service_categories].filter(Boolean);
               categories.forEach(cat => {
                 if (cat && typeof cat === 'string' && cat.trim()) {
@@ -70,14 +71,14 @@ export default function ProjectsPage() {
               });
             }
           });
-          
+
           setAllVendorCategories(Array.from(categorySet).sort());
         }
       } catch (err) {
         console.error('Failed to fetch vendor categories:', err);
       }
     }
-    
+
     fetchAllVendorCategories();
   }, []);
 
@@ -121,188 +122,10 @@ export default function ProjectsPage() {
     }
   };
 
-  // [R5.3] Handle workflow action buttons
-  const handleCompleteProject = async (projectId: string) => {
-    setActionLoading(projectId);
-    try {
-      const response = await fetch('/api/projects', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: projectId,
-          status: 'completed'
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to complete project');
-      }
-
-      // Update local state
-      setProjects(prev => prev.map(p => 
-        p.project_id === projectId 
-          ? { ...p, status: 'completed' }
-          : p
-      ));
-      
-      console.log('Project completed successfully');
-    } catch (err) {
-      console.error('Failed to complete project:', err);
-      setError(err instanceof Error ? err.message : 'Failed to complete project');
-    } finally {
-      setActionLoading(null);
-    }
+  const handleProjectClick = (project: Project) => {
+    setSelectedProject(project);
+    setIsModalOpen(true);
   };
-
-  // [R5.3] Get workflow button for project based on status
-  const getWorkflowButton = (project: Project) => {
-    const isLoading = actionLoading === project.project_id;
-    
-    switch (project.status?.toLowerCase()) {
-      case 'active':
-        return (
-          <button 
-            onClick={() => handleCompleteProject(project.project_id)}
-            disabled={isLoading}
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              backgroundColor: isLoading ? '#9ca3af' : '#16a34a',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              fontWeight: '500',
-              transition: 'background-color 150ms',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem'
-            }}
-            onMouseEnter={(e) => {
-              if (!isLoading) {
-                e.currentTarget.style.backgroundColor = '#15803d';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isLoading) {
-                e.currentTarget.style.backgroundColor = '#16a34a';
-              }
-            }}
-          >
-            {isLoading ? (
-              <>
-                <div style={{
-                  width: '1rem',
-                  height: '1rem',
-                  border: '2px solid white',
-                  borderTop: '2px solid transparent',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }}></div>
-                Completing...
-              </>
-            ) : (
-              <>
-                <CheckCircle style={{ width: '1rem', height: '1rem' }} />
-                Complete Project
-              </>
-            )}
-          </button>
-        );
-        
-      case 'completed':
-      case 'closed':
-      case 'Closed':
-        return (
-          <Link 
-            href={`/rate-project?project_id=${project.project_id}`}
-            style={{ textDecoration: 'none', width: '100%' }}
-          >
-            <button style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              backgroundColor: '#ea580c',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              cursor: 'pointer',
-              fontWeight: '500',
-              transition: 'background-color 150ms',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#c2410c';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#ea580c';
-            }}
-            >
-              <Star style={{ width: '1rem', height: '1rem' }} />
-              Rate Project
-            </button>
-          </Link>
-        );
-        
-      case 'archived':
-        return (
-          <Link 
-            href={`/rate-project?project_id=${project.project_id}&edit=true`}
-            style={{ textDecoration: 'none', width: '100%' }}
-          >
-            <button style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              backgroundColor: '#7c3aed',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              cursor: 'pointer',
-              fontWeight: '500',
-              transition: 'background-color 150ms',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#6d28d9';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#7c3aed';
-            }}
-            >
-              <Edit3 style={{ width: '1rem', height: '1rem' }} />
-              Edit Ratings
-            </button>
-          </Link>
-        );
-        
-      default:
-        return (
-          <button style={{
-            width: '100%',
-            padding: '0.75rem 1rem',
-            backgroundColor: '#6b7280',
-            color: 'white',
-            border: 'none',
-            borderRadius: '0.375rem',
-            cursor: 'not-allowed',
-            fontWeight: '500',
-            opacity: 0.6
-          }}
-          disabled
-          >
-            Unknown Status
-          </button>
-        );
-    }
-  };
-
 
   return (
     <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
@@ -459,7 +282,7 @@ export default function ProjectsPage() {
 
         {/* Project List - 2 Column Layout matching vendor page style */}
         {!loading && !error && projects.length > 0 && (
-          <div style={{ 
+          <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '1rem',
@@ -467,12 +290,18 @@ export default function ProjectsPage() {
             margin: '0 auto'
           }}>
             {projects.map((project) => (
-              <div key={project.project_id} className="professional-card" style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                padding: '1rem 1.5rem',
-                minHeight: '5rem'
-              }}>
+              <div
+                key={project.project_id}
+                className="professional-card"
+                onClick={() => handleProjectClick(project)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '1rem 1.5rem',
+                  minHeight: '5rem',
+                  cursor: 'pointer'
+                }}
+              >
                 {/* Project Avatar */}
                 <div style={{
                   width: '3rem',
@@ -493,9 +322,9 @@ export default function ProjectsPage() {
                 {/* Main Project Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                    <h3 style={{ 
-                      fontSize: '1.125rem', 
-                      fontWeight: '600', 
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
                       color: '#111827',
                       margin: 0,
                       whiteSpace: 'nowrap',
@@ -505,7 +334,7 @@ export default function ProjectsPage() {
                     }}>
                       {project.project_title}
                     </h3>
-                    
+
                     {/* Due date */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                       <Calendar style={{ width: '1rem', height: '1rem', color: '#d1d5db' }} />
@@ -517,15 +346,15 @@ export default function ProjectsPage() {
                     <span style={{ fontWeight: '500', color: '#1A5276' }}>
                       {(() => {
                         if (project.vendors?.service_categories) {
-                          const categories = Array.isArray(project.vendors.service_categories) 
-                            ? project.vendors.service_categories 
+                          const categories = Array.isArray(project.vendors.service_categories)
+                            ? project.vendors.service_categories
                             : [project.vendors.service_categories];
                           return categories[0] || 'Unassigned';
                         }
                         return 'Unassigned';
                       })()}
                     </span>
-                    
+
                     {/* Status Badge */}
                     <div style={{
                       display: 'inline-flex',
@@ -542,63 +371,6 @@ export default function ProjectsPage() {
                     </div>
                   </div>
                 </div>
-
-                {/* Action Buttons */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginLeft: '1rem' }}>
-                  <button 
-                    onClick={() => {
-                      console.log('View button clicked for project:', project.project_id, project.project_title);
-                      router.push(`/projects/${project.project_id}`);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#1A5276',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      minWidth: '120px',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <Eye style={{ width: '1rem', height: '1rem' }} />
-                    View Project
-                  </button>
-                  
-                  <Link 
-                    href={`/projects/${project.project_id}/edit`}
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <button 
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 1rem',
-                        backgroundColor: '#6B8F71',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.375rem',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                        minWidth: '120px',
-                        justifyContent: 'center',
-                        width: '100%'
-                      }}
-                    >
-                      <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Edit Project
-                    </button>
-                  </Link>
-                </div>
               </div>
             ))}
           </div>
@@ -614,6 +386,18 @@ export default function ProjectsPage() {
           </div>
         )}
       </div>
+
+      {/* Project Modal */}
+      {selectedProject && (
+        <ProjectModal
+          project={selectedProject}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedProject(null);
+          }}
+        />
+      )}
 
       <style jsx>{`
         @keyframes spin {

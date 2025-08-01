@@ -29,24 +29,24 @@ interface EnrichedVendor {
 export async function POST(request: Request) {
   try {
     console.log('=== ViRA Enhanced Match API Called ===');
-    
+
     // [R5.1] Parse enhanced request with simplified inputs
     const body = await request.json();
     console.log('Request body:', body);
-    
+
     const { serviceCategory, projectScope } = body;
 
     if (!serviceCategory || !projectScope) {
       console.log('Missing required fields:', { serviceCategory, projectScope });
       return NextResponse.json(
-        { error: 'Service category and project scope are required' }, 
+        { error: 'Service category and project scope are required' },
         { status: 400 }
       );
     }
 
     // [R5.2] Step 1: CRUD query to find vendor candidates by service category
     console.log('Querying vendors with service category:', serviceCategory);
-    
+
     const { data: candidates, error: vendorError } = await supabase
       .from('vendors')
       .select(`
@@ -60,15 +60,15 @@ export async function POST(request: Request) {
         contact_email,
         status
       `)
-      .eq('status', 'Active');
-      // Note: Removed .ilike filter since service_categories is an array
+      .eq('status', 'active');
+    // Note: Removed .ilike filter since service_categories is an array
 
     console.log('Vendor query result:', { candidates: candidates?.length, error: vendorError });
 
     if (vendorError) {
       console.error('Vendor query error:', vendorError);
       return NextResponse.json(
-        { error: 'Failed to fetch vendor candidates' }, 
+        { error: 'Failed to fetch vendor candidates' },
         { status: 500 }
       );
     }
@@ -81,15 +81,33 @@ export async function POST(request: Request) {
       });
     }
 
-    // Filter candidates by service category (since it's an array)
+    // [R5.2] Filter candidates by service category with enhanced debugging
+    console.log('=== DEBUGGING CATEGORY FILTERING ===');
+    console.log('Looking for serviceCategory:', serviceCategory);
+    console.log('Sample vendor service_categories format:', candidates[0]?.service_categories);
+    console.log('Is sample array?', Array.isArray(candidates[0]?.service_categories));
+
     const filteredCandidates = candidates.filter(vendor => {
+      console.log(`Vendor ${vendor.vendor_name}:`, {
+        service_categories: vendor.service_categories,
+        isArray: Array.isArray(vendor.service_categories),
+        includes: Array.isArray(vendor.service_categories) ?
+          vendor.service_categories.includes(serviceCategory) :
+          vendor.service_categories === serviceCategory
+      });
+
       if (Array.isArray(vendor.service_categories)) {
         return vendor.service_categories.includes(serviceCategory);
+      }
+      // Handle string format (comma-separated or single value)
+      if (typeof vendor.service_categories === 'string') {
+        return vendor.service_categories.split(',').map(cat => cat.trim()).includes(serviceCategory);
       }
       return vendor.service_categories === serviceCategory;
     });
 
-    console.log('Filtered candidates:', filteredCandidates.length);
+    console.log('Filtered candidates count:', filteredCandidates.length);
+    console.log('Filtered vendor names:', filteredCandidates.map(v => v.vendor_name));
 
     if (filteredCandidates.length === 0) {
       return NextResponse.json({
@@ -100,7 +118,7 @@ export async function POST(request: Request) {
 
     // [R5.3] Step 2: Fetch and aggregate ratings data for each candidate
     console.log('Fetching ratings for candidates...');
-    
+
     const enrichedVendors: EnrichedVendor[] = await Promise.all(
       filteredCandidates.map(async (vendor) => {
         const { data: ratings, error: ratingsError } = await supabase
@@ -137,29 +155,29 @@ export async function POST(request: Request) {
 
         if (ratings && ratings.length > 0) {
           const validRatings = ratings.filter(r => r.project_success_rating && r.vendor_overall_rating);
-          
+
           if (validRatings.length > 0) {
             analytics.total_ratings = validRatings.length;
-            
+
             // Calculate averages
             analytics.avg_project_success = validRatings.reduce((sum, r) => sum + r.project_success_rating, 0) / validRatings.length;
             analytics.avg_overall_rating = validRatings.reduce((sum, r) => sum + r.vendor_overall_rating, 0) / validRatings.length;
-            
+
             const qualityRatings = validRatings.filter(r => r.vendor_quality_rating);
             if (qualityRatings.length > 0) {
               analytics.avg_quality_rating = qualityRatings.reduce((sum, r) => sum + r.vendor_quality_rating, 0) / qualityRatings.length;
             }
-            
+
             const commRatings = validRatings.filter(r => r.vendor_communication_rating);
             if (commRatings.length > 0) {
               analytics.avg_communication = commRatings.reduce((sum, r) => sum + r.vendor_communication_rating, 0) / commRatings.length;
             }
-            
+
             // Calculate percentages
             analytics.on_time_percentage = (validRatings.filter(r => r.project_on_time).length / validRatings.length) * 100;
             analytics.on_budget_percentage = (validRatings.filter(r => r.project_on_budget).length / validRatings.length) * 100;
             analytics.recommendation_rate = (validRatings.filter(r => r.recommend_again).length / validRatings.length) * 100;
-            
+
             // Collect recent positive feedback
             analytics.recent_feedback = validRatings
               .map(r => r.what_went_well)
@@ -177,7 +195,7 @@ export async function POST(request: Request) {
 
     // [R5.4] Step 3: Send enriched data to Gemini AI for intelligent ranking
     console.log('Sending data to Gemini AI...');
-    
+
     const prompt = `
 You are ViRA (Vendor Intelligence & Recommendation Assistant), an expert AI system that analyzes vendor data to provide strategic recommendations.
 
@@ -256,33 +274,33 @@ IMPORTANT: Return ONLY the JSON array above, no additional text or explanation.
 
     // [R5.5] Parse and validate AI response
     let recommendations;
-    
+
     if (geminiResponse) {
       // Extract JSON from response (handle cases where AI adds explanatory text)
       let jsonString = geminiResponse.replace(/```json|```/g, '').trim();
-      
+
       // Find JSON array in the response if it's mixed with text
       const jsonMatch = jsonString.match(/\[\s*{[\s\S]*}\s*\]/);
       if (jsonMatch) {
         jsonString = jsonMatch[0];
       }
-      
+
       try {
         recommendations = JSON.parse(jsonString);
-        
+
         // Validate the response structure
         if (!Array.isArray(recommendations)) {
           throw new Error('Response is not an array');
         }
-        
+
         // Ensure all required fields are present
-        recommendations = recommendations.filter(rec => 
-          rec.vendorName && 
-          typeof rec.viraScore === 'number' && 
-          rec.reason && 
+        recommendations = recommendations.filter(rec =>
+          rec.vendorName &&
+          typeof rec.viraScore === 'number' &&
+          rec.reason &&
           Array.isArray(rec.keyStrengths)
         );
-        
+
       } catch (parseError) {
         console.error('Failed to parse enhanced AI response:', parseError);
         console.error('Extracted JSON string:', jsonString);
@@ -291,27 +309,27 @@ IMPORTANT: Return ONLY the JSON array above, no additional text or explanation.
     } else {
       recommendations = null;
     }
-    
+
     // [R5.5] Fallback if AI parsing failed
     if (!recommendations || recommendations.length === 0) {
       console.log('Using fallback recommendations');
       recommendations = enrichedVendors
         .sort((a, b) => {
           // Sort by a combination of rating quality and quantity (0-100% scale)
-          const scoreA = (a.ratings_analytics.avg_overall_rating * 6) + 
-                        (a.ratings_analytics.recommendation_rate * 0.4) + 
-                        Math.min(a.ratings_analytics.total_ratings * 5, 20);
-          const scoreB = (b.ratings_analytics.avg_overall_rating * 6) + 
-                        (b.ratings_analytics.recommendation_rate * 0.4) + 
-                        Math.min(b.ratings_analytics.total_ratings * 5, 20);
+          const scoreA = (a.ratings_analytics.avg_overall_rating * 6) +
+            (a.ratings_analytics.recommendation_rate * 0.4) +
+            Math.min(a.ratings_analytics.total_ratings * 5, 20);
+          const scoreB = (b.ratings_analytics.avg_overall_rating * 6) +
+            (b.ratings_analytics.recommendation_rate * 0.4) +
+            Math.min(b.ratings_analytics.total_ratings * 5, 20);
           return scoreB - scoreA;
         })
         .slice(0, 5)
         .map(vendor => ({
           vendorName: vendor.vendor_name,
-          viraScore: Math.min(100, Math.max(10, 
-            (vendor.ratings_analytics.avg_overall_rating * 6) + 
-            (vendor.ratings_analytics.recommendation_rate * 0.4) + 
+          viraScore: Math.min(100, Math.max(10,
+            (vendor.ratings_analytics.avg_overall_rating * 6) +
+            (vendor.ratings_analytics.recommendation_rate * 0.4) +
             Math.min(vendor.ratings_analytics.total_ratings * 5, 20)
           )),
           reason: `${vendor.vendor_name} specializes in ${vendor.service_categories} with ${vendor.ratings_analytics.total_ratings} client ratings averaging ${vendor.ratings_analytics.avg_overall_rating.toFixed(1)}/10. They maintain ${vendor.ratings_analytics.on_time_percentage.toFixed(0)}% on-time delivery and ${vendor.ratings_analytics.recommendation_rate.toFixed(0)}% client recommendation rate.`,
@@ -320,16 +338,16 @@ IMPORTANT: Return ONLY the JSON array above, no additional text or explanation.
             vendor.ratings_analytics.on_time_percentage > 80 ? 'Reliable delivery' : 'Professional service',
             vendor.specialties ? 'Specialized expertise' : 'Comprehensive capabilities'
           ],
-          considerations: vendor.ratings_analytics.total_ratings < 3 ? 
-            'Limited rating history - consider as emerging vendor' : 
+          considerations: vendor.ratings_analytics.total_ratings < 3 ?
+            'Limited rating history - consider as emerging vendor' :
             'Well-established vendor with proven track record'
         }));
     }
 
     // [R5.6] Return enhanced recommendations
     console.log('Returning recommendations:', recommendations.length);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       recommendations,
       searchCriteria: {
         serviceCategory,

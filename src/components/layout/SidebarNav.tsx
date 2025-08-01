@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Briefcase, MessageSquare, Building2, GitCompareArrows, Building, Upload } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Building2, GitCompareArrows, Building } from 'lucide-react';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -10,8 +10,6 @@ const navItems = [
   { href: '/vendors', label: 'Vendors', icon: Building2 },
   { href: '/clients', label: 'Clients', icon: Building },
   { href: '/projects', label: 'Projects', icon: Briefcase },
-  { href: '/chat', label: 'ViRA Chat', icon: MessageSquare },
-  { href: '/import', label: 'Import Data', icon: Upload },
 ];
 
 export function SidebarNav() {

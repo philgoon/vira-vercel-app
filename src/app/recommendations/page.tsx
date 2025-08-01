@@ -1,477 +1,242 @@
-// [R7.1] Enhanced recommendations page with ViRA Scores and detailed vendor analysis
-'use client';
+'use client'
 
-import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
-import Link from 'next/link';
-import { Star, TrendingUp, CheckCircle, AlertCircle, ArrowLeft, Mail, Trophy } from 'lucide-react';
-import { EnhancedRecommendation, LegacyRecommendation } from '@/types';
+import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
+import Link from 'next/link'
+import { Star, TrendingUp, CheckCircle, AlertCircle, ArrowLeft, Trophy, Sparkles, Award } from 'lucide-react'
+import { EnhancedRecommendation, LegacyRecommendation } from '@/types'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 
-// [R1] Separate component for content that uses useSearchParams
 function RecommendationsContent() {
-  const searchParams = useSearchParams();
-  const data = searchParams.get('data');
-  const isEnhanced = searchParams.get('enhanced') === 'true';
-  
-  let recommendations: (EnhancedRecommendation | LegacyRecommendation)[] = [];
+  const searchParams = useSearchParams()
+  const data = searchParams.get('data')
+  const isEnhanced = searchParams.get('enhanced') === 'true'
 
-  // [R7.1] Parse recommendations from URL query parameters
+  let recommendations: (EnhancedRecommendation | LegacyRecommendation)[] = []
+
   if (data) {
     try {
-      recommendations = JSON.parse(data);
+      recommendations = JSON.parse(data)
     } catch (error) {
-      console.error('Failed to parse recommendations data:', error);
+      console.error('Failed to parse recommendations data:', error)
     }
   }
 
-  // [R7.2] Helper function to get score color
-  const getScoreColor = (score: number) => {
-    if (score >= 8.5) return { bg: '#dcfce7', text: '#166534', border: '#bbf7d0' };
-    if (score >= 7.0) return { bg: '#fef3c7', text: '#92400e', border: '#fde68a' };
-    if (score >= 5.5) return { bg: '#dbeafe', text: '#1e40af', border: '#93c5fd' };
-    return { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' };
-  };
-
-  // [R7.2] Helper function to get score label
-  const getScoreLabel = (score: number) => {
-    if (score >= 8.5) return 'Excellent Match';
-    if (score >= 7.0) return 'Great Match';
-    if (score >= 5.5) return 'Good Match';
-    return 'Consider Carefully';
-  };
-
-  // [R7.3] Helper function to check if recommendation is enhanced
   const isEnhancedRecommendation = (rec: EnhancedRecommendation | LegacyRecommendation): rec is EnhancedRecommendation => {
-    return 'viraScore' in rec;
-  };
+    return 'viraScore' in rec
+  }
+
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return '#1A5276' // Brand blue for top scores
+    if (score >= 80) return '#6B8F71' // Brand green for good scores
+    if (score >= 70) return '#6E6F71' // Brand gray for decent scores
+    return '#dc2626' // Red for low scores
+  }
+
+  const getRankIcon = (index: number) => {
+    if (index === 0) return <Trophy className="w-6 h-6 text-white" />
+    if (index === 1) return <Award className="w-6 h-6 text-white" />
+    if (index === 2) return <Star className="w-6 h-6 text-white" />
+    return <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 font-bold">{index + 1}</div>
+  }
+
+  const getRankLabel = (index: number) => {
+    if (index === 0) return 'Top Choice'
+    if (index === 1) return 'Strong Alternative'
+    if (index === 2) return 'Good Option'
+    return `Option ${index + 1}`
+  }
+
+  // Truncate verbose analysis to 2-3 sentences max
+  const truncateAnalysis = (text: string): string => {
+    const sentences = text.split('. ')
+    if (sentences.length <= 2) return text
+    return sentences.slice(0, 2).join('. ') + '.'
+  }
 
   return (
-    <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                <h1 style={{
-                  fontSize: '1.875rem',
-                  fontFamily: 'var(--font-headline)',
-                  fontWeight: 'bold',
-                  color: '#1A5276'
-                }}>
-                  {isEnhanced ? 'ViRA Enhanced Recommendations' : 'Vendor Recommendations'}
-                </h1>
-                {isEnhanced && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.25rem 0.75rem',
-                    backgroundColor: '#dcfce7',
-                    color: '#166534',
-                    borderRadius: '9999px',
-                    fontSize: '0.75rem',
-                    fontWeight: '600'
-                  }}>
-                    <Trophy style={{ width: '0.875rem', height: '0.875rem' }} />
-                    AI-Powered Analysis
-                  </div>
-                )}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#1A5276' }}>
+                <Sparkles className="w-6 h-6 text-white" />
               </div>
-              <p style={{ color: '#6b7280' }}>
-                {isEnhanced 
-                  ? 'Data-driven vendor recommendations powered by performance analytics and AI scoring'
-                  : 'AI-generated vendor matches for your project'
-                }
-              </p>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Your ViRA Recommendations</h1>
+                <p className="text-gray-600">AI-powered vendor matches ranked by compatibility</p>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <Link
-                href="/vira-match"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#6b7280',
-                  color: 'white',
-                  textDecoration: 'none',
-                  borderRadius: '0.375rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '500'
-                }}
-              >
-                <ArrowLeft style={{ width: '1rem', height: '1rem' }} />
-                New Search
+            <div className="flex gap-3">
+              <Link href="/vira-match">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <ArrowLeft className="w-4 h-4" />
+                  New Search
+                </Button>
               </Link>
-              <Link
-                href="/"
-                style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#1A5276',
-                  color: 'white',
-                  textDecoration: 'none',
-                  borderRadius: '0.375rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '500'
-                }}
-              >
-                Dashboard
+              <Link href="/">
+                <Button style={{ backgroundColor: '#1A5276' }} className="text-white hover:opacity-90">
+                  Dashboard
+                </Button>
               </Link>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div style={{ padding: '2rem 1.5rem' }}>
-        <div style={{ maxWidth: '80rem', margin: '0 auto' }}>
-          
-          {recommendations.length > 0 ? (
-            <>
-              {/* Results Summary */}
-              <div style={{
-                backgroundColor: '#f0fdf4',
-                border: '1px solid #bbf7d0',
-                borderRadius: '0.5rem',
-                padding: '1rem',
-                marginBottom: '2rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}>
-                <CheckCircle style={{ width: '1.25rem', height: '1.25rem', color: '#15803d' }} />
-                <div>
-                  <p style={{ color: '#15803d', fontWeight: '600', marginBottom: '0.25rem' }}>
-                    Found {recommendations.length} {isEnhanced ? 'Enhanced' : 'AI'} Recommendations
-                  </p>
-                  <p style={{ color: '#166534', fontSize: '0.875rem' }}>
-                    {isEnhanced 
-                      ? 'Each vendor has been analyzed using performance data, client ratings, and project fit scoring'
-                      : 'Recommendations generated based on your project requirements'
-                    }
-                  </p>
-                </div>
-              </div>
-
-              {/* Recommendations Grid */}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))', 
-                gap: '1.5rem' 
-              }}>
-                {recommendations.map((rec, index) => {
-                  const isEnhanced = isEnhancedRecommendation(rec);
-                  const scoreColors = isEnhanced ? getScoreColor(rec.viraScore) : null;
-                  
-                  return (
-                    <div key={index} className="professional-card" style={{ overflow: 'hidden' }}>
-                      {/* Vendor Header */}
-                      <div style={{
-                        height: isEnhanced ? '6rem' : '4rem',
-                        background: `linear-gradient(135deg, #1A5276 0%, #6B8F71 100%)`,
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '1rem 1.5rem'
-                      }}>
-                        <div style={{ color: 'white' }}>
-                          <h3 style={{ 
-                            fontSize: '1.125rem', 
-                            fontWeight: '600', 
-                            marginBottom: '0.25rem',
-                            lineHeight: '1.3'
-                          }}>
-                            {rec.vendorName}
-                          </h3>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            fontSize: '0.875rem',
-                            opacity: 0.9
-                          }}>
-                            <span>#{index + 1} Recommendation</span>
-                            {isEnhanced && (
-                              <>
-                                <span>•</span>
-                                <span>{getScoreLabel(rec.viraScore)}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {isEnhanced && scoreColors && (
-                          <div style={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                            backdropFilter: 'blur(10px)',
-                            borderRadius: '0.5rem',
-                            padding: '0.75rem',
-                            textAlign: 'center',
-                            minWidth: '5rem'
-                          }}>
-                            <div style={{ 
-                              fontSize: '1.5rem', 
-                              fontWeight: 'bold', 
-                              color: 'white',
-                              marginBottom: '0.25rem'
-                            }}>
-                              {rec.viraScore.toFixed(1)}
-                            </div>
-                            <div style={{ 
-                              fontSize: '0.75rem', 
-                              color: 'rgba(255, 255, 255, 0.8)',
-                              fontWeight: '500'
-                            }}>
-                              ViRA Score
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Vendor Content */}
-                      <div style={{ padding: '1.5rem' }}>
-                        
-                        {/* Key Strengths (Enhanced only) */}
-                        {isEnhanced && rec.keyStrengths && (
-                          <div style={{ marginBottom: '1rem' }}>
-                            <h4 style={{ 
-                              fontSize: '0.875rem', 
-                              fontWeight: '600', 
-                              color: '#111827', 
-                              marginBottom: '0.5rem',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.25rem'
-                            }}>
-                              <TrendingUp style={{ width: '0.875rem', height: '0.875rem' }} />
-                              Key Strengths
-                            </h4>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                              {rec.keyStrengths.map((strength, idx) => (
-                                <span
-                                  key={idx}
-                                  style={{
-                                    padding: '0.25rem 0.75rem',
-                                    backgroundColor: '#E8F4F8',
-                                    color: '#1A5276',
-                                    borderRadius: '9999px',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '500'
-                                  }}
-                                >
-                                  {strength}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Analysis/Reason */}
-                        <div style={{ marginBottom: '1rem' }}>
-                          <h4 style={{ 
-                            fontSize: '0.875rem', 
-                            fontWeight: '600', 
-                            color: '#111827', 
-                            marginBottom: '0.5rem' 
-                          }}>
-                            {isEnhanced ? 'ViRA Analysis' : 'Why This Vendor'}
-                          </h4>
-                          <p style={{ 
-                            color: '#6b7280', 
-                            fontSize: '0.875rem', 
-                            lineHeight: '1.5'
-                          }}>
-                            {rec.reason}
-                          </p>
-                        </div>
-
-                        {/* Considerations (Enhanced only) */}
-                        {isEnhanced && rec.considerations && (
-                          <div style={{ marginBottom: '1rem' }}>
-                            <h4 style={{ 
-                              fontSize: '0.875rem', 
-                              fontWeight: '600', 
-                              color: '#111827', 
-                              marginBottom: '0.5rem',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.25rem'
-                            }}>
-                              <AlertCircle style={{ width: '0.875rem', height: '0.875rem' }} />
-                              Considerations
-                            </h4>
-                            <p style={{ 
-                              color: '#6b7280', 
-                              fontSize: '0.875rem', 
-                              lineHeight: '1.4',
-                              fontStyle: 'italic'
-                            }}>
-                              {rec.considerations}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Action Buttons */}
-                        <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
-                          <button style={{
-                            flex: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.5rem',
-                            padding: '0.75rem',
-                            backgroundColor: '#1A5276',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '0.375rem',
-                            cursor: 'pointer',
-                            fontSize: '0.875rem',
-                            fontWeight: '500',
-                            transition: 'background-color 150ms'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#154466';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1A5276';
-                          }}
-                          >
-                            <Mail style={{ width: '1rem', height: '1rem' }} />
-                            Contact Vendor
-                          </button>
-                          
-                          <button style={{
-                            padding: '0.75rem',
-                            backgroundColor: '#6B8F71',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '0.375rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'background-color 150ms'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#5a7660';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#6B8F71';
-                          }}
-                          >
-                            <Star style={{ width: '1rem', height: '1rem' }} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Enhancement Notice */}
-              {isEnhanced && (
-                <div className="professional-card" style={{ 
-                  marginTop: '2rem', 
-                  padding: '1.5rem',
-                  backgroundColor: '#fef9c3',
-                  border: '1px solid #fde047'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'start', gap: '1rem' }}>
-                    <Trophy style={{ width: '1.5rem', height: '1.5rem', color: '#ca8a04', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <div>
-                      <h3 style={{ fontWeight: '600', color: '#92400e', marginBottom: '0.5rem' }}>
-                        Enhanced by ViRA Intelligence
-                      </h3>
-                      <p style={{ color: '#a16207', fontSize: '0.875rem', lineHeight: '1.5' }}>
-                        These recommendations are powered by real client ratings, project performance data, and AI analysis. 
-                        ViRA Scores consider service category fit, project scope alignment, historical performance, 
-                        and client satisfaction metrics to provide data-driven vendor recommendations.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            // [R7.4] No recommendations found
-            <div style={{ textAlign: 'center', padding: '3rem' }}>
-              <div style={{
-                width: '4rem',
-                height: '4rem',
-                backgroundColor: '#f3f4f6',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 1rem'
-              }}>
-                <AlertCircle style={{ width: '2rem', height: '2rem', color: '#9ca3af' }} />
-              </div>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '0.5rem' }}>
-                No Recommendations Found
-              </h3>
-              <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
-                We couldn't find any matching vendors for your criteria. Please try adjusting your search.
-              </p>
-              <Link
-                href="/vira-match"
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#1A5276',
-                  color: 'white',
-                  textDecoration: 'none',
-                  borderRadius: '0.5rem',
-                  fontWeight: '500'
-                }}
-              >
-                Try New Search
-              </Link>
+          {recommendations.length > 0 && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span className="text-green-800 font-medium">
+                Found {recommendations.length} perfect matches - ranked by ViRA Score
+              </span>
             </div>
           )}
         </div>
       </div>
+
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        {recommendations.length > 0 ? (
+          <div className="space-y-6">
+            {recommendations.map((rec, index) => {
+              const isEnhanced = isEnhancedRecommendation(rec)
+
+              return (
+                <Card key={index} className="overflow-hidden">
+                  {/* Ranking Header */}
+                  <div className="h-20 relative" style={{ backgroundColor: isEnhanced ? getScoreColor(rec.viraScore) : '#6E6F71' }}>
+                    <div className="flex items-center justify-between h-full px-6 text-white">
+                      <div className="flex items-center gap-4">
+                        {getRankIcon(index)}
+                        <div>
+                          <h2 className="text-xl font-bold">{rec.vendorName}</h2>
+                          <p className="text-sm opacity-90">{getRankLabel(index)}</p>
+                        </div>
+                      </div>
+
+                      {isEnhanced && (
+                        <div className="text-right">
+                          <div className="text-3xl font-bold">{rec.viraScore}</div>
+                          <div className="text-sm opacity-90">ViRA Score</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-6">
+                    {/* Key Strengths */}
+                    {isEnhanced && rec.keyStrengths && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4" />
+                          Key Strengths
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {rec.keyStrengths.map((strength, idx) => (
+                            <Badge key={idx} variant="secondary" className="bg-blue-50 text-blue-700">
+                              {strength}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Concise Analysis */}
+                    <div className="mb-4">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                        {isEnhanced ? 'ViRA Analysis' : 'Why This Vendor'}
+                      </h4>
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        {truncateAnalysis(rec.reason)}
+                      </p>
+                    </div>
+
+                    {/* Considerations */}
+                    {isEnhanced && rec.considerations && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" />
+                          Considerations
+                        </h4>
+                        <p className="text-gray-600 text-sm italic">
+                          {rec.considerations}
+                        </p>
+                      </div>
+                    )}
+
+                  </div>
+                </Card>
+              )
+            })}
+
+            {/* Enhancement Notice */}
+            {isEnhanced && (
+              <Card className="p-6 border-2" style={{ backgroundColor: '#f8fafc', borderColor: '#1A5276' }}>
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#1A5276' }}>
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Enhanced by ViRA Intelligence</h3>
+                    <p className="text-gray-700 text-sm leading-relaxed">
+                      These recommendations are powered by real performance data, client ratings, and AI analysis.
+                      ViRA Scores consider service fit, project alignment, and satisfaction metrics for data-driven vendor selection.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Recommendations Found</h3>
+            <p className="text-gray-600 mb-6">
+              We couldn&apos;t find any matching vendors for your criteria. Please try adjusting your search.
+            </p>
+            <Link href="/vira-match">
+              <Button style={{ backgroundColor: '#1A5276' }} className="text-white hover:opacity-90">
+                Try New Search
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
-  );
+  )
 }
 
-// [R1] Main page component with Suspense boundary for useSearchParams
 export default function RecommendationsPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
-        <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-          <div style={{ padding: '1.5rem' }}>
-            <h1 style={{
-              fontSize: '1.875rem',
-              fontFamily: 'var(--font-headline)',
-              fontWeight: 'bold',
-              color: '#1A5276'
-            }}>Vendor Recommendations</h1>
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-4xl mx-auto px-6 py-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center animate-pulse" style={{ backgroundColor: '#1A5276' }}>
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Your ViRA Recommendations</h1>
+                <p className="text-gray-600">Loading your perfect vendor matches...</p>
+              </div>
+            </div>
           </div>
         </div>
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <div style={{
-            width: '2rem',
-            height: '2rem',
-            border: '2px solid #1A5276',
-            borderTop: '2px solid transparent',
-            borderRadius: '50%',
-            margin: '0 auto 1rem',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          <p style={{ color: '#6b7280' }}>Loading recommendations...</p>
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#1A5276', borderTopColor: 'transparent' }}></div>
+          </div>
         </div>
-        <style jsx>{`
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     }>
       <RecommendationsContent />
     </Suspense>
-  );
+  )
 }

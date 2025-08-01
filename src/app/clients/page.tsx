@@ -2,16 +2,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building, Plus, Eye, Calendar, MapPin, Phone } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Building, Plus } from 'lucide-react';
 import { Client, ClientsApiResponse } from '@/types';
+import ClientModal from '@/components/modals/ClientModal';
 
 export default function ClientsPage() {
-  const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filter states
   const [selectedIndustry, setSelectedIndustry] = useState('all');
 
@@ -24,7 +25,7 @@ export default function ClientsPage() {
 
         const response = await fetch(`/api/clients?${params.toString()}`);
         if (!response.ok) throw new Error('Failed to fetch clients');
-        
+
         const data: ClientsApiResponse = await response.json();
         setClients(data.clients || []);
       } catch (err) {
@@ -191,7 +192,7 @@ export default function ClientsPage() {
 
         {/* Client List - 2 Column Layout matching vendor page style */}
         {!loading && !error && clients.length > 0 && (
-          <div style={{ 
+          <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '1rem',
@@ -199,12 +200,21 @@ export default function ClientsPage() {
             margin: '0 auto'
           }}>
             {clients.map((client) => (
-              <div key={client.client_id} className="professional-card" style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                padding: '1rem 1.5rem',
-                minHeight: '5rem'
-              }}>
+              <div
+                key={client.client_id}
+                className="professional-card"
+                onClick={() => {
+                  setSelectedClient(client);
+                  setIsModalOpen(true);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '1rem 1.5rem',
+                  minHeight: '5rem',
+                  cursor: 'pointer'
+                }}
+              >
                 {/* Client Avatar */}
                 <div style={{
                   width: '3rem',
@@ -225,15 +235,15 @@ export default function ClientsPage() {
                 {/* Main Client Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                    <h3 style={{ 
-                      fontSize: '1.125rem', 
-                      fontWeight: '600', 
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
                       color: '#111827',
                       margin: 0
                     }}>
                       {client.client_name}
                     </h3>
-                    
+
                     {/* Projects count */}
                     {client.total_projects !== undefined && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -247,7 +257,7 @@ export default function ClientsPage() {
                     <span style={{ fontWeight: '500', color: '#1A5276' }}>
                       {client.industry || 'Industry Not Set'}
                     </span>
-                    
+
                     {/* Status Badge */}
                     <div style={{
                       padding: '0.125rem 0.5rem',
@@ -260,61 +270,6 @@ export default function ClientsPage() {
                       Active
                     </div>
                   </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginLeft: '1rem' }}>
-                  <button 
-                    onClick={() => {
-                      console.log('View button clicked for client:', client.client_id, client.client_name);
-                      router.push(`/clients/${client.client_id}`);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#1A5276',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      minWidth: '120px',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <Eye style={{ width: '1rem', height: '1rem' }} />
-                    View Client
-                  </button>
-                  
-                  <button 
-                    onClick={() => {
-                      console.log('Edit button clicked for client:', client.client_id, client.client_name);
-                      router.push(`/clients/${client.client_id}/edit`);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#6B8F71',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      minWidth: '120px',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Edit Client
-                  </button>
                 </div>
               </div>
             ))}
@@ -331,6 +286,18 @@ export default function ClientsPage() {
           </div>
         )}
       </div>
+
+      {/* Client Modal */}
+      {selectedClient && (
+        <ClientModal
+          client={selectedClient}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedClient(null);
+          }}
+        />
+      )}
 
       <style jsx>{`
         @keyframes spin {

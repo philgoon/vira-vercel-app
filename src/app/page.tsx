@@ -4,16 +4,13 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { 
-  Users, 
-  Briefcase, 
-  Building, 
-  Star, 
-  Search, 
-  ChevronRight, 
-  Database,
-  TrendingUp,
-  Activity
+import {
+  Users,
+  Briefcase,
+  Building,
+  Star,
+  Search,
+  TrendingUp
 } from 'lucide-react';
 
 interface DatabaseStats {
@@ -110,7 +107,7 @@ export default function DashboardPage() {
       {/* Main Content */}
       <div style={{ padding: '2rem 1.5rem' }}>
         <div style={{ maxWidth: '80rem', margin: '0 auto' }}>
-          
+
           {/* System Status */}
           {loading && (
             <div className="professional-card" style={{ padding: '2rem', textAlign: 'center', marginBottom: '2rem' }}>
@@ -144,61 +141,147 @@ export default function DashboardPage() {
 
           {stats && (
             <>
-              {/* Welcome Section */}
-              <div style={{ marginBottom: '2rem' }}>
+              {/* Hero Section - Primary Business Actions */}
+              <div style={{ marginBottom: '3rem' }}>
+
                 <div style={{
-                  backgroundColor: '#f0fdf4',
-                  border: '1px solid #bbf7d0',
-                  borderRadius: '0.5rem',
-                  padding: '1.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem'
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))',
+                  gap: '2rem',
+                  maxWidth: '1200px',
+                  margin: '0 auto'
                 }}>
-                  <div style={{
-                    width: '3rem',
-                    height: '3rem',
-                    backgroundColor: '#15803d',
-                    borderRadius: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <Activity style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
-                  </div>
-                  <div>
-                    <h3 style={{ color: '#15803d', fontWeight: '600', marginBottom: '0.25rem' }}>
-                      System Online & Ready
-                    </h3>
-                    <p style={{ color: '#166534', fontSize: '0.875rem' }}>
-                      All systems operational. Database connected with {stats.vendors + stats.projects + stats.clients + stats.ratings} total records.
-                    </p>
-                  </div>
+                  {/* ViRA Match - Primary CTA */}
+                  <Link href="/vira-match" style={{ textDecoration: 'none' }}>
+                    <div className="professional-card" style={{
+                      padding: '2rem',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 200ms',
+                      backgroundColor: '#1A5276',
+                      color: 'white',
+                      border: 'none'
+                    }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
+                        e.currentTarget.style.backgroundColor = '#154466';
+                        e.currentTarget.style.boxShadow = '0 20px 40px -8px rgba(26, 82, 118, 0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                        e.currentTarget.style.backgroundColor = '#1A5276';
+                        e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
+                      }}
+                    >
+                      <div style={{
+                        width: '4rem',
+                        height: '4rem',
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        borderRadius: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 1rem'
+                      }}>
+                        <Search style={{ width: '2rem', height: '2rem', color: 'white' }} />
+                      </div>
+                      <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
+                        ViRA Match
+                      </h3>
+                      <p style={{ fontSize: '1.125rem', opacity: 0.9, marginBottom: '1rem' }}>
+                        Find the perfect vendor for your next project using AI-powered matching
+                      </p>
+                      <div style={{
+                        padding: '0.75rem 2rem',
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        borderRadius: '2rem',
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        display: 'inline-block'
+                      }}>
+                        Start Matching →
+                      </div>
+                    </div>
+                  </Link>
+
+                  {/* Review Ratings - Secondary CTA */}
+                  <Link href="/ratings" style={{ textDecoration: 'none' }}>
+                    <div className="professional-card" style={{
+                      padding: '2rem',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 200ms',
+                      backgroundColor: '#6B8F71',
+                      color: 'white',
+                      border: 'none'
+                    }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
+                        e.currentTarget.style.backgroundColor = '#5a7a60';
+                        e.currentTarget.style.boxShadow = '0 20px 40px -8px rgba(107, 143, 113, 0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                        e.currentTarget.style.backgroundColor = '#6B8F71';
+                        e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
+                      }}
+                    >
+                      <div style={{
+                        width: '4rem',
+                        height: '4rem',
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        borderRadius: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 1rem'
+                      }}>
+                        <Star style={{ width: '2rem', height: '2rem', color: 'white' }} />
+                      </div>
+                      <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
+                        Review Ratings
+                      </h3>
+                      <p style={{ fontSize: '1.125rem', opacity: 0.9, marginBottom: '1rem' }}>
+                        Review vendor ratings and monitor pending projects awaiting completion
+                      </p>
+                      <div style={{
+                        padding: '0.75rem 2rem',
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        borderRadius: '2rem',
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        display: 'inline-block'
+                      }}>
+                        Review Ratings →
+                      </div>
+                    </div>
+                  </Link>
                 </div>
               </div>
 
+
               {/* Stats Overview */}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
                 gap: '1.5rem',
                 marginBottom: '2rem'
               }}>
                 <Link href="/vendors" style={{ textDecoration: 'none' }}>
-                  <div className="professional-card" style={{ 
-                    padding: '1.5rem', 
+                  <div className="professional-card" style={{
+                    padding: '1.5rem',
                     textAlign: 'center',
                     cursor: 'pointer',
                     transition: 'transform 150ms, box-shadow 150ms'
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 10px 25px -3px rgb(0 0 0 / 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
-                  }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 10px 25px -3px rgb(0 0 0 / 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
+                    }}
                   >
                     <div style={{
                       width: '3rem',
@@ -221,20 +304,20 @@ export default function DashboardPage() {
                 </Link>
 
                 <Link href="/projects" style={{ textDecoration: 'none' }}>
-                  <div className="professional-card" style={{ 
-                    padding: '1.5rem', 
+                  <div className="professional-card" style={{
+                    padding: '1.5rem',
                     textAlign: 'center',
                     cursor: 'pointer',
                     transition: 'transform 150ms, box-shadow 150ms'
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 10px 25px -3px rgb(0 0 0 / 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
-                  }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 10px 25px -3px rgb(0 0 0 / 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
+                    }}
                   >
                     <div style={{
                       width: '3rem',
@@ -257,20 +340,20 @@ export default function DashboardPage() {
                 </Link>
 
                 <Link href="/clients" style={{ textDecoration: 'none' }}>
-                  <div className="professional-card" style={{ 
-                    padding: '1.5rem', 
+                  <div className="professional-card" style={{
+                    padding: '1.5rem',
                     textAlign: 'center',
                     cursor: 'pointer',
                     transition: 'transform 150ms, box-shadow 150ms'
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 10px 25px -3px rgb(0 0 0 / 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
-                  }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 10px 25px -3px rgb(0 0 0 / 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
+                    }}
                   >
                     <div style={{
                       width: '3rem',
@@ -292,211 +375,44 @@ export default function DashboardPage() {
                   </div>
                 </Link>
 
-                <div className="professional-card" style={{ padding: '1.5rem', textAlign: 'center' }}>
-                  <div style={{
-                    width: '3rem',
-                    height: '3rem',
-                    backgroundColor: '#FEF3C7',
-                    borderRadius: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 1rem'
-                  }}>
-                    <Star style={{ width: '1.5rem', height: '1.5rem', color: '#D97706' }} />
-                  </div>
-                  <h3 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#D97706', marginBottom: '0.5rem' }}>
-                    {stats.ratings}
-                  </h3>
-                  <p style={{ color: '#6b7280', fontWeight: '500', marginBottom: '0.5rem' }}>Ratings</p>
-                  <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Data source</p>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', 
-                gap: '1.5rem',
-                marginBottom: '2rem'
-              }}>
-                <Link href="/vira-match" style={{ textDecoration: 'none' }}>
-                  <div className="professional-card" style={{ 
+                <Link href="/ratings" style={{ textDecoration: 'none' }}>
+                  <div className="professional-card" style={{
                     padding: '1.5rem',
+                    textAlign: 'center',
                     cursor: 'pointer',
-                    transition: 'transform 150ms'
+                    transition: 'transform 150ms, box-shadow 150ms'
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 10px 25px -3px rgb(0 0 0 / 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
+                    }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <div style={{
-                        width: '3rem',
-                        height: '3rem',
-                        backgroundColor: '#E8F4F8',
-                        borderRadius: '0.5rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Search style={{ width: '1.5rem', height: '1.5rem', color: '#1A5276' }} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{ fontWeight: '600', color: '#111827', marginBottom: '0.25rem' }}>
-                          ViRA Match
-                        </h3>
-                        <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                          Find the perfect vendor for your next project
-                        </p>
-                      </div>
-                      <ChevronRight style={{ width: '1.25rem', height: '1.25rem', color: '#9ca3af' }} />
+                    <div style={{
+                      width: '3rem',
+                      height: '3rem',
+                      backgroundColor: '#FEF3C7',
+                      borderRadius: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 1rem'
+                    }}>
+                      <Star style={{ width: '1.5rem', height: '1.5rem', color: '#D97706' }} />
                     </div>
+                    <h3 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#D97706', marginBottom: '0.5rem' }}>
+                      {stats.ratings}
+                    </h3>
+                    <p style={{ color: '#6b7280', fontWeight: '500', marginBottom: '0.5rem' }}>Ratings</p>
+                    <p style={{ color: '#D97706', fontSize: '0.875rem', fontWeight: '500' }}>Review →</p>
                   </div>
                 </Link>
-
-                <Link href="/rate-project" style={{ textDecoration: 'none' }}>
-                  <div className="professional-card" style={{ 
-                    padding: '1.5rem',
-                    cursor: 'pointer',
-                    transition: 'transform 150ms'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <div style={{
-                        width: '3rem',
-                        height: '3rem',
-                        backgroundColor: '#FEF3C7',
-                        borderRadius: '0.5rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Star style={{ width: '1.5rem', height: '1.5rem', color: '#D97706' }} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{ fontWeight: '600', color: '#111827', marginBottom: '0.25rem' }}>
-                          Rate Project
-                        </h3>
-                        <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                          Submit ratings for completed projects
-                        </p>
-                      </div>
-                      <ChevronRight style={{ width: '1.25rem', height: '1.25rem', color: '#9ca3af' }} />
-                    </div>
-                  </div>
-                </Link>
-
-                {/* Add Sample Data Button - For Testing */}
-                {stats && (stats.vendors + stats.projects + stats.clients) === 0 && (
-                  <div className="professional-card" style={{ 
-                    padding: '1.5rem',
-                    cursor: 'pointer',
-                    transition: 'transform 150ms',
-                    backgroundColor: '#fef3c7',
-                    border: '1px solid #fde047'
-                  }}
-                  onClick={async () => {
-                    try {
-                      const response = await fetch('/api/add-sample-data', {
-                        method: 'POST'
-                      });
-                      if (response.ok) {
-                        window.location.reload();
-                      } else {
-                        alert('Failed to add sample data');
-                      }
-                    } catch (error) {
-                      alert('Error adding sample data');
-                    }
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <div style={{
-                        width: '3rem',
-                        height: '3rem',
-                        backgroundColor: '#fbbf24',
-                        borderRadius: '0.5rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Database style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{ fontWeight: '600', color: '#92400e', marginBottom: '0.25rem' }}>
-                          Add Sample Data
-                        </h3>
-                        <p style={{ color: '#a16207', fontSize: '0.875rem' }}>
-                          Click to add test vendors, projects, and clients
-                        </p>
-                      </div>
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: '#f59e0b',
-                        color: 'white',
-                        borderRadius: '9999px',
-                        fontSize: '0.75rem',
-                        fontWeight: '500'
-                      }}>
-                        Setup
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* System Info */}
-              <div className="professional-card" style={{ padding: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                  <Database style={{ width: '1.25rem', height: '1.25rem', color: '#1A5276' }} />
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827' }}>
-                    System Status
-                  </h3>
-                </div>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-                  gap: '1rem',
-                  fontSize: '0.875rem'
-                }}>
-                  <div>
-                    <span style={{ color: '#6b7280' }}>Database:</span>
-                    <span style={{ fontWeight: '500', color: '#15803d', marginLeft: '0.5rem' }}>Connected ✓</span>
-                  </div>
-                  <div>
-                    <span style={{ color: '#6b7280' }}>Total Records:</span>
-                    <span style={{ fontWeight: '500', color: '#374151', marginLeft: '0.5rem' }}>
-                      {stats.vendors + stats.projects + stats.clients + stats.ratings}
-                    </span>
-                  </div>
-                  <div>
-                    <span style={{ color: '#6b7280' }}>AI Matching:</span>
-                    <span style={{ fontWeight: '500', color: '#15803d', marginLeft: '0.5rem' }}>Ready ✓</span>
-                  </div>
-                  <div>
-                    <span style={{ color: '#6b7280' }}>Last Updated:</span>
-                    <span style={{ fontWeight: '500', color: '#374151', marginLeft: '0.5rem' }}>
-                      {new Date().toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
+
             </>
           )}
         </div>
