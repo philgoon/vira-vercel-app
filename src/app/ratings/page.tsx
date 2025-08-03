@@ -28,11 +28,11 @@ type ProjectWithRating = Project & {
     rating_date: string;
   } | null;
   rating_status: 'Complete' | 'Incomplete' | 'Needs Review';
-  vendors: {
+  vendor: {
     vendor_name: string;
     service_categories?: string;
   } | null;
-  clients: {
+  client: {
     client_name: string;
   } | null;
 };
@@ -57,7 +57,7 @@ export default function RatingsPage() {
         const response = await fetch('/api/ratings');
         const data = await response.json();
         if (response.ok) {
-          setProjects(data.projects);
+          setProjects(data);
         } else {
           throw new Error(data.error || 'Failed to fetch projects');
         }
@@ -76,7 +76,8 @@ export default function RatingsPage() {
     .filter(project => {
       if (selectedFilter === 'All') return true;
       if (selectedFilter === 'Needs Review') return project.rating_status === 'Needs Review';
-      if (selectedFilter === 'Rated') return project.rating_status === 'Complete' || project.rating_status === 'Incomplete';
+      if (selectedFilter === 'Incomplete') return project.rating_status === 'Incomplete';
+      if (selectedFilter === 'Complete') return project.rating_status === 'Complete';
       return true;
     })
     .sort((a, b) => {
@@ -89,7 +90,7 @@ export default function RatingsPage() {
   // Handle project card click
   const handleProjectClick = (project: ProjectWithRating) => {
     setSelectedProject(project);
-    if (project.rating) {
+    if (project.rating_status === 'Complete') {
       setIsViewModalOpen(true);
     } else {
       setIsSubmissionModalOpen(true);
@@ -140,7 +141,7 @@ export default function RatingsPage() {
               Filter by Status
             </h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {['All', 'Needs Review', 'Rated'].map(filter => (
+              {['All', 'Needs Review', 'Incomplete', 'Complete'].map(filter => (
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
@@ -235,7 +236,8 @@ export default function RatingsPage() {
                 <div style={{
                   width: '3rem',
                   height: '3rem',
-                  backgroundColor: project.rating ? '#1A5276' : '#F59E0B',
+                  backgroundColor: project.rating_status === 'Complete' ? '#1A5276' :
+                    project.rating_status === 'Incomplete' ? '#F59E0B' : '#EF4444',
                   borderRadius: '0.5rem',
                   display: 'flex',
                   alignItems: 'center',
@@ -263,32 +265,22 @@ export default function RatingsPage() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
                     <span style={{ fontWeight: '500', color: '#1A5276' }}>
-                      {project.vendors?.vendor_name || 'N/A'}
+                      {project.project_overall_rating_calc || 'N/A'}
                     </span>
 
                     {/* Status Badge */}
                     <div style={{
                       padding: '0.125rem 0.5rem',
-                      backgroundColor: project.rating ? '#e0eaf1' : '#fef3c7',
-                      color: project.rating ? '#1A5276' : '#92400e',
+                      backgroundColor: project.rating_status === 'Complete' ? '#dcfce7' :
+                        project.rating_status === 'Incomplete' ? '#fef9c3' : '#fef2f2',
+                      color: project.rating_status === 'Complete' ? '#166534' :
+                        project.rating_status === 'Incomplete' ? '#92400e' : '#dc2626',
                       borderRadius: '9999px',
                       fontSize: '0.75rem',
                       fontWeight: '500'
                     }}>
-                      {project.rating ? 'Rated' : 'Needs Review'}
+                      {project.rating_status}
                     </div>
-                    {project.rating && (
-                      <div style={{
-                        padding: '0.125rem 0.5rem',
-                        backgroundColor: project.rating_status === 'Complete' ? '#dcfce7' : '#fef9c3',
-                        color: project.rating_status === 'Complete' ? '#166534' : '#92400e',
-                        borderRadius: '9999px',
-                        fontSize: '0.75rem',
-                        fontWeight: '500'
-                      }}>
-                        {project.rating_status}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -318,7 +310,7 @@ export default function RatingsPage() {
         />
       )}
 
-      {selectedProject && !selectedProject.rating && (
+      {selectedProject && (selectedProject.rating_status === 'Needs Review' || selectedProject.rating_status === 'Incomplete') && (
         <RatingSubmissionModal
           project={selectedProject}
           isOpen={isSubmissionModalOpen}

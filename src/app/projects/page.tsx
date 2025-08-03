@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Calendar, Building, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Building } from 'lucide-react';
 import { Project, ProjectsApiResponse } from '@/types';
 import ProjectModal from '../../components/modals/ProjectModal';
 
@@ -15,22 +15,31 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Vendor category filter states
-  const [allVendorCategories, setAllVendorCategories] = useState<string[]>([]);
-  const [selectedVendorCategory, setSelectedVendorCategory] = useState('all');
+  // Vendor name filter states
+  const [allVendorNames, setAllVendorNames] = useState<string[]>([]);
+  const [selectedVendorNames, setSelectedVendorNames] = useState<string[]>([]);
 
   // [R7.5] Fetch projects from Supabase API
   useEffect(() => {
     async function fetchProjects() {
       try {
-        const params = new URLSearchParams();
-        if (selectedVendorCategory !== 'all') params.set('vendor_category', selectedVendorCategory);
-
-        const response = await fetch(`/api/projects?${params.toString()}`);
+        const response = await fetch('/api/projects');
         if (!response.ok) throw new Error('Failed to fetch projects');
 
         const data: ProjectsApiResponse = await response.json();
-        setProjects(data.projects || []);
+        let projectList = data.projects || [];
+
+        // Client-side filtering for vendor names
+        if (selectedVendorNames.length > 0) {
+          projectList = projectList.filter(project => {
+            const vendorName = project.vendor_name;
+            return vendorName && selectedVendorNames.some(selectedName =>
+              vendorName.toLowerCase().includes(selectedName.toLowerCase())
+            );
+          });
+        }
+
+        setProjects(projectList);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch projects');
       } finally {
@@ -39,7 +48,7 @@ export default function ProjectsPage() {
     }
 
     fetchProjects();
-  }, [selectedVendorCategory]);
+  }, [selectedVendorNames]);
 
   // [R5.3] Clear error after some time
   useEffect(() => {
@@ -49,78 +58,41 @@ export default function ProjectsPage() {
     }
   }, [error]);
 
-  // Fetch all vendor categories from projects on component mount
+  // Fetch all vendor names from projects on component mount
   useEffect(() => {
-    async function fetchAllVendorCategories() {
+    async function fetchAllVendorNames() {
       try {
         const response = await fetch('/api/projects');
         if (response.ok) {
           const data: ProjectsApiResponse = await response.json();
           const allProjects = data.projects || [];
 
-          const categorySet = new Set<string>();
+          const vendorNameSet = new Set<string>();
           allProjects.forEach(project => {
-            if (project.vendors?.service_categories) {
-              const categories = Array.isArray(project.vendors.service_categories)
-                ? project.vendors.service_categories
-                : [project.vendors.service_categories].filter(Boolean);
-              categories.forEach(cat => {
-                if (cat && typeof cat === 'string' && cat.trim()) {
-                  categorySet.add(cat.trim());
-                }
-              });
+            if (project.vendor_name && typeof project.vendor_name === 'string' && project.vendor_name.trim()) {
+              vendorNameSet.add(project.vendor_name.trim());
             }
           });
 
-          setAllVendorCategories(Array.from(categorySet).sort());
+          setAllVendorNames(Array.from(vendorNameSet).sort());
         }
       } catch (err) {
-        console.error('Failed to fetch vendor categories:', err);
+        console.error('Failed to fetch vendor names:', err);
       }
     }
 
-    fetchAllVendorCategories();
+    fetchAllVendorNames();
   }, []);
 
-  // [R7.6] Helper functions
-  const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return <CheckCircle style={{ width: '1rem', height: '1rem' }} />;
-      case 'in progress':
-      case 'active':
-        return <Clock style={{ width: '1rem', height: '1rem' }} />;
-      case 'planning':
-      case 'proposed':
-        return <AlertCircle style={{ width: '1rem', height: '1rem' }} />;
-      default:
-        return <Clock style={{ width: '1rem', height: '1rem' }} />;
-    }
+  // Toggle vendor name selection
+  const toggleVendorName = (vendorName: string) => {
+    setSelectedVendorNames(prev =>
+      prev.includes(vendorName)
+        ? prev.filter(name => name !== vendorName)
+        : [...prev, vendorName]
+    );
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return { color: '#166534', backgroundColor: '#dcfce7', borderColor: '#bbf7d0' };
-      case 'in progress':
-      case 'active':
-        return { color: '#ca8a04', backgroundColor: '#fef3c7', borderColor: '#fde68a' };
-      case 'planning':
-      case 'proposed':
-        return { color: '#1d4ed8', backgroundColor: '#dbeafe', borderColor: '#93c5fd' };
-      default:
-        return { color: '#6b7280', backgroundColor: '#f9fafb', borderColor: '#e5e7eb' };
-    }
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Not set';
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch {
-      return dateString;
-    }
-  };
 
   const handleProjectClick = (project: Project) => {
     setSelectedProject(project);
@@ -166,48 +138,48 @@ export default function ProjectsPage() {
       {/* Filters */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ padding: '1rem 1.5rem' }}>
-          {/* Vendor Category Filter Buttons */}
-          {allVendorCategories.length > 0 && (
+          {/* Vendor Name Filter Buttons */}
+          {allVendorNames.length > 0 && (
             <div style={{ marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                Filter by Vendor Category
+                Filter by Vendor Name
               </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <button
-                  onClick={() => setSelectedVendorCategory('all')}
+                  onClick={() => setSelectedVendorNames([])}
                   style={{
                     padding: '0.5rem 1rem',
                     borderRadius: '9999px',
                     border: '1px solid',
-                    borderColor: selectedVendorCategory === 'all' ? '#1A5276' : '#d1d5db',
-                    backgroundColor: selectedVendorCategory === 'all' ? '#1A5276' : 'white',
-                    color: selectedVendorCategory === 'all' ? 'white' : '#374151',
+                    borderColor: selectedVendorNames.length === 0 ? '#1A5276' : '#d1d5db',
+                    backgroundColor: selectedVendorNames.length === 0 ? '#1A5276' : 'white',
+                    color: selectedVendorNames.length === 0 ? 'white' : '#374151',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
                     fontWeight: '500',
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  All Categories
+                  All Vendors
                 </button>
-                {allVendorCategories.map(category => (
+                {allVendorNames.map(vendorName => (
                   <button
-                    key={category}
-                    onClick={() => setSelectedVendorCategory(category)}
+                    key={vendorName}
+                    onClick={() => toggleVendorName(vendorName)}
                     style={{
                       padding: '0.5rem 1rem',
                       borderRadius: '9999px',
                       border: '1px solid',
-                      borderColor: selectedVendorCategory === category ? '#1A5276' : '#d1d5db',
-                      backgroundColor: selectedVendorCategory === category ? '#1A5276' : 'white',
-                      color: selectedVendorCategory === category ? 'white' : '#374151',
+                      borderColor: selectedVendorNames.includes(vendorName) ? '#1A5276' : '#d1d5db',
+                      backgroundColor: selectedVendorNames.includes(vendorName) ? '#1A5276' : 'white',
+                      color: selectedVendorNames.includes(vendorName) ? 'white' : '#374151',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
                       fontWeight: '500',
                       transition: 'all 0.2s ease'
                     }}
                   >
-                    {category}
+                    {vendorName}
                   </button>
                 ))}
               </div>
@@ -264,7 +236,7 @@ export default function ProjectsPage() {
               No projects found
             </h3>
             <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
-              {selectedVendorCategory === 'all' ? 'No projects exist yet.' : `No projects found for "${selectedVendorCategory}" category.`}
+              {selectedVendorNames.length === 0 ? 'No projects exist yet.' : `No projects found for selected vendors.`}
             </p>
             <button style={{
               padding: '0.5rem 1rem',
@@ -321,53 +293,42 @@ export default function ProjectsPage() {
 
                 {/* Main Project Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                  {/* Line 1: Clean project title only */}
+                  <div style={{ marginBottom: '0.25rem' }}>
                     <h3 style={{
                       fontSize: '1.125rem',
                       fontWeight: '600',
                       color: '#111827',
-                      margin: 0,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      maxWidth: '200px'
+                      margin: 0
                     }}>
                       {project.project_title}
                     </h3>
-
-                    {/* Due date */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <Calendar style={{ width: '1rem', height: '1rem', color: '#d1d5db' }} />
-                      <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{formatDate(project.expected_deadline)}</span>
-                    </div>
                   </div>
 
+                  {/* Line 2: Client + Vendor + Rating */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                    {/* Client Name */}
                     <span style={{ fontWeight: '500', color: '#1A5276' }}>
-                      {(() => {
-                        if (project.vendors?.service_categories) {
-                          const categories = Array.isArray(project.vendors.service_categories)
-                            ? project.vendors.service_categories
-                            : [project.vendors.service_categories];
-                          return categories[0] || 'Unassigned';
-                        }
-                        return 'Unassigned';
-                      })()}
+                      {project.client_name || 'No Client'}
                     </span>
 
-                    {/* Status Badge */}
+                    {/* Vendor Name */}
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      {project.vendor_name || 'Unassigned'}
+                    </span>
+
+                    {/* Project Rating */}
                     <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
                       padding: '0.125rem 0.5rem',
+                      backgroundColor: project.project_overall_rating_calc ? '#dcfce7' : '#f3f4f6',
+                      color: project.project_overall_rating_calc ? '#166534' : '#6b7280',
                       borderRadius: '9999px',
                       fontSize: '0.75rem',
-                      fontWeight: '500',
-                      ...getStatusColor(project.status)
+                      fontWeight: '500'
                     }}>
-                      {getStatusIcon(project.status)}
-                      {project.status || 'Unknown'}
+                      {project.project_overall_rating_calc ?
+                        `${Number(project.project_overall_rating_calc).toFixed(1)}/10` :
+                        'No rating'}
                     </div>
                   </div>
                 </div>
@@ -381,7 +342,7 @@ export default function ProjectsPage() {
           <div style={{ marginTop: '2rem', textAlign: 'center' }}>
             <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
               Showing {projects.length} projects
-              {selectedVendorCategory !== 'all' && ` for "${selectedVendorCategory}" category`}
+              {selectedVendorNames.length > 0 && ` for selected vendors`}
             </p>
           </div>
         )}

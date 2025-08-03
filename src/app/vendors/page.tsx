@@ -27,14 +27,12 @@ export default function VendorsPage() {
         const data: VendorsApiResponse = await response.json();
         let vendorList = data.vendors || [];
 
-        // Client-side filtering for categories
+        // Client-side filtering for categories (using vendor_type)
         if (selectedCategories.length > 0) {
           vendorList = vendorList.filter(vendor => {
-            const categories = Array.isArray(vendor.service_categories)
-              ? vendor.service_categories
-              : [vendor.service_categories].filter(Boolean);
-            return selectedCategories.some(selectedCat =>
-              categories.some(vendorCat => vendorCat?.toLowerCase().includes(selectedCat.toLowerCase()))
+            const vendorType = vendor.vendor_type;
+            return vendorType && selectedCategories.some(selectedCat =>
+              vendorType.toLowerCase().includes(selectedCat.toLowerCase())
             );
           });
         }
@@ -61,14 +59,9 @@ export default function VendorsPage() {
 
           const categorySet = new Set<string>();
           allVendors.forEach(vendor => {
-            const categories = Array.isArray(vendor.service_categories)
-              ? vendor.service_categories
-              : [vendor.service_categories].filter(Boolean);
-            categories.forEach(cat => {
-              if (cat && typeof cat === 'string' && cat.trim()) {
-                categorySet.add(cat.trim());
-              }
-            });
+            if (vendor.vendor_type && typeof vendor.vendor_type === 'string' && vendor.vendor_type.trim()) {
+              categorySet.add(vendor.vendor_type.trim());
+            }
           });
 
           setAllCategories(Array.from(categorySet).sort());
@@ -263,21 +256,26 @@ export default function VendorsPage() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
                     <span style={{ fontWeight: '500', color: '#1A5276' }}>
-                      {Array.isArray(vendor.service_categories)
-                        ? vendor.service_categories[0]
-                        : vendor.service_categories || 'Service Provider'}
+                      {vendor.vendor_type || 'Service Provider'}
                     </span>
 
-                    {/* Status Badge */}
+                    {/* Project Count */}
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      {vendor.total_projects || 0} projects
+                    </span>
+
+                    {/* Rating Badge */}
                     <div style={{
                       padding: '0.125rem 0.5rem',
-                      backgroundColor: vendor.status === 'Active' ? '#dcfce7' : '#f3f4f6',
-                      color: vendor.status === 'Active' ? '#166534' : '#6b7280',
+                      backgroundColor: vendor.avg_overall_rating ? '#dcfce7' : '#f3f4f6',
+                      color: vendor.avg_overall_rating ? '#166534' : '#6b7280',
                       borderRadius: '9999px',
                       fontSize: '0.75rem',
                       fontWeight: '500'
                     }}>
-                      {vendor.status || 'Unknown'}
+                      {vendor.avg_overall_rating ?
+                        `${Number(vendor.avg_overall_rating).toFixed(1)}/10` :
+                        'No ratings'}
                     </div>
                   </div>
                 </div>

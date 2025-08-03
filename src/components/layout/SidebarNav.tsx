@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Building2, GitCompareArrows, Building } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Users, GitCompareArrows, Building, Star } from 'lucide-react';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/vira-match', label: 'ViRA Match', icon: GitCompareArrows },
-  { href: '/vendors', label: 'Vendors', icon: Building2 },
+  { href: '/rate-project', label: 'Reviews', icon: Star },
+  { href: '/vendors', label: 'Vendors', icon: Users },
   { href: '/clients', label: 'Clients', icon: Building },
   { href: '/projects', label: 'Projects', icon: Briefcase },
 ];

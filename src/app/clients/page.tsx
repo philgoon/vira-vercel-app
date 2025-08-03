@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building, Plus } from 'lucide-react';
-import { Client, ClientsApiResponse } from '@/types';
+import { Building, Briefcase, Calendar } from 'lucide-react';
+import { Client } from '@/types';
 import ClientModal from '@/components/modals/ClientModal';
 
 export default function ClientsPage() {
@@ -13,21 +13,15 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filter states
-  const [selectedIndustry, setSelectedIndustry] = useState('all');
-
   // [R7.8] Fetch clients from Supabase API
   useEffect(() => {
     async function fetchClients() {
       try {
-        const params = new URLSearchParams();
-        if (selectedIndustry !== 'all') params.set('industry', selectedIndustry);
-
-        const response = await fetch(`/api/clients?${params.toString()}`);
+        const response = await fetch('/api/clients');
         if (!response.ok) throw new Error('Failed to fetch clients');
 
-        const data: ClientsApiResponse = await response.json();
-        setClients(data.clients || []);
+        const data = await response.json();
+        setClients(data || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch clients');
       } finally {
@@ -36,9 +30,7 @@ export default function ClientsPage() {
     }
 
     fetchClients();
-  }, [selectedIndustry]);
-
-  const uniqueIndustries = ['all', ...new Set(clients.map(c => c.industry).filter(Boolean) as string[])];
+  }, []);
 
   return (
     <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
@@ -57,75 +49,10 @@ export default function ClientsPage() {
                 Manage your client relationships and project history
               </p>
             </div>
-            <button style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              backgroundColor: '#6B8F71',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              fontWeight: '500'
-            }}>
-              <Plus style={{ width: '1rem', height: '1rem' }} />
-              Add New Client
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ padding: '1rem 1.5rem' }}>
-          {/* Industry Filter Buttons */}
-          <div style={{ marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-              Filter by Industry
-            </h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <button
-                onClick={() => setSelectedIndustry('all')}
-                style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: '9999px',
-                  border: '1px solid',
-                  borderColor: selectedIndustry === 'all' ? '#1A5276' : '#d1d5db',
-                  backgroundColor: selectedIndustry === 'all' ? '#1A5276' : 'white',
-                  color: selectedIndustry === 'all' ? 'white' : '#374151',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                All Industries
-              </button>
-              {uniqueIndustries.filter(industry => industry !== 'all').map(industry => (
-                <button
-                  key={industry}
-                  onClick={() => setSelectedIndustry(industry)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '9999px',
-                    border: '1px solid',
-                    borderColor: selectedIndustry === industry ? '#1A5276' : '#d1d5db',
-                    backgroundColor: selectedIndustry === industry ? '#1A5276' : 'white',
-                    color: selectedIndustry === industry ? 'white' : '#374151',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {industry}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Content */}
       <div style={{ padding: '1.5rem' }}>
@@ -174,7 +101,7 @@ export default function ClientsPage() {
               No clients found
             </h3>
             <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
-              {selectedIndustry !== 'all' ? `No clients found in ${selectedIndustry} industry.` : 'No clients exist yet.'}
+              No clients exist yet.
             </p>
             <button style={{
               padding: '0.5rem 1rem',
@@ -201,7 +128,7 @@ export default function ClientsPage() {
           }}>
             {clients.map((client) => (
               <div
-                key={client.client_id}
+                key={client.client_key}
                 className="professional-card"
                 onClick={() => {
                   setSelectedClient(client);
@@ -243,31 +170,20 @@ export default function ClientsPage() {
                     }}>
                       {client.client_name}
                     </h3>
-
-                    {/* Projects count */}
-                    {client.total_projects !== undefined && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Building style={{ width: '1rem', height: '1rem', color: '#d1d5db' }} />
-                        <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{client.total_projects} projects</span>
-                      </div>
-                    )}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                    <span style={{ fontWeight: '500', color: '#1A5276' }}>
-                      {client.industry || 'Industry Not Set'}
-                    </span>
-
-                    {/* Status Badge */}
-                    <div style={{
-                      padding: '0.125rem 0.5rem',
-                      backgroundColor: '#dcfce7',
-                      color: '#166534',
-                      borderRadius: '9999px',
-                      fontSize: '0.75rem',
-                      fontWeight: '500'
-                    }}>
-                      Active
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Briefcase style={{ width: '1rem', height: '1rem' }} />
+                      <span>
+                        {client.total_projects} {client.total_projects === 1 ? 'project' : 'projects'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Calendar style={{ width: '1rem', height: '1rem' }} />
+                      <span>
+                        Last project: {client.last_project_date ? new Date(client.last_project_date).toLocaleDateString() : 'N/A'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -281,7 +197,6 @@ export default function ClientsPage() {
           <div style={{ marginTop: '2rem', textAlign: 'center' }}>
             <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
               Showing {clients.length} clients
-              {selectedIndustry !== 'all' && ` in ${selectedIndustry}`}
             </p>
           </div>
         )}

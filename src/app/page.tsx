@@ -32,15 +32,23 @@ export default function DashboardPage() {
         const [vendorsResult, projectsResult, clientsResult, ratingsResult] = await Promise.all([
           supabase.from('vendors').select('vendor_id', { count: 'exact', head: true }),
           supabase.from('projects').select('project_id', { count: 'exact', head: true }),
-          supabase.from('clients').select('client_id', { count: 'exact', head: true }),
-          supabase.from('ratings').select('rating_id', { count: 'exact', head: true }),
+          supabase.from('clients_summary').select('*', { count: 'exact', head: true }),
+          supabase.from('projects_with_vendor').select('*', { count: 'exact', head: true }).eq('rating_status', 'Complete'),
         ]);
+
+        // Debug logging
+        console.log('Dashboard data results:', {
+          vendors: { count: vendorsResult.count, error: vendorsResult.error },
+          projects: { count: projectsResult.count, error: projectsResult.error },
+          clients: { count: clientsResult.count, error: clientsResult.error },
+          ratings: { count: ratingsResult.count, error: ratingsResult.error }
+        });
 
         // Check for errors
         if (vendorsResult.error) throw new Error(`Vendors table: ${vendorsResult.error.message}`);
         if (projectsResult.error) throw new Error(`Projects table: ${projectsResult.error.message}`);
-        if (clientsResult.error) throw new Error(`Clients table: ${clientsResult.error.message}`);
-        if (ratingsResult.error) throw new Error(`Ratings table: ${ratingsResult.error.message}`);
+        if (clientsResult.error) throw new Error(`Clients summary table: ${clientsResult.error.message}`);
+        if (ratingsResult.error) throw new Error(`Completed ratings query: ${ratingsResult.error.message}`);
 
         setStats({
           vendors: vendorsResult.count || 0,
@@ -141,131 +149,12 @@ export default function DashboardPage() {
 
           {stats && (
             <>
-              {/* Hero Section - Primary Business Actions */}
-              <div style={{ marginBottom: '3rem' }}>
-
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))',
-                  gap: '2rem',
-                  maxWidth: '1200px',
-                  margin: '0 auto'
-                }}>
-                  {/* ViRA Match - Primary CTA */}
-                  <Link href="/vira-match" style={{ textDecoration: 'none' }}>
-                    <div className="professional-card" style={{
-                      padding: '2rem',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 200ms',
-                      backgroundColor: '#1A5276',
-                      color: 'white',
-                      border: 'none'
-                    }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
-                        e.currentTarget.style.backgroundColor = '#154466';
-                        e.currentTarget.style.boxShadow = '0 20px 40px -8px rgba(26, 82, 118, 0.4)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                        e.currentTarget.style.backgroundColor = '#1A5276';
-                        e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
-                      }}
-                    >
-                      <div style={{
-                        width: '4rem',
-                        height: '4rem',
-                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                        borderRadius: '1rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 1rem'
-                      }}>
-                        <Search style={{ width: '2rem', height: '2rem', color: 'white' }} />
-                      </div>
-                      <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
-                        ViRA Match
-                      </h3>
-                      <p style={{ fontSize: '1.125rem', opacity: 0.9, marginBottom: '1rem' }}>
-                        Find the perfect vendor for your next project using AI-powered matching
-                      </p>
-                      <div style={{
-                        padding: '0.75rem 2rem',
-                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                        borderRadius: '2rem',
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        display: 'inline-block'
-                      }}>
-                        Start Matching →
-                      </div>
-                    </div>
-                  </Link>
-
-                  {/* Review Ratings - Secondary CTA */}
-                  <Link href="/ratings" style={{ textDecoration: 'none' }}>
-                    <div className="professional-card" style={{
-                      padding: '2rem',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 200ms',
-                      backgroundColor: '#6B8F71',
-                      color: 'white',
-                      border: 'none'
-                    }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
-                        e.currentTarget.style.backgroundColor = '#5a7a60';
-                        e.currentTarget.style.boxShadow = '0 20px 40px -8px rgba(107, 143, 113, 0.4)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                        e.currentTarget.style.backgroundColor = '#6B8F71';
-                        e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
-                      }}
-                    >
-                      <div style={{
-                        width: '4rem',
-                        height: '4rem',
-                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                        borderRadius: '1rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 1rem'
-                      }}>
-                        <Star style={{ width: '2rem', height: '2rem', color: 'white' }} />
-                      </div>
-                      <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
-                        Review Ratings
-                      </h3>
-                      <p style={{ fontSize: '1.125rem', opacity: 0.9, marginBottom: '1rem' }}>
-                        Review vendor ratings and monitor pending projects awaiting completion
-                      </p>
-                      <div style={{
-                        padding: '0.75rem 2rem',
-                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                        borderRadius: '2rem',
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        display: 'inline-block'
-                      }}>
-                        Review Ratings →
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              </div>
-
-
-              {/* Stats Overview */}
+              {/* Stats Overview - Dashboard Metrics */}
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
                 gap: '1.5rem',
-                marginBottom: '2rem'
+                marginBottom: '3rem'
               }}>
                 <Link href="/vendors" style={{ textDecoration: 'none' }}>
                   <div className="professional-card" style={{
@@ -412,6 +301,123 @@ export default function DashboardPage() {
                 </Link>
               </div>
 
+              {/* Hero Section - Primary Business Actions */}
+              <div style={{ marginBottom: '2rem' }}>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '2rem',
+                  maxWidth: '1000px',
+                  margin: '0 auto'
+                }}>
+                  {/* ViRA Match - Primary CTA */}
+                  <Link href="/vira-match" style={{ textDecoration: 'none' }}>
+                    <div className="professional-card" style={{
+                      padding: '2rem',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 200ms',
+                      backgroundColor: '#1A5276',
+                      color: 'white',
+                      border: 'none'
+                    }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
+                        e.currentTarget.style.backgroundColor = '#154466';
+                        e.currentTarget.style.boxShadow = '0 20px 40px -8px rgba(26, 82, 118, 0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                        e.currentTarget.style.backgroundColor = '#1A5276';
+                        e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
+                      }}
+                    >
+                      <div style={{
+                        width: '4rem',
+                        height: '4rem',
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        borderRadius: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 1rem'
+                      }}>
+                        <Search style={{ width: '2rem', height: '2rem', color: 'white' }} />
+                      </div>
+                      <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
+                        ViRA Match
+                      </h3>
+                      <p style={{ fontSize: '1.125rem', opacity: 0.9, marginBottom: '1rem' }}>
+                        Find the perfect vendor for your next project using AI-powered matching
+                      </p>
+                      <div style={{
+                        padding: '0.75rem 2rem',
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        borderRadius: '2rem',
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        display: 'inline-block'
+                      }}>
+                        Start Matching →
+                      </div>
+                    </div>
+                  </Link>
+
+                  {/* Rate Project - Data Collection CTA */}
+                  <Link href="/rate-project" style={{ textDecoration: 'none' }}>
+                    <div className="professional-card" style={{
+                      padding: '2rem',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 200ms',
+                      backgroundColor: '#6B8F71',
+                      color: 'white',
+                      border: 'none'
+                    }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
+                        e.currentTarget.style.backgroundColor = '#5a7a60';
+                        e.currentTarget.style.boxShadow = '0 20px 40px -8px rgba(107, 143, 113, 0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                        e.currentTarget.style.backgroundColor = '#6B8F71';
+                        e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
+                      }}
+                    >
+                      <div style={{
+                        width: '4rem',
+                        height: '4rem',
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        borderRadius: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 1rem'
+                      }}>
+                        <TrendingUp style={{ width: '2rem', height: '2rem', color: 'white' }} />
+                      </div>
+                      <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
+                        Rate Project
+                      </h3>
+                      <p style={{ fontSize: '1.125rem', opacity: 0.9, marginBottom: '1rem' }}>
+                        Submit ratings for completed projects to improve vendor intelligence
+                      </p>
+                      <div style={{
+                        padding: '0.75rem 2rem',
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        borderRadius: '2rem',
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        display: 'inline-block'
+                      }}>
+                        Rate Project →
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              </div>
 
             </>
           )}

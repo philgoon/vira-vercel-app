@@ -9,47 +9,49 @@ export async function GET(request: Request) {
     const id = searchParams.get('id');
     const vendorCategory = searchParams.get('vendor_category');
 
+    // [R4.2] Query projects table directly - vendor_name now in projects table
     let query = supabase
       .from('projects')
-      .select(`
-        *,
-        vendors:assigned_vendor_id (
-          vendor_id,
-          vendor_name,
-          service_categories
-        )
-      `)
-      .order('expected_deadline', { ascending: true });
+      .select('*');
 
     // Apply filters if provided
     if (id) {
       query = query.eq('project_id', id);
     } else if (status && status !== 'all') {
-      query = query.eq('status', status);
+      // Handle rating completion status filtering
+      if (status === 'need-review') {
+        query = query.is('project_overall_rating_calc', null);
+      } else if (status === 'complete') {
+        query = query.not('project_overall_rating_calc', 'is', null);
+      } else {
+        // Legacy status filtering for other status values
+        query = query.eq('status', status);
+      }
     }
 
     const { data: projects, error } = await query;
+
+    // [DEBUG] Log the actual response to debug data structure issues
+    console.log('=== PROJECTS API DEBUG ===');
+    console.log('Supabase query error:', error);
+    console.log('Projects data returned:', projects);
+    console.log('Projects count:', projects?.length || 0);
+    if (projects && projects.length > 0) {
+      console.log('Sample project structure:', JSON.stringify(projects[0], null, 2));
+    }
 
     if (error) {
       console.error('Supabase error:', error);
       return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
     }
 
-    // Client-side filtering for vendor category if specified
+    // Client-side filtering for vendor category if specified (using vendor_name from projects table)
     let filteredProjects = projects || [];
     if (vendorCategory && vendorCategory !== 'all') {
       filteredProjects = projects?.filter(project => {
-        const vendor = project.vendors;
-        if (!vendor) return false;
-        
-        const categories = Array.isArray(vendor.service_categories) 
-          ? vendor.service_categories 
-          : [vendor.service_categories].filter(Boolean);
-        
-        return categories.some((cat: any) => 
-          cat && typeof cat === 'string' && 
-          cat.toLowerCase().includes(vendorCategory.toLowerCase())
-        );
+        const vendorName = project.vendor_name;
+        return vendorName && typeof vendorName === 'string' &&
+          vendorName.toLowerCase().includes(vendorCategory.toLowerCase());
       }) || [];
     }
 
@@ -63,7 +65,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
+
     const { data: project, error } = await supabase
       .from('projects')
       .insert([body])
@@ -91,7 +93,7 @@ export async function PUT(request: Request) {
     // Validate required fields
     if (!project_id) {
       return NextResponse.json(
-        { error: 'Missing required field: project_id' }, 
+        { error: 'Missing required field: project_id' },
         { status: 400 }
       );
     }
@@ -102,12 +104,12 @@ export async function PUT(request: Request) {
     if (isStatusOnlyUpdate) {
       // [R5.2] Handle status-only updates with workflow validation
       const { status } = updateData;
-      
+
       // Validate status transition (only allow specific workflow transitions)
       const validTransitions = ['active', 'completed', 'archived', 'on_hold', 'cancelled'];
       if (!validTransitions.includes(status)) {
         return NextResponse.json(
-          { error: `Invalid status. Must be one of: ${validTransitions.join(', ')}` }, 
+          { error: `Invalid status. Must be one of: ${validTransitions.join(', ')}` },
           { status: 400 }
         );
       }
@@ -134,11 +136,11 @@ export async function PUT(request: Request) {
         'cancelled': ['active'] // Allow restarting
       };
 
-      if (currentStatus !== status && 
-          (!validWorkflowTransitions[currentStatus] || 
-           !validWorkflowTransitions[currentStatus].includes(status))) {
+      if (currentStatus !== status &&
+        (!validWorkflowTransitions[currentStatus] ||
+          !validWorkflowTransitions[currentStatus].includes(status))) {
         return NextResponse.json(
-          { error: `Invalid transition from '${currentStatus}' to '${status}'` }, 
+          { error: `Invalid transition from '${currentStatus}' to '${status}'` },
           { status: 400 }
         );
       }
@@ -149,9 +151,9 @@ export async function PUT(request: Request) {
       ...updateData,
       updated_at: new Date().toISOString()
     }
-    
+
     console.log('Updating project with payload:', updatePayload)
-    
+
     const { data: updatedProject, error: updateError } = await supabase
       .from('projects')
       .update(updatePayload)
@@ -161,14 +163,14 @@ export async function PUT(request: Request) {
 
     if (updateError) {
       console.error('Project update error:', updateError);
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Failed to update project',
         details: updateError,
-        payload: updatePayload 
+        payload: updatePayload
       }, { status: 500 });
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       project: updatedProject,
       message: 'Project updated successfully'
     });

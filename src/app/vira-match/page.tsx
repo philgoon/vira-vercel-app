@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Vendor, VendorsApiResponse } from '@/types';
+import { Vendor } from '@/types';
 import ViRAMatchWizard from '@/components/vira-match/ViRAMatchWizard';
 
 export default function ViRAMatchPage() {
@@ -16,24 +16,23 @@ export default function ViRAMatchPage() {
       try {
         const response = await fetch('/api/vendors');
         if (response.ok) {
-          const data: VendorsApiResponse = await response.json();
-          console.log('Vendors API response:', data); // DEBUG
-          console.log('First vendor service_categories:', data.vendors?.[0]?.service_categories); // DEBUG
+          const data = await response.json();
+          console.log('RAW VENDORS API RESPONSE:', data); // Enhanced DEBUG
+          const { vendors }: { vendors: Vendor[] } = data;
 
           const categories = [...new Set(
-            data.vendors
-              ?.map((vendor: Vendor) => {
-                const serviceCategories = vendor.service_categories;
-                // Handle both array and string formats
-                if (Array.isArray(serviceCategories)) {
-                  return serviceCategories[0]; // Get first category from array
-                } else if (typeof serviceCategories === 'string') {
-                  return serviceCategories;
+            vendors
+              ?.flatMap((vendor: Vendor) => {
+                // Use the correct field from the updated Vendor type
+                const serviceCategory = vendor.vendor_type; // CORRECTED: Was service_category
+                if (typeof serviceCategory === 'string' && serviceCategory.trim() !== '') {
+                  // Handle comma-separated strings by splitting them
+                  return serviceCategory.split(',').map(cat => cat.trim());
                 }
-                return null;
+                return []; // Return an empty array if no category, flatMap will remove it
               })
-              ?.filter((cat: string | null): cat is string => cat !== null && cat.trim() !== '')
-          )].sort() as string[];
+              .filter((cat): cat is string => !!cat) // Filter out any empty or null categories
+          )].sort();
 
           console.log('Extracted categories:', categories); // DEBUG
           setServiceCategories(categories);

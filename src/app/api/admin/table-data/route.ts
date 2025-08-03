@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     switch (table) {
       case 'vendors':
         query = supabase
-          .from('vendors')
+          .from('vendors_enhanced')
           .select('*');
         break;
 
@@ -33,18 +33,18 @@ export async function GET(request: NextRequest) {
 
       case 'projects':
         query = supabase
-          .from('projects')
+          .from('projects_consolidated')
           .select('*');
         break;
 
       case 'ratings':
+        // NOTE: The 'ratings' table is now part of 'projects_consolidated'.
+        // We will fetch this data when the 'projects' table is requested.
+        // This case can be removed or adjusted later if a separate ratings view is needed.
         query = supabase
-          .from('ratings')
-          .select(`
-            *,
-            projects(project_title),
-            vendors(vendor_name)
-          `);
+          .from('projects_consolidated')
+          .select('*')
+          .not('project_success', 'is', null); // Only fetch projects that have ratings
         break;
 
       default:

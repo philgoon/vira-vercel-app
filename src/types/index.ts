@@ -1,126 +1,72 @@
-// [R1.1] Shared TypeScript interfaces for the application
-export interface Vendor {
-  vendor_id: number | string; // Handle both formats - database uses different types
-  vendor_name: string;
-  contact_name?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  location?: string;
-  time_zone?: string;
-  service_categories: string | string[]; // Handle both formats
-  specialties?: string;
-  pricing_notes?: string;
-  status?: string;
-  onboarding_date?: string;
-  vendor_notes?: string;
-}
-
 export interface Project {
   project_id: string;
   project_title: string;
-  project_description?: string;
-  project_type?: string;
-  client_id?: string;
-  expected_deadline?: string;
-  key_skills_required?: string;
-  initial_vendor_rating?: number;
-  industry_experience?: string;
+  client_name: string;
+  vendor_id: string;
+  vendor_name: string;
+  submitted_by: string | null;
   status: string;
-  team_member?: string;
-  assigned_vendor_id?: string;
-  contact_date?: string;
-  updated_at?: string;
-  vendors?: {
-    vendor_id: number | string;
-    vendor_name: string;
-    service_categories: string | string[];
-  };
+  rating_date: string | null;
+  project_success_rating: number | null;
+  quality_rating: number | null;
+  communication_rating: number | null;
+  what_went_well: string | null;
+  areas_for_improvement: string | null;
+  recommend_again: boolean | null;
+  project_overall_rating_input: number | null;
+  project_overall_rating_calc: number | null;
+  created_at: string;
+  updated_at: string;
+  rating_status: 'Needs Review' | 'Incomplete' | 'Complete' | null;
+}
+
+export interface Vendor {
+  vendor_id: string;
+  vendor_code?: string | null;
+  vendor_name: string;
+  vendor_type?: string | null;
+  status?: string | null;
+  primary_contact?: string | null;
+  email?: string | null;
+  time_zone?: string | null;
+  contact_preference?: string | null;
+  onboarding_date?: string | null;
+  overall_rating?: number | null;
+  industry?: string | null;
+  skills?: string | null;
+  portfolio_url?: string | null;
+  sample_work_urls?: string | null;
+  pricing_structure?: string | null;
+  rate_cost?: string | null;
+  availability?: string | null;
+  record_date?: string | null;
+  created_at: string;
+  updated_at: string;
+  // Fields from vendor_performance view for convenience on main page
+  total_projects?: number;
+  avg_overall_rating?: number;
 }
 
 export interface Client {
-  client_id: number | string; // Handle both formats
+  client_key: string;
   client_name: string;
-  industry?: string;
-  time_zone?: string;
-  total_projects?: number;
-  preferred_contact?: string;
-  client_notes?: string;
-  created_date: string;
-  updated_at?: string;
+  total_projects: number;
+  last_project_date: string;
 }
 
 export interface Rating {
-  rating_id?: number;
+  rating_id: string;
   project_id: string;
   vendor_id: string;
-  client_id?: string;
-  rater_email: string;
   project_success_rating: number;
-  project_on_time: boolean;
-  project_on_budget: boolean;
-  vendor_overall_rating: number;
-  vendor_quality_rating?: number;
-  vendor_communication_rating?: number;
-  what_went_well?: string;
-  areas_for_improvement?: string;
+  quality_rating: number;
+  communication_rating: number;
+  what_went_well?: string | null;
+  areas_for_improvement?: string | null;
   recommend_again: boolean;
-  rating_date?: string;
-}
-
-export interface EnhancedRecommendation {
-  vendorName: string;
-  viraScore: number;
-  reason: string;
-  keyStrengths: string[];
-  considerations?: string;
-}
-
-export interface LegacyRecommendation {
-  vendorName: string;
-  reason: string;
-}
-
-export interface MessageIntent {
-  type: 'vendor_recommendation' | 'vendor_search' | 'general';
-  searchTerm?: string;
-  serviceCategory?: string;
-  projectScope?: string;
-}
-
-export interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
-export interface VendorSearchResult {
-  vendor_name: string;
-  service_categories: string;
-  specialties?: string;
-  location?: string;
-  contact_name?: string;
-  contact_email?: string;
-}
-
-// API Response types
-export interface ApiResponse<T> {
-  data?: T;
-  error?: string;
-  message?: string;
-}
-
-export interface VendorsApiResponse {
-  vendors: Vendor[];
-}
-
-export interface ProjectsApiResponse {
-  projects: Project[];
-}
-
-export interface ClientsApiResponse {
-  clients: Client[];
-}
-
-export interface RatingsApiResponse {
-  ratings: Rating[];
+  project_overall_rating_input?: number | null;
+  project_overall_rating_calc?: number | null;
+  submitted_by: string;
+  created_at: string;
+  updated_at: string;
 }

@@ -39,14 +39,9 @@ export default function ClientModal({ client, isOpen, onClose }: ClientModalProp
                 <Badge className="bg-green-100 text-green-800 border-green-200">
                   Active Client
                 </Badge>
-                {client.industry && (
-                  <Badge variant="outline">
-                    {client.industry}
-                  </Badge>
-                )}
               </div>
               <DialogDescription className="text-base">
-                {client.industry ? `Operating in ${client.industry} industry` : 'Business client'}
+                Client Summary
               </DialogDescription>
             </div>
           </div>
@@ -64,18 +59,10 @@ export default function ClientModal({ client, isOpen, onClose }: ClientModalProp
                 <span className="text-gray-600 font-medium">Client Name:</span>
                 <div className="text-gray-900 mt-1">{client.client_name}</div>
               </div>
-              {client.industry && (
-                <div className="text-sm">
-                  <span className="text-gray-600 font-medium">Industry:</span>
-                  <div className="text-gray-900 mt-1">{client.industry}</div>
-                </div>
-              )}
-              {client.total_projects && (
-                <div className="text-sm">
-                  <span className="text-gray-600 font-medium">Total Projects:</span>
-                  <div className="text-gray-900 mt-1">{client.total_projects}</div>
-                </div>
-              )}
+              <div className="text-sm">
+                <span className="text-gray-600 font-medium">Total Projects:</span>
+                <div className="text-gray-900 mt-1">{client.total_projects}</div>
+              </div>
             </div>
           </div>
 
@@ -87,19 +74,11 @@ export default function ClientModal({ client, isOpen, onClose }: ClientModalProp
             </h3>
             <div className="space-y-3">
               <div className="text-sm">
-                <span className="text-gray-600 font-medium">Client Since:</span>
+                <span className="text-gray-600 font-medium">Last Project Date:</span>
                 <div className="text-gray-900 mt-1">
-                  {new Date(client.created_date).toLocaleDateString()}
+                  {new Date(client.last_project_date).toLocaleDateString()}
                 </div>
               </div>
-              {client.updated_at && (
-                <div className="text-sm">
-                  <span className="text-gray-600 font-medium">Last Updated:</span>
-                  <div className="text-gray-900 mt-1">
-                    {new Date(client.updated_at).toLocaleDateString()}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -114,17 +93,9 @@ export default function ClientModal({ client, isOpen, onClose }: ClientModalProp
                 <div className="text-2xl font-bold text-green-600">Active</div>
                 <div className="text-sm text-gray-600">Status</div>
               </div>
-              {client.total_projects && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{client.total_projects}</div>
-                  <div className="text-sm text-gray-600">Total Projects</div>
-                </div>
-              )}
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
-                  {Math.floor((new Date().getTime() - new Date(client.created_date).getTime()) / (1000 * 60 * 60 * 24))}
-                </div>
-                <div className="text-sm text-gray-600">Days as Client</div>
+                <div className="text-2xl font-bold text-blue-600">{client.total_projects}</div>
+                <div className="text-sm text-gray-600">Total Projects</div>
               </div>
             </div>
           </div>
@@ -135,21 +106,15 @@ export default function ClientModal({ client, isOpen, onClose }: ClientModalProp
           <div className="flex flex-wrap gap-6 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span>ID: {client.client_id}</span>
+              <span>ID: {client.client_key}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               <span>Active Client</span>
             </div>
-            {client.industry && (
-              <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-purple-500" />
-                <span>{client.industry} Industry</span>
-              </div>
-            )}
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-gray-500" />
-              <span>Since: {new Date(client.created_date).toLocaleDateString()}</span>
+              <span>Last Project: {new Date(client.last_project_date).toLocaleDateString()}</span>
             </div>
           </div>
         </div>

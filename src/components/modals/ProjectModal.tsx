@@ -13,7 +13,12 @@ import {
   Calendar,
   Building2,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Star,
+  User,
+  MessageSquare,
+  TrendingUp,
+  Users
 } from 'lucide-react'
 import { Project } from '@/types'
 
@@ -40,9 +45,22 @@ export default function ProjectModal({ project, isOpen, onClose }: ProjectModalP
     }
   }
 
+  const getRatingStatusColor = (status: string | null) => {
+    switch (status) {
+      case 'Complete': return 'bg-green-100 text-green-800 border-green-200'
+      case 'Incomplete': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'Needs Review': return 'bg-red-100 text-red-800 border-red-200'
+      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
+  }
+
+  const formatRating = (rating: number | null) => {
+    return rating ? `${rating.toFixed(1)}/10` : 'Not rated'
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-start gap-4">
             <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
@@ -50,140 +68,199 @@ export default function ProjectModal({ project, isOpen, onClose }: ProjectModalP
             </div>
             <div className="flex-1">
               <DialogTitle className="text-2xl font-bold mb-2">{project.project_title}</DialogTitle>
-              <div className="flex items-center gap-3 mb-2 flex-wrap">
+              <div className="flex items-center gap-3 mb-3 flex-wrap">
                 <Badge className={getStatusColor(project.status)}>
                   {project.status}
                 </Badge>
-                {project.project_type && (
-                  <Badge variant="outline">
-                    {project.project_type}
+                {project.rating_status && (
+                  <Badge className={getRatingStatusColor(project.rating_status)}>
+                    Rating: {project.rating_status}
+                  </Badge>
+                )}
+                {project.project_overall_rating_calc && (
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-300">
+                    ⭐ {formatRating(project.project_overall_rating_calc)}
                   </Badge>
                 )}
               </div>
-              {project.project_description && (
-                <DialogDescription className="text-base">
-                  {project.project_description}
-                </DialogDescription>
-              )}
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <span className="flex items-center gap-1">
+                  <Users className="w-4 h-4" />
+                  {project.client_name || 'No Client'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Building2 className="w-4 h-4" />
+                  {project.vendor_name || 'No Vendor'}
+                </span>
+              </div>
             </div>
           </div>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          {/* Project Information */}
+          {/* Project Overview */}
           <div className="p-6 bg-white rounded-lg border shadow-sm">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Building2 className="w-5 h-5 text-blue-500" />
-              Project Details
+              Project Overview
             </h3>
             <div className="space-y-3">
               <div className="text-sm">
-                <span className="text-gray-600 font-medium">Title:</span>
-                <div className="text-gray-900 mt-1">{project.project_title}</div>
+                <span className="text-gray-600 font-medium">Client:</span>
+                <div className="text-gray-900 mt-1 font-medium">{project.client_name || 'Not specified'}</div>
               </div>
-              {project.project_type && (
+              <div className="text-sm">
+                <span className="text-gray-600 font-medium">Vendor:</span>
+                <div className="text-gray-900 mt-1">{project.vendor_name || 'Not assigned'}</div>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600 font-medium">Status:</span>
+                <div className="text-gray-900 mt-1">{project.status}</div>
+              </div>
+              {project.submitted_by && (
                 <div className="text-sm">
-                  <span className="text-gray-600 font-medium">Type:</span>
-                  <div className="text-gray-900 mt-1">{project.project_type}</div>
-                </div>
-              )}
-              {project.project_description && (
-                <div className="text-sm">
-                  <span className="text-gray-600 font-medium">Description:</span>
-                  <div className="text-gray-900 mt-1">{project.project_description}</div>
-                </div>
-              )}
-              {project.vendors?.vendor_name && (
-                <div className="text-sm">
-                  <span className="text-gray-600 font-medium">Vendor:</span>
-                  <div className="text-gray-900 mt-1">{project.vendors.vendor_name}</div>
+                  <span className="text-gray-600 font-medium">Submitted By:</span>
+                  <div className="text-gray-900 mt-1">{project.submitted_by}</div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Timeline Information */}
+          {/* Rating & Performance */}
+          <div className="p-6 bg-white rounded-lg border shadow-sm">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Star className="w-5 h-5 text-yellow-500" />
+              Rating & Performance
+            </h3>
+            <div className="space-y-3">
+              <div className="text-sm">
+                <span className="text-gray-600 font-medium">Overall Rating:</span>
+                <div className="text-gray-900 mt-1 font-semibold text-lg">
+                  {formatRating(project.project_overall_rating_calc)}
+                </div>
+              </div>
+
+              {(project.project_success_rating || project.quality_rating || project.communication_rating) && (
+                <div className="grid grid-cols-3 gap-2 mt-4">
+                  <div className="text-center p-2 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Success</div>
+                    <div className="font-medium">{formatRating(project.project_success_rating)}</div>
+                  </div>
+                  <div className="text-center p-2 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Quality</div>
+                    <div className="font-medium">{formatRating(project.quality_rating)}</div>
+                  </div>
+                  <div className="text-center p-2 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Communication</div>
+                    <div className="font-medium">{formatRating(project.communication_rating)}</div>
+                  </div>
+                </div>
+              )}
+
+              {project.recommend_again !== null && (
+                <div className="text-sm mt-3">
+                  <span className="text-gray-600 font-medium">Recommend Again:</span>
+                  <div className="text-gray-900 mt-1">
+                    <Badge className={project.recommend_again ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                      {project.recommend_again ? 'Yes' : 'No'}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Timeline & Dates */}
           <div className="p-6 bg-white rounded-lg border shadow-sm">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-purple-500" />
-              Timeline
+              Timeline & Dates
             </h3>
             <div className="space-y-3">
-              {project.contact_date && (
-                <div className="text-sm">
-                  <span className="text-gray-600 font-medium">Contact Date:</span>
-                  <div className="text-gray-900 mt-1">
-                    {new Date(project.contact_date).toLocaleDateString()}
-                  </div>
+              <div className="text-sm">
+                <span className="text-gray-600 font-medium">Created:</span>
+                <div className="text-gray-900 mt-1">
+                  {new Date(project.created_at).toLocaleDateString()}
                 </div>
-              )}
-              {project.expected_deadline && (
-                <div className="text-sm">
-                  <span className="text-gray-600 font-medium">Expected Deadline:</span>
-                  <div className="text-gray-900 mt-1">
-                    {new Date(project.expected_deadline).toLocaleDateString()}
-                  </div>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600 font-medium">Last Updated:</span>
+                <div className="text-gray-900 mt-1">
+                  {new Date(project.updated_at).toLocaleDateString()}
                 </div>
-              )}
-              {project.updated_at && (
+              </div>
+              {project.rating_date && (
                 <div className="text-sm">
-                  <span className="text-gray-600 font-medium">Last Updated:</span>
+                  <span className="text-gray-600 font-medium">Rating Date:</span>
                   <div className="text-gray-900 mt-1">
-                    {new Date(project.updated_at).toLocaleDateString()}
+                    {new Date(project.rating_date).toLocaleDateString()}
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Status Overview */}
-          <div className="p-6 bg-white rounded-lg border shadow-sm lg:col-span-2">
+          {/* Feedback & Insights */}
+          <div className="p-6 bg-white rounded-lg border shadow-sm">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              Project Status
+              <MessageSquare className="w-5 h-5 text-green-500" />
+              Feedback & Insights
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{project.status}</div>
-                <div className="text-sm text-gray-600">Current Status</div>
-              </div>
-              {project.project_type && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{project.project_type}</div>
-                  <div className="text-sm text-gray-600">Project Type</div>
+            <div className="space-y-4">
+              {project.what_went_well && (
+                <div className="text-sm">
+                  <span className="text-gray-600 font-medium flex items-center gap-1 mb-2">
+                    <TrendingUp className="w-4 h-4 text-green-500" />
+                    What Went Well:
+                  </span>
+                  <div className="text-gray-900 p-3 bg-green-50 rounded border-l-4 border-green-400">
+                    {project.what_went_well}
+                  </div>
                 </div>
               )}
-              {project.contact_date && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {Math.floor((new Date().getTime() - new Date(project.contact_date).getTime()) / (1000 * 60 * 60 * 24))}
+
+              {project.areas_for_improvement && (
+                <div className="text-sm">
+                  <span className="text-gray-600 font-medium flex items-center gap-1 mb-2">
+                    <TrendingUp className="w-4 h-4 text-orange-500" />
+                    Areas for Improvement:
+                  </span>
+                  <div className="text-gray-900 p-3 bg-orange-50 rounded border-l-4 border-orange-400">
+                    {project.areas_for_improvement}
                   </div>
-                  <div className="text-sm text-gray-600">Days Since Contact</div>
+                </div>
+              )}
+
+              {!project.what_went_well && !project.areas_for_improvement && (
+                <div className="text-sm text-gray-500 italic">
+                  No feedback provided yet
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Quick Stats Bar */}
-        <div className="mt-6 pt-4 border-t">
+        {/* Administrative Info */}
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <div className="flex flex-wrap gap-6 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span>ID: {project.project_id}</span>
+              <span>Project ID: {project.project_id}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span>Contact: {project.contact_date ? new Date(project.contact_date).toLocaleDateString() : 'N/A'}</span>
+              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+              <span>Vendor ID: {project.vendor_id}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-500" />
-              <span>Updated: {project.updated_at ? new Date(project.updated_at).toLocaleDateString() : 'N/A'}</span>
-            </div>
-            {project.expected_deadline && (
+            {project.submitted_by && (
               <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-purple-500" />
-                <span>Deadline: {new Date(project.expected_deadline).toLocaleDateString()}</span>
+                <User className="w-4 h-4 text-gray-500" />
+                <span>Submitted by: {project.submitted_by}</span>
+              </div>
+            )}
+            {project.rating_status && (
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-gray-500" />
+                <span>Rating Status: {project.rating_status}</span>
               </div>
             )}
           </div>

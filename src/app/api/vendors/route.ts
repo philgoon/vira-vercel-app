@@ -1,4 +1,4 @@
-// [R4.1] Updated vendors API route using actual Supabase schema
+// [R4.1] Updated vendors API route using vendor_performance view for new schema
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
@@ -6,52 +6,77 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
-    const type = searchParams.get('type');
     const status = searchParams.get('status');
     const id = searchParams.get('id');
 
-    let query = supabase
-      .from('vendors')
-      .select('*');
-
-    // If specific ID requested, return that vendor
+    // Step 1: Query the vendor_performance view for aggregated data
+    let performanceQuery = supabase.from('vendor_performance').select('*');
     if (id) {
-      query = query.eq('vendor_id', id);
-    } else {
-      // Otherwise apply filters and ordering
-      query = query.order('vendor_name');
-      
-      if (search) {
-        query = query.or(`vendor_name.ilike.%${search}%,specialties.ilike.%${search}%,service_categories.ilike.%${search}%`);
-      }
-      
-      if (type && type !== 'all') {
-        query = query.eq('service_categories', type);
-      }
-      
-      if (status && status !== 'all') {
-        query = query.eq('status', status);
-      }
+      performanceQuery = performanceQuery.eq('vendor_id', id);
+    }
+    if (status && status !== 'all') {
+      performanceQuery = performanceQuery.eq('status', status);
+    }
+    if (search) {
+      performanceQuery = performanceQuery.or(`vendor_name.ilike.%${search}%,vendor_type.ilike.%${search}%`);
     }
 
-    const { data: vendors, error } = await query;
+    const { data: performanceData, error: performanceError } = await performanceQuery;
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({ error: 'Failed to fetch vendors' }, { status: 500 });
+    if (performanceError) {
+      console.error('Supabase error fetching from vendor_performance:', performanceError);
+      return NextResponse.json({ error: 'Failed to fetch vendor performance data' }, { status: 500 });
     }
+
+    if (!performanceData || performanceData.length === 0) {
+      return NextResponse.json({ vendors: [] });
+    }
+
+    // Step 2: Get vendor IDs to fetch detailed data
+    const vendorIds = performanceData.map(p => p.vendor_id);
+
+    // Step 3: Query the vendors table for detailed information
+    const { data: detailData, error: detailError } = await supabase
+      .from('vendors')
+      .select('*')
+      .in('vendor_id', vendorIds);
+
+    if (detailError) {
+      console.error('Supabase error fetching from vendors:', detailError);
+      return NextResponse.json({ error: 'Failed to fetch vendor details' }, { status: 500 });
+    }
+
+    // Step 4: Merge the two datasets
+    const vendors = performanceData.map(performanceItem => {
+      const details = detailData.find(d => d.vendor_id === performanceItem.vendor_id) || {};
+      return {
+        ...details, // Detailed info from 'vendors' table
+        ...performanceItem, // Aggregated info from 'vendor_performance'
+      };
+    });
+
+    // Sort final merged data
+    vendors.sort((a, b) => {
+      const ratingA = a.avg_overall_rating ?? -1;
+      const ratingB = b.avg_overall_rating ?? -1;
+      if (ratingA !== ratingB) {
+        return ratingB - ratingA;
+      }
+      return a.vendor_name.localeCompare(b.vendor_name);
+    });
 
     return NextResponse.json({ vendors });
+
   } catch (error) {
-    console.error('Failed to fetch vendors:', error);
-    return NextResponse.json({ error: 'Failed to fetch vendors' }, { status: 500 });
+    console.error('Error in vendors API route:', error);
+    return NextResponse.json({ error: 'An internal error occurred' }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
+
     const { data: vendor, error } = await supabase
       .from('vendors')
       .insert([body])

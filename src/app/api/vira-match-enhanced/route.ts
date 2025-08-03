@@ -1,366 +1,204 @@
-// [R5.1] Enhanced ViRA Match API - CRUD-based vendor matching with ratings data
+// [R7.0] Final Refactored ViRA Match API - Uses a 3-source data enrichment strategy
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { genAI } from '@/lib/ai';
 
-// [R5.1] Interface for vendor with enriched ratings data
-interface EnrichedVendor {
-  vendor_id: number;
+// Define comprehensive interfaces for our data structures
+interface VendorProfile {
+  vendor_id: string;
   vendor_name: string;
-  service_categories: string;
-  specialties?: string;
-  location?: string;
-  pricing_notes?: string;
-  contact_name?: string;
-  contact_email?: string;
-  ratings_analytics: {
-    total_ratings: number;
-    avg_project_success: number;
-    avg_overall_rating: number;
-    avg_quality_rating: number;
-    avg_communication: number;
-    on_time_percentage: number;
-    on_budget_percentage: number;
-    recommendation_rate: number;
-    recent_feedback: string[];
-  };
+  vendor_type?: string;
+  skills?: string;
+  pricing_structure?: string;
+}
+
+interface VendorPerformance {
+  avg_success?: number;
+  avg_quality?: number;
+  avg_communication?: number;
+  avg_overall_rating?: number;
+  recommendation_pct?: number;
+  rated_projects?: number;
+}
+
+interface ProjectHistory {
+  project_title: string;
+  what_went_well?: string;
+  areas_for_improvement?: string;
+  project_overall_rating_calc?: number;
+}
+
+interface EnrichedVendor {
+  profile: VendorProfile;
+  performance: VendorPerformance;
+  history: ProjectHistory[];
 }
 
 export async function POST(request: Request) {
   try {
-    console.log('=== ViRA Enhanced Match API Called ===');
+    console.log('=== ViRA Final Refactored Match API Called ===');
 
-    // [R5.1] Parse enhanced request with simplified inputs
     const body = await request.json();
-    console.log('Request body:', body);
-
     const { serviceCategory, projectScope } = body;
 
     if (!serviceCategory || !projectScope) {
-      console.log('Missing required fields:', { serviceCategory, projectScope });
-      return NextResponse.json(
-        { error: 'Service category and project scope are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Service category and project scope are required' }, { status: 400 });
     }
 
-    // [R5.2] Step 1: CRUD query to find vendor candidates by service category
-    console.log('Querying vendors with service category:', serviceCategory);
-
-    const { data: candidates, error: vendorError } = await supabase
+    // Step 1: Get Base Candidate Profiles from 'vendors' table
+    console.log(`Step 1: Fetching candidate profiles for category: ${serviceCategory}`);
+    const { data: vendorProfiles, error: profilesError } = await supabase
       .from('vendors')
-      .select(`
-        vendor_id,
-        vendor_name,
-        service_categories,
-        specialties,
-        location,
-        pricing_notes,
-        contact_name,
-        contact_email,
-        status
-      `)
-      .eq('status', 'active');
-    // Note: Removed .ilike filter since service_categories is an array
+      .select('vendor_id, vendor_name, vendor_type, skills, pricing_structure')
+      .eq('status', 'active')
+      .ilike('vendor_type', `%${serviceCategory}%`);
 
-    console.log('Vendor query result:', { candidates: candidates?.length, error: vendorError });
-
-    if (vendorError) {
-      console.error('Vendor query error:', vendorError);
-      return NextResponse.json(
-        { error: 'Failed to fetch vendor candidates' },
-        { status: 500 }
-      );
+    if (profilesError) throw new Error(`Failed to fetch vendor profiles: ${profilesError.message}`);
+    if (!vendorProfiles || vendorProfiles.length === 0) {
+      return NextResponse.json({ recommendations: [], message: `No active vendors found for service category: ${serviceCategory}` });
     }
+    console.log(`Found ${vendorProfiles.length} candidate profiles.`);
 
-    if (!candidates || candidates.length === 0) {
-      console.log('No vendors found');
-      return NextResponse.json({
-        recommendations: [],
-        message: `No active vendors found`
-      });
-    }
+    const vendorIds = vendorProfiles.map(v => v.vendor_id);
 
-    // [R5.2] Filter candidates by service category with enhanced debugging
-    console.log('=== DEBUGGING CATEGORY FILTERING ===');
-    console.log('Looking for serviceCategory:', serviceCategory);
-    console.log('Sample vendor service_categories format:', candidates[0]?.service_categories);
-    console.log('Is sample array?', Array.isArray(candidates[0]?.service_categories));
+    // Step 2: Concurrently fetch performance summaries and project histories
+    console.log('Step 2: Fetching performance summaries and project histories...');
+    const [performanceResult, historyResult] = await Promise.all([
+      supabase.from('vendor_performance').select('*').in('vendor_id', vendorIds),
+      supabase.from('projects_with_vendor').select('vendor_id, project_title, what_went_well, areas_for_improvement, project_overall_rating_calc').in('vendor_id', vendorIds)
+    ]);
 
-    const filteredCandidates = candidates.filter(vendor => {
-      console.log(`Vendor ${vendor.vendor_name}:`, {
-        service_categories: vendor.service_categories,
-        isArray: Array.isArray(vendor.service_categories),
-        includes: Array.isArray(vendor.service_categories) ?
-          vendor.service_categories.includes(serviceCategory) :
-          vendor.service_categories === serviceCategory
-      });
+    if (performanceResult.error) throw new Error(`Failed to fetch vendor performance: ${performanceResult.error.message}`);
+    if (historyResult.error) throw new Error(`Failed to fetch project history: ${historyResult.error.message}`);
 
-      if (Array.isArray(vendor.service_categories)) {
-        return vendor.service_categories.includes(serviceCategory);
-      }
-      // Handle string format (comma-separated or single value)
-      if (typeof vendor.service_categories === 'string') {
-        return vendor.service_categories.split(',').map(cat => cat.trim()).includes(serviceCategory);
-      }
-      return vendor.service_categories === serviceCategory;
+    const performances = performanceResult.data;
+    const histories = historyResult.data;
+
+    // Step 3: Consolidate data into a master profile for each vendor
+    console.log('Step 3: Consolidating data into master profiles...');
+    const enrichedVendors: EnrichedVendor[] = vendorProfiles.map(profile => {
+      const performance = performances.find(p => p.vendor_id === profile.vendor_id) || {};
+      const history = histories.filter(h => h.vendor_id === profile.vendor_id);
+
+      return {
+        profile: {
+          vendor_id: profile.vendor_id,
+          vendor_name: profile.vendor_name,
+          vendor_type: profile.vendor_type,
+          skills: profile.skills,
+          pricing_structure: profile.pricing_structure
+        },
+        performance: {
+          avg_success: performance.avg_success,
+          avg_quality: performance.avg_quality,
+          avg_communication: performance.avg_communication,
+          avg_overall_rating: performance.avg_overall_rating,
+          recommendation_pct: performance.recommendation_pct,
+          rated_projects: performance.rated_projects
+        },
+        history: history.map(h => ({
+          project_title: h.project_title,
+          what_went_well: h.what_went_well,
+          areas_for_improvement: h.areas_for_improvement,
+          project_overall_rating_calc: h.project_overall_rating_calc
+        }))
+      };
     });
 
-    console.log('Filtered candidates count:', filteredCandidates.length);
-    console.log('Filtered vendor names:', filteredCandidates.map(v => v.vendor_name));
-
-    if (filteredCandidates.length === 0) {
-      return NextResponse.json({
-        recommendations: [],
-        message: `No active vendors found for service category: ${serviceCategory}`
-      });
-    }
-
-    // [R5.3] Step 2: Fetch and aggregate ratings data for each candidate
-    console.log('Fetching ratings for candidates...');
-
-    const enrichedVendors: EnrichedVendor[] = await Promise.all(
-      filteredCandidates.map(async (vendor) => {
-        const { data: ratings, error: ratingsError } = await supabase
-          .from('ratings')
-          .select(`
-            project_success_rating,
-            vendor_overall_rating,
-            vendor_quality_rating,
-            vendor_communication_rating,
-            project_on_time,
-            project_on_budget,
-            recommend_again,
-            what_went_well,
-            areas_for_improvement
-          `)
-          .eq('vendor_id', vendor.vendor_id);
-
-        if (ratingsError) {
-          console.warn(`Ratings error for vendor ${vendor.vendor_id}:`, ratingsError);
-        }
-
-        // [R5.3] Calculate ratings analytics
-        const analytics = {
-          total_ratings: 0,
-          avg_project_success: 0,
-          avg_overall_rating: 0,
-          avg_quality_rating: 0,
-          avg_communication: 0,
-          on_time_percentage: 0,
-          on_budget_percentage: 0,
-          recommendation_rate: 0,
-          recent_feedback: [] as string[]
-        };
-
-        if (ratings && ratings.length > 0) {
-          const validRatings = ratings.filter(r => r.project_success_rating && r.vendor_overall_rating);
-
-          if (validRatings.length > 0) {
-            analytics.total_ratings = validRatings.length;
-
-            // Calculate averages
-            analytics.avg_project_success = validRatings.reduce((sum, r) => sum + r.project_success_rating, 0) / validRatings.length;
-            analytics.avg_overall_rating = validRatings.reduce((sum, r) => sum + r.vendor_overall_rating, 0) / validRatings.length;
-
-            const qualityRatings = validRatings.filter(r => r.vendor_quality_rating);
-            if (qualityRatings.length > 0) {
-              analytics.avg_quality_rating = qualityRatings.reduce((sum, r) => sum + r.vendor_quality_rating, 0) / qualityRatings.length;
-            }
-
-            const commRatings = validRatings.filter(r => r.vendor_communication_rating);
-            if (commRatings.length > 0) {
-              analytics.avg_communication = commRatings.reduce((sum, r) => sum + r.vendor_communication_rating, 0) / commRatings.length;
-            }
-
-            // Calculate percentages
-            analytics.on_time_percentage = (validRatings.filter(r => r.project_on_time).length / validRatings.length) * 100;
-            analytics.on_budget_percentage = (validRatings.filter(r => r.project_on_budget).length / validRatings.length) * 100;
-            analytics.recommendation_rate = (validRatings.filter(r => r.recommend_again).length / validRatings.length) * 100;
-
-            // Collect recent positive feedback
-            analytics.recent_feedback = validRatings
-              .map(r => r.what_went_well)
-              .filter(feedback => feedback && feedback.trim() !== '')
-              .slice(0, 3);
-          }
-        }
-
-        return {
-          ...vendor,
-          ratings_analytics: analytics
-        };
-      })
-    );
-
-    // [R5.4] Step 3: Send enriched data to Gemini AI for intelligent ranking
-    console.log('Sending data to Gemini AI...');
-
+    // Step 4: Build the ultimate high-context AI prompt
+    console.log('Step 4: Building high-context prompt for Gemini AI...');
     const prompt = `
-You are ViRA (Vendor Intelligence & Recommendation Assistant), an expert AI system that analyzes vendor data to provide strategic recommendations.
+You are ViRA (Vendor Intelligence & Recommendation Assistant), an expert AI system that analyzes comprehensive vendor data to provide strategic recommendations.
 
 PROJECT REQUIREMENTS:
 - Service Category: ${serviceCategory}
-- Project Scope: ${projectScope}
+- Project Scope: "${projectScope}"
 
-VENDOR CANDIDATES WITH PERFORMANCE DATA:
+VENDOR CANDIDATES WITH FULL CONTEXT:
+---
 ${enrichedVendors.map(vendor => `
-VENDOR: ${vendor.vendor_name}
-- Service Categories: ${vendor.service_categories || 'Not specified'}
-- Specialties: ${vendor.specialties || 'Not specified'}
-- Location: ${vendor.location || 'Not specified'}
-- Pricing: ${vendor.pricing_notes || 'Not specified'}
-- Contact: ${vendor.contact_name || 'Not available'} (${vendor.contact_email || 'No email'})
+VENDOR: ${vendor.profile.vendor_name}
 
-PERFORMANCE ANALYTICS:
-- Total Projects Rated: ${vendor.ratings_analytics.total_ratings}
-- Average Project Success: ${vendor.ratings_analytics.avg_project_success.toFixed(1)}/10
-- Average Overall Rating: ${vendor.ratings_analytics.avg_overall_rating.toFixed(1)}/10
-- Average Quality Rating: ${vendor.ratings_analytics.avg_quality_rating > 0 ? vendor.ratings_analytics.avg_quality_rating.toFixed(1) + '/10' : 'No data'}
-- Average Communication: ${vendor.ratings_analytics.avg_communication > 0 ? vendor.ratings_analytics.avg_communication.toFixed(1) + '/10' : 'No data'}
-- On-Time Delivery: ${vendor.ratings_analytics.on_time_percentage.toFixed(0)}%
-- On-Budget Delivery: ${vendor.ratings_analytics.on_budget_percentage.toFixed(0)}%
-- Client Recommendation Rate: ${vendor.ratings_analytics.recommendation_rate.toFixed(0)}%
-- Recent Client Feedback: ${vendor.ratings_analytics.recent_feedback.length > 0 ? vendor.ratings_analytics.recent_feedback.join(' | ') : 'No feedback available'}
+DESCRIPTIVE PROFILE:
+- Primary Service Category: ${vendor.profile.vendor_type || 'Not specified'}
+- Key Skills: ${vendor.profile.skills || 'Not specified'}
+- Typical Pricing: ${vendor.profile.pricing_structure || 'Not specified'}
+
+PERFORMANCE SUMMARY:
+- Total Rated Projects: ${vendor.performance.rated_projects ?? 'N/A'}
+- Average Overall Rating: ${vendor.performance.avg_overall_rating?.toFixed(1) ?? 'N/A'}/10
+- Client Recommendation Rate: ${vendor.performance.recommendation_pct?.toFixed(0) ?? 'N/A'}%
+- Avg Quality: ${vendor.performance.avg_quality?.toFixed(1) ?? 'N/A'}/10 | Avg Communication: ${vendor.performance.avg_communication?.toFixed(1) ?? 'N/A'}/10
+
+DETAILED PROJECT HISTORY (Sample):
+${vendor.history.slice(0, 3).map(h => `
+  - Project: "${h.project_title}" (Rating: ${h.project_overall_rating_calc?.toFixed(1) ?? 'N/A'})
+    - What Went Well: "${h.what_went_well || 'N/A'}"
+    - Areas for Improvement: "${h.areas_for_improvement || 'N/A'}"
+`).join('') || '  - No detailed project history available.'}
 `).join('\n---\n')}
 
 ANALYSIS REQUIREMENTS:
-1. Evaluate each vendor's fit for the specific project scope and service category
-2. Consider their performance history, reliability metrics, and client satisfaction
-3. Weigh specialties and experience relevant to the project requirements
-4. Factor in communication quality and project delivery track record
-5. Assign a comprehensive ViRA Score (0-100% scale) based on:
-   - Service category match (25%)
-   - Project scope alignment (25%)
-   - Performance history (30%)
-   - Client satisfaction metrics (20%)
+1.  **Project Fit (40%):** How well do the vendor's skills and described services match the project scope?
+2.  **Performance & Reliability (40%):** Analyze their quantitative history. Are they consistent? Do they have a high recommendation rate and strong overall ratings?
+3.  **Qualitative Match (20%):** Read the "What Went Well" and "Areas for Improvement" sections. Does their past feedback suggest they would be a good cultural and process fit for this specific project?
+4.  **Final Score:** Assign a comprehensive ViRA Score (0-100) based on your integrated analysis.
 
 CRITICAL: You must return ONLY a valid JSON array, no explanatory text before or after.
 
-OUTPUT FORMAT:
-Return ONLY a valid JSON array of the top 3-5 vendors ranked by ViRA Score. Each vendor must include:
+OUTPUT FORMAT (JSON array of top 3-5 vendors):
 - vendorName: string (exact vendor name)
-- viraScore: number (0-100, representing percentage match)
-- reason: string (150-200 words explaining the score and recommendation)
-- keyStrengths: array of 2-3 specific strengths
-- considerations: string (any important considerations or potential concerns)
+- viraScore: number (0-100)
+- reason: string (150-200 words explaining the score, referencing specifics from their profile, performance, and history)
+- keyStrengths: array of 2-3 specific strengths, derived from the data
+- considerations: string (any important considerations or potential concerns based on the data)
 
-EXAMPLE FORMAT:
+EXAMPLE:
 [
   {
     "vendorName": "Example Vendor Inc.",
-    "viraScore": 87,
-    "reason": "Comprehensive analysis explaining why this vendor scores highly...",
-    "keyStrengths": ["Strong track record", "Excellent communication", "On-time delivery"],
-    "considerations": "Higher pricing may require budget consideration"
+    "viraScore": 92,
+    "reason": "This vendor is an exceptional match due to their deep expertise in [Skill], reflected in their project history. Their average overall rating of 9.1/10 across 25 projects shows consistent high performance. Positive feedback on projects like 'X' and 'Y' specifically mention their proactive communication, which aligns well with the stated project needs.",
+    "keyStrengths": ["High Client Satisfaction (9.1 avg rating)", "Proven On-time Delivery", "Specific expertise in [Skill]"],
+    "considerations": "Their pricing structure is premium, which should be aligned with the project budget."
   }
 ]
-
-IMPORTANT: Return ONLY the JSON array above, no additional text or explanation.
     `;
 
-    // [R5.4] Call Gemini API with enhanced prompt
-    let geminiResponse;
-    try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-      const result = await model.generateContent(prompt);
-      geminiResponse = await result.response.text();
-      console.log('Gemini API response received');
-    } catch (geminiError) {
-      console.error('Gemini API Error:', geminiError);
-      // Fallback without AI analysis
-      geminiResponse = null;
-    }
-
-    // [R5.5] Parse and validate AI response
+    // Step 5: Call Gemini API and process the response
+    console.log('Step 5: Calling Gemini and processing response...');
     let recommendations;
-
-    if (geminiResponse) {
-      // Extract JSON from response (handle cases where AI adds explanatory text)
-      let jsonString = geminiResponse.replace(/```json|```/g, '').trim();
-
-      // Find JSON array in the response if it's mixed with text
-      const jsonMatch = jsonString.match(/\[\s*{[\s\S]*}\s*\]/);
-      if (jsonMatch) {
-        jsonString = jsonMatch[0];
-      }
-
-      try {
-        recommendations = JSON.parse(jsonString);
-
-        // Validate the response structure
-        if (!Array.isArray(recommendations)) {
-          throw new Error('Response is not an array');
-        }
-
-        // Ensure all required fields are present
-        recommendations = recommendations.filter(rec =>
-          rec.vendorName &&
-          typeof rec.viraScore === 'number' &&
-          rec.reason &&
-          Array.isArray(rec.keyStrengths)
-        );
-
-      } catch (parseError) {
-        console.error('Failed to parse enhanced AI response:', parseError);
-        console.error('Extracted JSON string:', jsonString);
-        recommendations = null;
-      }
-    } else {
-      recommendations = null;
+    try {
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const result = await model.generateContent(prompt);
+      const geminiResponse = await result.response.text();
+      const jsonMatch = geminiResponse.match(/\[\s*{[\s\S]*}\s*\]/);
+      if (!jsonMatch) throw new Error("No JSON array found in AI response");
+      recommendations = JSON.parse(jsonMatch[0]);
+    } catch (aiError) {
+      console.error('AI processing failed:', aiError);
+      // Fallback logic can be implemented here if needed
+      recommendations = [];
     }
 
-    // [R5.5] Fallback if AI parsing failed
-    if (!recommendations || recommendations.length === 0) {
-      console.log('Using fallback recommendations');
-      recommendations = enrichedVendors
-        .sort((a, b) => {
-          // Sort by a combination of rating quality and quantity (0-100% scale)
-          const scoreA = (a.ratings_analytics.avg_overall_rating * 6) +
-            (a.ratings_analytics.recommendation_rate * 0.4) +
-            Math.min(a.ratings_analytics.total_ratings * 5, 20);
-          const scoreB = (b.ratings_analytics.avg_overall_rating * 6) +
-            (b.ratings_analytics.recommendation_rate * 0.4) +
-            Math.min(b.ratings_analytics.total_ratings * 5, 20);
-          return scoreB - scoreA;
-        })
-        .slice(0, 5)
-        .map(vendor => ({
-          vendorName: vendor.vendor_name,
-          viraScore: Math.min(100, Math.max(10,
-            (vendor.ratings_analytics.avg_overall_rating * 6) +
-            (vendor.ratings_analytics.recommendation_rate * 0.4) +
-            Math.min(vendor.ratings_analytics.total_ratings * 5, 20)
-          )),
-          reason: `${vendor.vendor_name} specializes in ${vendor.service_categories} with ${vendor.ratings_analytics.total_ratings} client ratings averaging ${vendor.ratings_analytics.avg_overall_rating.toFixed(1)}/10. They maintain ${vendor.ratings_analytics.on_time_percentage.toFixed(0)}% on-time delivery and ${vendor.ratings_analytics.recommendation_rate.toFixed(0)}% client recommendation rate.`,
-          keyStrengths: [
-            vendor.ratings_analytics.avg_overall_rating > 7 ? 'High client satisfaction' : 'Established track record',
-            vendor.ratings_analytics.on_time_percentage > 80 ? 'Reliable delivery' : 'Professional service',
-            vendor.specialties ? 'Specialized expertise' : 'Comprehensive capabilities'
-          ],
-          considerations: vendor.ratings_analytics.total_ratings < 3 ?
-            'Limited rating history - consider as emerging vendor' :
-            'Well-established vendor with proven track record'
-        }));
+    // Final validation of the AI response
+    if (!Array.isArray(recommendations)) {
+      console.error("AI response was not a valid array, returning empty.");
+      recommendations = [];
     }
 
-    // [R5.6] Return enhanced recommendations
-    console.log('Returning recommendations:', recommendations.length);
-
+    console.log(`Returning ${recommendations.length} recommendations.`);
     return NextResponse.json({
       recommendations,
-      searchCriteria: {
-        serviceCategory,
-        projectScope
-      },
+      searchCriteria: { serviceCategory, projectScope },
       candidatesAnalyzed: enrichedVendors.length,
-      totalRatingsConsidered: enrichedVendors.reduce((sum, v) => sum + v.ratings_analytics.total_ratings, 0)
     });
 
   } catch (error) {
-    console.error('Enhanced ViRA Match API error:', error);
+    console.error('ViRA Match API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return NextResponse.json(
-      { error: 'An error occurred while generating enhanced recommendations.' },
+      { error: 'An error occurred while generating recommendations.', details: errorMessage },
       { status: 500 }
     );
   }

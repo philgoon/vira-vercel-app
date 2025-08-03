@@ -1,802 +1,426 @@
-// [R5.4] Enhanced Rate Project page with edit mode support
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { Star, CheckCircle, Calendar, User, Building } from 'lucide-react';
-import { Project, Vendor, ProjectsApiResponse, VendorsApiResponse } from '@/types';
+import { useState, useEffect } from 'react';
+import RatingSubmissionModal from '@/components/modals/RatingSubmissionModal';
+import { Project } from '@/types';
 
-// [R4.1] Rating form inputs matching HTML form behavior (strings from selects)
-type RatingFormInputs = {
-  project_id: string; // This will contain the numeric id as a string
-  rater_email: string;
-  project_success_rating: string;
-  project_on_time: 'Yes' | 'No';
-  project_on_budget: 'Yes' | 'No';
-  vendor_overall_rating: string;
-  vendor_quality_rating?: string;
-  vendor_communication_rating?: string;
-  what_went_well?: string;
-  areas_for_improvement?: string;
-  recommend_again: 'Yes' | 'No';
+interface RatingData {
+  project_id: string;
+  vendor_id: string;  // [R4.4] Required for rating insertion
+  project_success_rating: number;
+  quality_rating: number;
+  communication_rating: number;
+  positive_feedback: string;
+  improvement_feedback: string;
+  overall_rating: number;
+  vendor_recommendation: boolean;  // [R4.4] Required for vendor recommendation
+}
+
+// [R4.4] Project type for rate-project page (submission workflow)
+type ProjectForSubmission = Project & {
+  rating_status: 'Incomplete' | 'Needs Review' | 'Complete';  // [R4.4] Include all three rating states
+  vendor: {
+    vendor_name: string;
+    service_categories?: string;
+  } | null;
+  vendor_name?: string; // Support flattened vendor data from projects_with_vendor view
+  client: {
+    client_name: string;
+  } | null;
 };
 
-// [R5.4] Separate component for the main content to use useSearchParams
-function RateProjectContent() {
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<RatingFormInputs>();
-  const searchParams = useSearchParams();
-  const projectIdParam = searchParams.get('project_id');
-  const isEditMode = searchParams.get('edit') === 'true';
-  
-  const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
-  const [existingRating, setExistingRating] = useState<any>(null);
+// Helper function to safely get vendor name from different project structures
+const getVendorName = (project: ProjectForSubmission): string => {
+  // Try different possible vendor name locations
+  if (project.vendor?.vendor_name) return project.vendor.vendor_name;
+  if (project.vendor_name) return project.vendor_name;
+  return 'No vendor assigned';
+};
+
+// Helper function to get brand colors based on rating status
+const getStatusColors = (status: 'Incomplete' | 'Needs Review' | 'Complete') => {
+  switch (status) {
+    case 'Needs Review':
+      return {
+        primary: '#6B8F71',      // Green - Action needed
+        background: '#F0F4F1',   // Light green background
+        text: '#2D5A32'          // Dark green text
+      };
+    case 'Incomplete':
+      return {
+        primary: '#1A5276',      // Blue - Work in progress
+        background: '#E8F4F8',   // Light blue background
+        text: '#0F3A52'          // Dark blue text
+      };
+    case 'Complete':
+      return {
+        primary: '#6E6F71',      // Gray - Finished
+        background: '#F1F1F1',   // Light gray background
+        text: '#4A4B4D'          // Dark gray text
+      };
+  }
+};
+
+export default function RateProjectPage() {
+  const [projects, setProjects] = useState<ProjectForSubmission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
-  const watchedProjectId = watch('project_id');
+  // Filter states
+  const [selectedFilter, setSelectedFilter] = useState<string>('incomplete');
 
-  // [R5.4] Load data and handle edit mode
+
+  // Modal states
+  const [selectedProject, setSelectedProject] = useState<ProjectForSubmission | null>(null);
+  const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
+
+  // [R4.4] Fetch projects that need rating submissions
   useEffect(() => {
-    async function loadData() {
+    async function fetchProjectsForRating() {
       try {
-        const [projectsResponse, vendorsResponse] = await Promise.all([
-          fetch('/api/projects'),
-          fetch('/api/vendors')
-        ]);
+        const response = await fetch('/api/projects');
+        const data = await response.json();
+        if (response.ok) {
+          // [R4.4] Transform projects to include rating_status based on quantitative ratings completeness
+          const projectsNeedingRating = (data.projects || [])
+            .filter((project: Project) => {
+              // Only include closed projects
+              const status = project.status?.toLowerCase() || '';
+              return status === 'closed' || status === 'completed' || status === 'complete' || status === 'finished' || status === 'done';
+            })
+            .map((project: Project) => {
+              // Check if any of the 3 quantitative ratings are missing
+              const hasIncompleteQuantitativeRatings =
+                project.project_success_rating === null ||
+                project.quality_rating === null ||
+                project.communication_rating === null;
 
-        if (projectsResponse.ok && vendorsResponse.ok) {
-          const projectsData: ProjectsApiResponse = await projectsResponse.json();
-          const vendorsData: VendorsApiResponse = await vendorsResponse.json();
+              let rating_status: 'Incomplete' | 'Needs Review' | 'Complete';
 
-          console.log('Loaded projects:', projectsData.projects?.length || 0, 'projects');
-          console.log('Loaded vendors:', vendorsData.vendors?.length || 0, 'vendors');
+              if (hasIncompleteQuantitativeRatings) {
+                rating_status = 'Incomplete';
+              } else if (project.project_overall_rating_calc === null) {
+                rating_status = 'Needs Review';
+              } else {
+                rating_status = 'Complete';
+              }
 
-          // [R5.4] In edit mode, include archived projects; otherwise only completed
-          let filteredProjects;
-          if (isEditMode) {
-            filteredProjects = (projectsData.projects || []).filter(
-              (p: Project & { status?: string }) => {
-                const status = p.status?.toLowerCase() || '';
-                return status === 'archived';
-              }
-            );
-          } else {
-            filteredProjects = (projectsData.projects || []).filter(
-              (p: Project & { status?: string }) => {
-                const status = p.status?.toLowerCase() || '';
-                return status === 'completed' || status === 'complete' || status === 'finished' || status === 'done' || status === 'closed';
-              }
-            );
-          }
-          
-          console.log('Filtered projects found:', filteredProjects.length);
-          console.log('Mode:', isEditMode ? 'Edit Mode' : 'Create Mode');
-          
-          setCompletedProjects(filteredProjects);
-          setVendors(vendorsData.vendors || []);
-          
-          // [R5.4] If project_id is provided via URL, auto-select it
-          if (projectIdParam) {
-            const project = filteredProjects.find((p: Project) => p.project_id === projectIdParam);
-            if (project) {
-              setSelectedProject(project);
-              setValue('project_id', project.project_id);
-              
-              // Auto-select vendor
-              const vendor = (vendorsData.vendors || []).find((v: Vendor) => 
-                String(v.vendor_id) === String(project.assigned_vendor_id)
-              );
-              if (vendor) {
-                setSelectedVendor(vendor);
-              }
-              
-              // [R5.4] In edit mode, load existing rating data
-              if (isEditMode) {
-                await loadExistingRating(project.project_id);
-              }
-            }
-          }
+              return {
+                ...project,
+                rating_status
+              };
+            });
+
+          setProjects(projectsNeedingRating);
         } else {
-          console.error('Failed to load data:', { 
-            projectsStatus: projectsResponse.status, 
-            vendorsStatus: vendorsResponse.status 
-          });
+          throw new Error(data.error || 'Failed to fetch projects');
         }
       } catch (err) {
-        setError('Failed to load projects and vendors');
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
       } finally {
         setLoading(false);
       }
     }
 
-    loadData();
-  }, [projectIdParam, isEditMode, setValue]);
+    fetchProjectsForRating();
+  }, []);
 
-  // [R5.4] Load existing rating data for edit mode
-  const loadExistingRating = async (projectId: string) => {
-    try {
-      const response = await fetch(`/api/ratings?project_id=${projectId}`);
-      if (response.ok) {
-        const data = await response.json();
-        const ratings = data.ratings || [];
-        
-        if (ratings.length > 0) {
-          const rating = ratings[0]; // Get the most recent rating
-          setExistingRating(rating);
-          
-          // Pre-fill form with existing data
-          setValue('rater_email', rating.rater_email || '');
-          setValue('project_success_rating', String(rating.project_success_rating || ''));
-          setValue('project_on_time', rating.project_on_time ? 'Yes' : 'No');
-          setValue('project_on_budget', rating.project_on_budget ? 'Yes' : 'No');
-          setValue('vendor_overall_rating', String(rating.vendor_overall_rating || ''));
-          setValue('vendor_quality_rating', String(rating.vendor_quality_rating || ''));
-          setValue('vendor_communication_rating', String(rating.vendor_communication_rating || ''));
-          setValue('what_went_well', rating.what_went_well || '');
-          setValue('areas_for_improvement', rating.areas_for_improvement || '');
-          setValue('recommend_again', rating.recommend_again ? 'Yes' : 'No');
-          
-          console.log('Pre-filled form with existing rating data:', rating);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load existing rating:', err);
-    }
+  // Filter projects based on selected filter
+  const filteredProjects = projects
+    .filter(project => {
+      if (selectedFilter === 'all') return true;
+      if (selectedFilter === 'incomplete') return project.rating_status === 'Incomplete';
+      if (selectedFilter === 'need-review') return project.rating_status === 'Needs Review';
+      if (selectedFilter === 'complete') return project.rating_status === 'Complete';
+      return true;
+    })
+    .sort((a, b) => {
+      // Sort "Needs Review" projects first, then "Complete" projects
+      if (a.rating_status === 'Needs Review' && b.rating_status !== 'Needs Review') return -1;
+      if (a.rating_status !== 'Needs Review' && b.rating_status === 'Needs Review') return 1;
+      return 0;
+    });
+
+  // Handle project card click
+  const handleProjectClick = (project: ProjectForSubmission) => {
+    setSelectedProject(project);
+    setIsSubmissionModalOpen(true);
   };
 
-  // [R4.1] Handle project selection and auto-populate vendor - REVERTED to correct logic
-  useEffect(() => {
-    console.log('useEffect triggered:', { watchedProjectId, completedProjectsCount: completedProjects.length });
-    
-    if (watchedProjectId && watchedProjectId !== '') {
-      // [R4.1] Find project by project_id (database primary key)
-      const project = completedProjects.find(p => String(p.project_id) === String(watchedProjectId));
-      console.log('Project lookup result:', { watchedProjectId, found: !!project, project: project?.project_title });
-      setSelectedProject(project || null);
-      
-      if (project?.assigned_vendor_id) {
-        const vendor = vendors.find(v => String(v.vendor_id) === String(project.assigned_vendor_id));
-        console.log('Vendor lookup result:', { vendorId: project.assigned_vendor_id, found: !!vendor, vendor: vendor?.vendor_name });
-        setSelectedVendor(vendor || null);
-      } else {
-        setSelectedVendor(null);
-      }
-    } else {
-      setSelectedProject(null);
-      setSelectedVendor(null);
-    }
-  }, [watchedProjectId, completedProjects, vendors]);
-
-  // [R5.4] Handle rating form submission (create or update)
-  const onSubmit: SubmitHandler<RatingFormInputs> = async (data) => {
-    setSubmitting(true);
-    setError(null);
-
-    console.log('Raw form data received:', data);
-    console.log('Selected project state:', selectedProject);
-    console.log('Edit mode:', isEditMode, 'Existing rating:', existingRating);
-
+  // [R4.4] Handle rating submission using /api/rate-project endpoint
+  const handleRatingSubmit = async (ratingData: RatingData) => {
     try {
-      // [R4.1] Keep project ID as string (database uses text project_id)
-      const projectId = data.project_id && data.project_id !== '' ? data.project_id : '';
-      const vendorId = selectedProject?.assigned_vendor_id || '';
-      const projectSuccessRating = data.project_success_rating && data.project_success_rating !== '' ? parseInt(String(data.project_success_rating)) : 0;
-      const vendorOverallRating = data.vendor_overall_rating && data.vendor_overall_rating !== '' ? parseInt(String(data.vendor_overall_rating)) : 0;
-      const vendorQualityRating = data.vendor_quality_rating && data.vendor_quality_rating !== '' ? parseInt(String(data.vendor_quality_rating)) : null;
-      const vendorCommunicationRating = data.vendor_communication_rating && data.vendor_communication_rating !== '' ? parseInt(String(data.vendor_communication_rating)) : null;
+      // [R4.4] Determine if this is a new rating (POST) or update (PUT)
+      // Check if project already has any quantitative ratings
+      const hasExistingRatings = selectedProject &&
+        (selectedProject.project_success_rating !== null ||
+          selectedProject.quality_rating !== null ||
+          selectedProject.communication_rating !== null);
 
-      console.log('Parsed values:', {
-        projectId,
-        vendorId,
-        projectSuccessRating,
-        vendorOverallRating,
-        vendorQualityRating,
-        vendorCommunicationRating
+      const method = hasExistingRatings ? 'PUT' : 'POST';
+
+      console.log('🔄 API Call Details:', {
+        method,
+        project_id: ratingData.project_id,
+        vendor_id: ratingData.vendor_id,
+        hasExistingRatings,
+        endpoint: '/api/rate-project'
       });
 
-      // [R4.1] Client-side validation before sending
-      if (!data.project_id || data.project_id === '' || projectId === '') {
-        console.error('Project validation failed:', { 'data.project_id': data.project_id, projectId });
-        throw new Error('Please select a valid project.');
-      }
-      if (!vendorId || vendorId === '') {
-        console.error('Vendor validation failed:', { vendorId, selectedProject });
-        throw new Error('Selected project has no assigned vendor.');
-      }
-      if (!data.rater_email || !data.rater_email.trim()) {
-        throw new Error('Please enter your email address.');
-      }
-      if (!data.project_success_rating || data.project_success_rating === '' || projectSuccessRating === 0 || isNaN(projectSuccessRating)) {
-        throw new Error('Please rate the project success.');
-      }
-      if (!data.vendor_overall_rating || data.vendor_overall_rating === '' || vendorOverallRating === 0 || isNaN(vendorOverallRating)) {
-        throw new Error('Please rate the vendor overall performance.');
-      }
-      if (!data.project_on_time) {
-        throw new Error('Please specify if the project was delivered on time.');
-      }
-      if (!data.project_on_budget) {
-        throw new Error('Please specify if the project was delivered on budget.');
-      }
-      if (!data.recommend_again) {
-        throw new Error('Please specify if you would recommend this vendor again.');
-      }
-
-      // [R5.4] Prepare payload with debugging
-      const payload = {
-        project_id: projectId,
-        vendor_id: vendorId,
-        rater_email: data.rater_email,
-        project_success_rating: projectSuccessRating,
-        project_on_time: data.project_on_time,
-        project_on_budget: data.project_on_budget,
-        vendor_overall_rating: vendorOverallRating,
-        vendor_quality_rating: vendorQualityRating,
-        vendor_communication_rating: vendorCommunicationRating,
-        what_went_well: data.what_went_well,
-        areas_for_improvement: data.areas_for_improvement,
-        recommend_again: data.recommend_again
-      };
-
-      console.log('Submitting rating payload:', payload);
-      console.log('Mode:', isEditMode ? 'UPDATE' : 'CREATE');
-
-      // [R5.4] In edit mode, use PUT to update; otherwise POST to create
-      const method = isEditMode ? 'PUT' : 'POST';
       const response = await fetch('/api/rate-project', {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(ratingData)
       });
 
-      // [R4.1] Enhanced error handling with response details
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('API Error Response:', errorData);
-        throw new Error(errorData.error || `Server error: ${response.status}`);
+        const errorData = await response.text();
+        console.error('❌ API Error Response:', errorData);
+        throw new Error(`Failed to submit rating: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log('Rating submitted successfully:', result);
+      console.log('✅ Rating submitted successfully:', result);
 
-      setSuccess(true);
-      
-      // [R5.4] In create mode, remove the rated project from the list
-      if (!isEditMode) {
-        setCompletedProjects(prev => prev.filter(p => p.project_id !== projectId));
-      }
+      // Remove the rated project from the list
+      setProjects(prev => prev.filter(p => p.project_id !== ratingData.project_id));
 
-    } catch (err: unknown) {
-      console.error('Form submission error:', err);
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unexpected error occurred.');
-      }
-    } finally {
-      setSubmitting(false);
+      // Close modal
+      setIsSubmissionModalOpen(false);
+      setSelectedProject(null);
+    } catch (error) {
+      console.error('Failed to submit rating:', error);
+      throw error;
     }
   };
-
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
-        <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-          <div style={{ padding: '1.5rem' }}>
-            <h1 style={{
-              fontSize: '1.875rem',
-              fontFamily: 'var(--font-headline)',
-              fontWeight: 'bold',
-              color: '#1A5276'
-            }}>Rate Project</h1>
-          </div>
-        </div>
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <div style={{
-            width: '2rem',
-            height: '2rem',
-            border: '2px solid #1A5276',
-            borderTop: '2px solid transparent',
-            borderRadius: '50%',
-            margin: '0 auto 1rem',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          <p style={{ color: '#6b7280' }}>Loading projects...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (success) {
-    return (
-      <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
-        <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-          <div style={{ padding: '1.5rem' }}>
-            <h1 style={{
-              fontSize: '1.875rem',
-              fontFamily: 'var(--font-headline)',
-              fontWeight: 'bold',
-              color: '#1A5276'
-            }}>Rate Project</h1>
-          </div>
-        </div>
-        <div style={{ padding: '2rem 1.5rem' }}>
-          <div style={{ maxWidth: '48rem', margin: '0 auto' }}>
-            <div style={{
-              backgroundColor: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              borderRadius: '0.5rem',
-              padding: '2rem',
-              textAlign: 'center'
-            }}>
-              <CheckCircle style={{ width: '3rem', height: '3rem', color: '#15803d', margin: '0 auto 1rem' }} />
-              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#15803d', marginBottom: '0.5rem' }}>
-                {isEditMode ? 'Rating Updated Successfully!' : 'Rating Submitted Successfully!'}
-              </h3>
-              <p style={{ color: '#166534', marginBottom: '1.5rem' }}>
-                {isEditMode 
-                  ? 'Your rating has been updated successfully.' 
-                  : 'Thank you for your feedback. The project has been archived and your rating will help improve future vendor recommendations.'
-                }
-              </p>
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                <Link 
-                  href="/rate-project"
-                  style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: '#15803d',
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '0.375rem',
-                    fontWeight: '500'
-                  }}
-                  onClick={() => setSuccess(false)}
-                >
-                  {isEditMode ? 'Edit Another Rating' : 'Rate Another Project'}
-                </Link>
-                <Link 
-                  href="/"
-                  style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: '#1A5276',
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '0.375rem',
-                    fontWeight: '500'
-                  }}
-                >
-                  Back to Dashboard
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
       {/* Header */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h1 style={{
-                fontSize: '1.875rem',
-                fontFamily: 'var(--font-headline)',
-                fontWeight: 'bold',
-                color: '#1A5276'
-              }}>{isEditMode ? 'Edit Project Rating' : 'Rate Project'}</h1>
-              <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
-                {isEditMode 
-                  ? 'Update your project and vendor ratings' 
-                  : 'Submit ratings for completed projects'
-                } • <Link href="/" style={{ fontWeight: '500', color: '#1A5276', textDecoration: 'underline' }}>Back to Dashboard</Link>
-              </p>
+          <h1 style={{
+            fontSize: '1.875rem',
+            fontFamily: 'var(--font-headline)',
+            fontWeight: 'bold',
+            color: '#1A5276'
+          }}>Rate Projects</h1>
+          <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
+            Submit ratings for completed projects that need review
+          </p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ padding: '1rem 1.5rem' }}>
+          <div style={{ marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
+              Filter by Status
+            </h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              {[
+                { label: 'Incomplete', value: 'incomplete' },
+                { label: 'Needs Review', value: 'need-review' },
+                { label: 'Complete', value: 'complete' },
+                { label: 'All', value: 'all' }
+              ].map(filter => (
+                <button
+                  key={filter.value}
+                  onClick={() => setSelectedFilter(filter.value)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '9999px',
+                    border: '1px solid',
+                    borderColor: selectedFilter === filter.value ? '#1A5276' : '#d1d5db',
+                    backgroundColor: selectedFilter === filter.value ? '#1A5276' : 'white',
+                    color: selectedFilter === filter.value ? 'white' : '#374151',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {filter.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div style={{ padding: '2rem 1.5rem' }}>
-        <div style={{ maxWidth: '48rem', margin: '0 auto' }}>
-          
-          {completedProjects.length === 0 ? (
-            <div style={{ textAlign: 'center' }}>
-              <Star style={{ width: '3rem', height: '3rem', color: '#9ca3af', margin: '0 auto 1rem' }} />
-              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', marginBottom: '0.5rem' }}>
-                {isEditMode ? 'No Archived Projects' : 'No Completed Projects'}
-              </h3>
-              <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
-                {isEditMode 
-                  ? 'There are no archived projects with ratings available for editing at this time.' 
-                  : 'There are no completed projects available for rating at this time.'
-                }
-              </p>
-              <Link 
-                href="/projects"
+      {/* Content */}
+      <div style={{ padding: '1.5rem' }}>
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <div style={{
+              width: '2rem',
+              height: '2rem',
+              border: '2px solid #1A5276',
+              borderTop: '2px solid transparent',
+              borderRadius: '50%',
+              margin: '0 auto 1rem',
+              animation: 'spin 1s linear infinite'
+            }}></div>
+            <p style={{ color: '#6b7280' }}>Loading projects...</p>
+          </div>
+        )}
+
+        {error && (
+          <div style={{
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '0.5rem',
+            padding: '1rem',
+            textAlign: 'center'
+          }}>
+            <p style={{ color: '#dc2626' }}>Error: {error}</p>
+          </div>
+        )}
+
+        {!loading && !error && filteredProjects.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <div style={{
+              width: '4rem',
+              height: '4rem',
+              backgroundColor: '#f3f4f6',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1rem'
+            }}>
+              <span style={{ fontSize: '1.5rem', color: '#9ca3af' }}>✓</span>
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', marginBottom: '0.5rem' }}>
+              All caught up!
+            </h3>
+            <p style={{ color: '#6b7280' }}>
+              No projects need rating submissions at this time.
+            </p>
+          </div>
+        )}
+
+        {/* Project List - 2 Column Layout */}
+        {!loading && !error && filteredProjects.length > 0 && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '1rem',
+            maxWidth: '1600px',
+            margin: '0 auto'
+          }}>
+            {filteredProjects.map((project) => (
+              <div
+                key={project.project_id}
+                className="professional-card"
+                onClick={() => handleProjectClick(project)}
                 style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#1A5276',
-                  color: 'white',
-                  textDecoration: 'none',
-                  borderRadius: '0.375rem',
-                  fontWeight: '500'
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '1rem 1.5rem',
+                  minHeight: '5rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
                 }}
               >
-                View All Projects
-              </Link>
-            </div>
-          ) : (
-            <div className="professional-card">
-              <div style={{ padding: '2rem' }}>
-                <div style={{ marginBottom: '2rem' }}>
-                  <h2 style={{
-                    fontSize: '1.25rem',
-                    fontWeight: '600',
-                    color: '#111827',
-                    marginBottom: '0.5rem'
-                  }}>{isEditMode ? 'Edit Project Rating' : 'Project Rating Form'}</h2>
-                  <p style={{ color: '#6b7280' }}>
-                    {isEditMode 
-                      ? 'Update your feedback on the project and vendor performance.' 
-                      : 'Please provide feedback on the completed project and vendor performance.'
-                    }
-                  </p>
+                {/* Project Avatar */}
+                <div style={{
+                  width: '3rem',
+                  height: '3rem',
+                  backgroundColor: getStatusColors(project.rating_status).primary,
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '1rem',
+                  flexShrink: 0
+                }}>
+                  <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'white' }}>
+                    {project.project_title.charAt(0)}
+                  </span>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  
-                  {/* Project Selection */}
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-                    gap: '1.5rem' 
-                  }}>
-                    <div>
-                      <label htmlFor="project_id" className="form-label">
-                        Project <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
-                      <select
-                        id="project_id"
-                        {...register('project_id', { required: 'Please select a project.' })}
-                        className="form-input"
-                      >
-                        <option value="">Select a {isEditMode ? 'rated' : 'completed'} project</option>
-                        {completedProjects.map((project) => (
-                          <option key={project.project_id} value={project.project_id}>
-                            {project.project_title}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.project_id && (
-                        <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#dc2626' }}>
-                          {errors.project_id.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label htmlFor="rater_email" className="form-label">
-                        Your Email <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
-                      <input
-                        id="rater_email"
-                        type="email"
-                        {...register('rater_email', { required: 'Email is required.' })}
-                        className="form-input"
-                        placeholder="your.email@company.com"
-                      />
-                      {errors.rater_email && (
-                        <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#dc2626' }}>
-                          {errors.rater_email.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Project Details Display */}
-                  {selectedProject && (
-                    <div style={{
-                      backgroundColor: '#f9fafb',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '0.5rem',
-                      padding: '1rem'
+                {/* Main Project Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: 0
                     }}>
-                      <h4 style={{ fontWeight: '600', color: '#111827', marginBottom: '0.5rem' }}>
-                        Selected Project Details:
-                      </h4>
-                      <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                        <strong>Title:</strong> {selectedProject.project_title}
-                      </p>
-                      {selectedProject.project_description && (
-                        <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                          <strong>Description:</strong> {selectedProject.project_description}
-                        </p>
-                      )}
-                      {selectedVendor && (
-                        <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                          <strong>Vendor:</strong> {selectedVendor.vendor_name}
-                          {selectedVendor.service_categories && ` (${selectedVendor.service_categories})`}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Project Performance Ratings */}
-                  <div>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
-                      Project Performance
+                      {project.project_title}
                     </h3>
-                    
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-                      gap: '1.5rem' 
-                    }}>
-                      <div>
-                        <label htmlFor="project_success_rating" className="form-label">
-                          Project Success Rating (1-10) <span style={{ color: '#ef4444' }}>*</span>
-                        </label>
-                        <select
-                          id="project_success_rating"
-                          {...register('project_success_rating', { required: 'Please rate the project success.' })}
-                          className="form-input"
-                        >
-                          <option value="">Select rating</option>
-                          {[...Array(10)].map((_, i) => (
-                            <option key={i + 1} value={i + 1}>
-                              {i + 1} {i === 9 ? '(Excellent)' : i === 4 ? '(Average)' : i === 0 ? '(Poor)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.project_success_rating && (
-                          <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#dc2626' }}>
-                            {errors.project_success_rating.message}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label htmlFor="project_on_time" className="form-label">
-                          Project Delivered On Time? <span style={{ color: '#ef4444' }}>*</span>
-                        </label>
-                        <select
-                          id="project_on_time"
-                          {...register('project_on_time', { required: 'Please specify if project was on time.' })}
-                          className="form-input"
-                        >
-                          <option value="">Select option</option>
-                          <option value="Yes">Yes</option>
-                          <option value="No">No</option>
-                        </select>
-                        {errors.project_on_time && (
-                          <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#dc2626' }}>
-                            {errors.project_on_time.message}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label htmlFor="project_on_budget" className="form-label">
-                          Project Delivered On Budget? <span style={{ color: '#ef4444' }}>*</span>
-                        </label>
-                        <select
-                          id="project_on_budget"
-                          {...register('project_on_budget', { required: 'Please specify if project was on budget.' })}
-                          className="form-input"
-                        >
-                          <option value="">Select option</option>
-                          <option value="Yes">Yes</option>
-                          <option value="No">No</option>
-                        </select>
-                        {errors.project_on_budget && (
-                          <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#dc2626' }}>
-                            {errors.project_on_budget.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
                   </div>
 
-                  {/* Vendor Performance Ratings */}
-                  <div>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
-                      Vendor Performance
-                    </h3>
-                    
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-                      gap: '1.5rem' 
-                    }}>
-                      <div>
-                        <label htmlFor="vendor_overall_rating" className="form-label">
-                          Overall Vendor Rating (1-10) <span style={{ color: '#ef4444' }}>*</span>
-                        </label>
-                        <select
-                          id="vendor_overall_rating"
-                          {...register('vendor_overall_rating', { required: 'Please rate the vendor overall.' })}
-                          className="form-input"
-                        >
-                          <option value="">Select rating</option>
-                          {[...Array(10)].map((_, i) => (
-                            <option key={i + 1} value={i + 1}>
-                              {i + 1} {i === 9 ? '(Excellent)' : i === 4 ? '(Average)' : i === 0 ? '(Poor)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.vendor_overall_rating && (
-                          <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#dc2626' }}>
-                            {errors.vendor_overall_rating.message}
-                          </p>
-                        )}
-                      </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                    <span style={{ fontWeight: '500', color: '#1A5276' }}>
+                      {getVendorName(project)}
+                    </span>
 
-                      <div>
-                        <label htmlFor="vendor_quality_rating" className="form-label">
-                          Work Quality Rating (1-10) <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Optional</span>
-                        </label>
-                        <select
-                          id="vendor_quality_rating"
-                          {...register('vendor_quality_rating')}
-                          className="form-input"
-                        >
-                          <option value="">Select rating</option>
-                          {[...Array(10)].map((_, i) => (
-                            <option key={i + 1} value={i + 1}>
-                              {i + 1} {i === 9 ? '(Excellent)' : i === 4 ? '(Average)' : i === 0 ? '(Poor)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label htmlFor="vendor_communication_rating" className="form-label">
-                          Communication Rating (1-10) <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Optional</span>
-                        </label>
-                        <select
-                          id="vendor_communication_rating"
-                          {...register('vendor_communication_rating')}
-                          className="form-input"
-                        >
-                          <option value="">Select rating</option>
-                          {[...Array(10)].map((_, i) => (
-                            <option key={i + 1} value={i + 1}>
-                              {i + 1} {i === 9 ? '(Excellent)' : i === 4 ? '(Average)' : i === 0 ? '(Poor)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Recommendation */}
-                  <div>
-                    <label htmlFor="recommend_again" className="form-label">
-                      Would you recommend this vendor again? <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <select
-                      id="recommend_again"
-                      {...register('recommend_again', { required: 'Please specify if you would recommend this vendor.' })}
-                      className="form-input"
-                    >
-                      <option value="">Select option</option>
-                      <option value="Yes">Yes</option>
-                      <option value="No">No</option>
-                    </select>
-                    {errors.recommend_again && (
-                      <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#dc2626' }}>
-                        {errors.recommend_again.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Feedback Text Areas */}
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
-                    gap: '1.5rem' 
-                  }}>
-                    <div>
-                      <label htmlFor="what_went_well" className="form-label">
-                        What went well? <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Optional</span>
-                      </label>
-                      <textarea
-                        id="what_went_well"
-                        {...register('what_went_well')}
-                        className="form-textarea"
-                        rows={4}
-                        placeholder="Describe positive aspects of working with this vendor..."
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="areas_for_improvement" className="form-label">
-                        Areas for improvement? <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Optional</span>
-                      </label>
-                      <textarea
-                        id="areas_for_improvement"
-                        {...register('areas_for_improvement')}
-                        className="form-textarea"
-                        rows={4}
-                        placeholder="Constructive feedback on areas where the vendor could improve..."
-                      />
-                    </div>
-                  </div>
-
-                  {/* Error Display */}
-                  {error && (
+                    {/* Status Badge */}
                     <div style={{
-                      borderRadius: '0.375rem',
-                      backgroundColor: '#fef2f2',
-                      border: '1px solid #fecaca',
-                      padding: '1rem'
+                      padding: '0.125rem 0.5rem',
+                      backgroundColor: getStatusColors(project.rating_status).background,
+                      color: getStatusColors(project.rating_status).text,
+                      borderRadius: '9999px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500'
                     }}>
-                      <div style={{ fontSize: '0.875rem', color: '#b91c1c' }}>{error}</div>
+                      {project.rating_status}
                     </div>
-                  )}
-
-                  {/* Submit Button */}
-                  <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '1rem' }}>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      style={{
-                        padding: '0.875rem 3rem',
-                        backgroundColor: submitting ? '#6b7280' : '#1A5276',
-                        color: 'white',
-                        fontWeight: '600',
-                        fontSize: '1rem',
-                        borderRadius: '0.5rem',
-                        border: 'none',
-                        cursor: submitting ? 'not-allowed' : 'pointer',
-                        transition: 'background-color 150ms',
-                        opacity: submitting ? 0.5 : 1
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!submitting) {
-                          e.currentTarget.style.backgroundColor = '#154466';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!submitting) {
-                          e.currentTarget.style.backgroundColor = '#1A5276';
-                        }
-                      }}
-                    >
-                      {submitting ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div style={{
-                            width: '1.25rem',
-                            height: '1.25rem',
-                            border: '2px solid white',
-                            borderTop: '2px solid transparent',
-                            borderRadius: '50%',
-                            animation: 'spin 1s linear infinite'
-                          }}></div>
-                          {isEditMode ? 'Updating Rating...' : 'Submitting Rating...'}
-                        </div>
-                      ) : (
-                        isEditMode ? 'Update Rating' : 'Submit Rating'
-                      )}
-                    </button>
                   </div>
-                </form>
+                </div>
+
+                {/* Action Indicator */}
+                <div style={{
+                  width: '2rem',
+                  height: '2rem',
+                  backgroundColor: '#f3f4f6',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginLeft: '1rem'
+                }}>
+                  <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>→</span>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
+
+        {/* Summary */}
+        {!loading && !error && filteredProjects.length > 0 && (
+          <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+              {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''} need{filteredProjects.length === 1 ? 's' : ''} rating review
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Rating Submission Modal */}
+      {selectedProject && (
+        <RatingSubmissionModal
+          project={selectedProject}
+          isOpen={isSubmissionModalOpen}
+          onClose={() => {
+            setIsSubmissionModalOpen(false);
+            setSelectedProject(null);
+          }}
+          onSubmit={handleRatingSubmit}
+        />
+      )}
 
       <style jsx>{`
         @keyframes spin {
@@ -805,39 +429,5 @@ function RateProjectContent() {
         }
       `}</style>
     </div>
-  );
-}
-
-// [R1] Main page component with Suspense boundary for useSearchParams
-export default function RateProjectPage() {
-  return (
-    <Suspense fallback={
-      <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
-        <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-          <div style={{ padding: '1.5rem' }}>
-            <h1 style={{
-              fontSize: '1.875rem',
-              fontFamily: 'var(--font-headline)',
-              fontWeight: 'bold',
-              color: '#1A5276'
-            }}>Rate Project</h1>
-          </div>
-        </div>
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <div style={{
-            width: '2rem',
-            height: '2rem',
-            border: '2px solid #1A5276',
-            borderTop: '2px solid transparent',
-            borderRadius: '50%',
-            margin: '0 auto 1rem',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          <p style={{ color: '#6b7280' }}>Loading page...</p>
-        </div>
-      </div>
-    }>
-      <RateProjectContent />
-    </Suspense>
   );
 }

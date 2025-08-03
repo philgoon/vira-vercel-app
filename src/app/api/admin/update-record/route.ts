@@ -38,58 +38,56 @@ export async function POST(request: NextRequest) {
 
     switch (table) {
       case 'vendors':
-        // Ensure service_categories is properly formatted as array
-        if (updateData.service_categories && typeof updateData.service_categories === 'string') {
-          try {
-            updateData.service_categories = JSON.parse(updateData.service_categories);
-          } catch {
-            // If not valid JSON, split by comma and clean up
-            updateData.service_categories = updateData.service_categories
-              .split(',')
-              .map((cat: string) => cat.trim())
-              .filter((cat: string) => cat.length > 0);
-          }
-        }
+        // Remove calculated fields for vendors_enhanced
+        delete updateData.total_projects;
+        delete updateData.rated_projects;
+        delete updateData.avg_project_success_rating;
+        delete updateData.avg_quality_rating;
+        delete updateData.avg_communication_rating;
+        delete updateData.avg_overall_rating;
+        delete updateData.recommendation_percentage;
+        delete updateData.vendor_id; // Don't update primary key
 
         console.log('Updating vendor with data:', updateData);
         query = supabase
-          .from('vendors')
+          .from('vendors_enhanced')
           .update(updateData)
-          .eq('vendor_id', id) // Use correct primary key
+          .eq('vendor_id', id)
           .select();
         break;
 
       case 'clients':
+        delete updateData.client_id; // Don't update primary key
         console.log('Updating client with data:', updateData);
         query = supabase
           .from('clients')
           .update(updateData)
-          .eq('client_id', id) // Use correct primary key
+          .eq('client_id', id)
           .select();
         break;
 
       case 'projects':
-        // Remove relational fields
-        delete updateData.client_name;
+        delete updateData.project_id; // Don't update primary key
+        delete updateData.vendor_id; // Don't update foreign key
 
         console.log('Updating project with data:', updateData);
         query = supabase
-          .from('projects')
+          .from('projects_consolidated')
           .update(updateData)
-          .eq('project_id', id) // Use correct primary key
+          .eq('project_id', id)
           .select();
         break;
 
       case 'ratings':
-        // Remove relational fields
-        delete updateData.project_name;
-        delete updateData.vendor_name;
+        // Ratings are part of projects_consolidated table
+        delete updateData.project_id;
+        delete updateData.vendor_id;
 
-        console.log('Updating rating with data:', updateData);
+        console.log('Updating rating (project) with data:', updateData);
         query = supabase
-          .from('ratings') // Use correct table name
+          .from('projects_consolidated')
           .update(updateData)
-          .eq('rating_id', id) // Use correct primary key
+          .eq('project_id', id)
           .select();
         break;
 
