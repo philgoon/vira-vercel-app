@@ -75,6 +75,10 @@ export interface ProjectsApiResponse {
   projects: Project[];
 }
 
+export interface VendorsApiResponse {
+  vendors: Vendor[];
+}
+
 // Recommendation interfaces for ViRA matching system
 export interface EnhancedRecommendation {
   vendorName: string
