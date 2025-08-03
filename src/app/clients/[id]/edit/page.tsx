@@ -8,12 +8,12 @@ import { Client } from '@/types';
 export default function EditClientPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
-  
+
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState({
     client_name: '',
     industry: '',
@@ -27,12 +27,12 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
       try {
         const response = await fetch(`/api/clients?id=${id}`);
         if (!response.ok) throw new Error('Failed to fetch client');
-        
+
         const data = await response.json();
-        const clientData = data.clients?.find((c: Client) => c.client_id.toString() === id);
-        
+        const clientData = data.clients?.find((c: Client) => c.client_key.toString() === id);
+
         if (!clientData) throw new Error('Client not found');
-        
+
         setClient(clientData);
         setFormData({
           client_name: clientData.client_name || '',
@@ -54,13 +54,13 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
   const handleSave = async () => {
     setSaving(true);
     setError(null);
-    
+
     try {
       const response = await fetch('/api/clients', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          client_id: id,
+          client_key: id,
           ...formData,
           updated_at: new Date().toISOString()
         })
@@ -70,7 +70,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to save changes');
       }
-      
+
       // Navigate back to client view page
       router.push(`/clients/${id}`);
     } catch (err) {
@@ -113,7 +113,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
         }}>
           <p style={{ color: '#dc2626' }}>Error: {error}</p>
         </div>
-        <button 
+        <button
           onClick={() => router.push('/clients')}
           style={{
             display: 'flex',
@@ -139,7 +139,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <p style={{ color: '#6b7280' }}>Client not found</p>
-        <button 
+        <button
           onClick={() => router.push('/clients')}
           style={{
             display: 'flex',
@@ -184,10 +184,10 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
               <ArrowLeft style={{ width: '1.25rem', height: '1.25rem' }} />
               Back to Client
             </button>
-            
-            <h1 style={{ 
-              fontSize: '1.875rem', 
-              fontWeight: 'bold', 
+
+            <h1 style={{
+              fontSize: '1.875rem',
+              fontWeight: 'bold',
               color: '#1A5276',
               margin: 0,
               fontFamily: 'var(--font-headline)'
@@ -211,7 +211,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
             >
               Cancel
             </button>
-            
+
             <button
               onClick={handleSave}
               disabled={saving}
@@ -251,18 +251,18 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
         )}
 
         <div className="professional-card" style={{ padding: '2rem' }}>
-          <h2 style={{ 
-            fontSize: '1.25rem', 
-            fontWeight: '600', 
+          <h2 style={{
+            fontSize: '1.25rem',
+            fontWeight: '600',
             marginBottom: '1.5rem',
             color: '#111827'
           }}>
             Client Information
           </h2>
-          
+
           <div style={{ display: 'grid', gap: '1.5rem' }}>
             <div>
-              <label className="form-label" style={{ 
+              <label className="form-label" style={{
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '600',
@@ -289,7 +289,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
               <div>
-                <label className="form-label" style={{ 
+                <label className="form-label" style={{
                   display: 'block',
                   fontSize: '0.875rem',
                   fontWeight: '600',
@@ -315,7 +315,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
               </div>
 
               <div>
-                <label className="form-label" style={{ 
+                <label className="form-label" style={{
                   display: 'block',
                   fontSize: '0.875rem',
                   fontWeight: '600',
@@ -347,7 +347,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
             </div>
 
             <div>
-              <label className="form-label" style={{ 
+              <label className="form-label" style={{
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '600',
@@ -378,7 +378,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
             </div>
 
             <div>
-              <label className="form-label" style={{ 
+              <label className="form-label" style={{
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '600',
