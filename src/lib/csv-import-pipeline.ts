@@ -667,6 +667,92 @@ export class CSVImportPipeline {
       errors
     };
   }
+
+  /**
+   * Generate fuzzy match suggestions for missing vendor names
+   */
+  private generateVendorSuggestions(missingVendors: string[], existingVendorNames: string[]): Map<string, string[]> {
+    const suggestions = new Map<string, string[]>();
+    
+    for (const missingVendor of missingVendors) {
+      const matches: { name: string, score: number }[] = [];
+      
+      for (const existingName of existingVendorNames) {
+        const score = this.calculateStringSimilarity(missingVendor.toLowerCase(), existingName.toLowerCase());
+        if (score > 0.6) { // Only suggest if similarity > 60%
+          matches.push({ name: existingName, score });
+        }
+      }
+      
+      // Sort by similarity score (descending) and take top 3
+      const topMatches = matches
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+        .map(match => match.name);
+      
+      suggestions.set(missingVendor, topMatches);
+    }
+    
+    return suggestions;
+  }
+
+  /**
+   * Calculate string similarity using Levenshtein distance
+   */
+  private calculateStringSimilarity(str1: string, str2: string): number {
+    const matrix = [];
+    const n = str1.length;
+    const m = str2.length;
+
+    if (n === 0) return m === 0 ? 1 : 0;
+    if (m === 0) return 0;
+
+    // Initialize matrix
+    for (let i = 0; i <= n; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= m; j++) {
+      matrix[0][j] = j;
+    }
+
+    // Fill matrix
+    for (let i = 1; i <= n; i++) {
+      for (let j = 1; j <= m; j++) {
+        const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,     // deletion
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j - 1] + cost // substitution
+        );
+      }
+    }
+
+    // Convert distance to similarity score (0-1)
+    const maxLength = Math.max(n, m);
+    return 1 - (matrix[n][m] / maxLength);
+  }
+
+  /**
+   * Build enhanced error message with vendor suggestions
+   */
+  private buildEnhancedVendorError(missingVendors: string[], suggestions: Map<string, string[]>): string {
+    let errorMsg = `Missing vendors found: ${missingVendors.join(', ')}\n\n`;
+    errorMsg += 'These vendors do not exist in the database. Please either:\n';
+    errorMsg += '1. Add these vendors to the database first, or\n';
+    errorMsg += '2. Check for typos and use exact vendor names\n\n';
+    
+    // Add specific suggestions for each missing vendor
+    for (const vendor of missingVendors) {
+      const vendorSuggestions = suggestions.get(vendor);
+      if (vendorSuggestions && vendorSuggestions.length > 0) {
+        errorMsg += `"${vendor}" - Did you mean: ${vendorSuggestions.join(', ')}\n`;
+      } else {
+        errorMsg += `"${vendor}" - No similar vendors found\n`;
+      }
+    }
+    
+    return errorMsg.trim();
+  }
 }
 
 // =====================================
