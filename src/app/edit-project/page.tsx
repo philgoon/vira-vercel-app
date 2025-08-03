@@ -10,7 +10,7 @@ import { Project, Vendor, Client } from '@/types'
 type ProjectFormInputs = {
   project_title: string
   project_description: string
-  client_id: string
+  client_key: string
   assigned_vendor_id: string
   expected_deadline: string
   status: string
@@ -22,13 +22,13 @@ function EditProjectContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const projectId = searchParams.get('project_id')
-  
+
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProjectFormInputs>()
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  
+
   const [project, setProject] = useState<Project | null>(null)
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [clients, setClients] = useState<Client[]>([])
@@ -71,7 +71,7 @@ function EditProjectContent() {
         // Pre-fill form
         setValue('project_title', projectInfo.project_title || '')
         setValue('project_description', projectInfo.project_description || '')
-        setValue('client_id', projectInfo.client_id || '')
+        setValue('client_key', projectInfo.client_key || '')
         setValue('assigned_vendor_id', projectInfo.assigned_vendor_id || '')
         setValue('expected_deadline', projectInfo.expected_deadline?.split('T')[0] || '')
         setValue('status', projectInfo.status || 'active')
@@ -99,7 +99,7 @@ function EditProjectContent() {
         project_id: projectId,
         project_title: data.project_title,
         project_description: data.project_description || null,
-        client_id: data.client_id || null,
+        client_id: data.client_key || null,
         assigned_vendor_id: data.assigned_vendor_id || null,
         expected_deadline: data.expected_deadline || null,
         status: data.status,
@@ -127,9 +127,9 @@ function EditProjectContent() {
         router.push('/projects')
       }, 1500)
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Update error:', err)
-      setError(err.message)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
       setSubmitting(false)
     }
@@ -162,7 +162,7 @@ function EditProjectContent() {
         <div className="p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-600">{error}</p>
-          <Link 
+          <Link
             href="/projects"
             className="inline-block mt-4 px-4 py-2 bg-[#1A5276] text-white rounded hover:bg-[#154360]"
           >
@@ -178,7 +178,7 @@ function EditProjectContent() {
       <div className="bg-white border-b">
         <div className="px-6 py-4">
           <div className="flex items-center gap-4">
-            <Link 
+            <Link
               href="/projects"
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
@@ -243,18 +243,18 @@ function EditProjectContent() {
                         Client <span className="text-red-500">*</span>
                       </label>
                       <select
-                        {...register('client_id', { required: 'Client is required' })}
+                        {...register('client_key', { required: 'Client is required' })}
                         className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#1A5276] focus:border-transparent"
                       >
                         <option value="">Select a client</option>
                         {clients.map((client) => (
-                          <option key={client.client_id} value={client.client_id}>
+                          <option key={client.client_key} value={client.client_key}>
                             {client.client_name}
                           </option>
                         ))}
                       </select>
-                      {errors.client_id && (
-                        <p className="mt-1 text-sm text-red-600">{errors.client_id.message}</p>
+                      {errors.client_key && (
+                        <p className="mt-1 text-sm text-red-600">{errors.client_key.message}</p>
                       )}
                     </div>
 
@@ -345,11 +345,10 @@ function EditProjectContent() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${
-                        submitting
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-[#1A5276] hover:bg-[#154360] text-white'
-                      }`}
+                      className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${submitting
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-[#1A5276] hover:bg-[#154360] text-white'
+                        }`}
                     >
                       {submitting ? 'Saving...' : 'Save Changes'}
                     </button>
