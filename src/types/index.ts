@@ -74,3 +74,17 @@ export interface Rating {
 export interface ProjectsApiResponse {
   projects: Project[];
 }
+
+// Recommendation interfaces for ViRA matching system
+export interface EnhancedRecommendation {
+  vendorName: string
+  viraScore: number
+  keyStrengths: string[]
+  reason: string
+  considerations: string
+}
+
+export interface LegacyRecommendation {
+  vendorName: string
+  reason: string
+}
