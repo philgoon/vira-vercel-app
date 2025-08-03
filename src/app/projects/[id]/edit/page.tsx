@@ -8,18 +8,18 @@ import { Project, Vendor, Client } from '@/types';
 export default function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
-  
+
   const [project, setProject] = useState<Project | null>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState({
     project_title: '',
     project_description: '',
-    client_id: '',
+    client_key: '',
     assigned_vendor_id: '',
     expected_deadline: '',
     status: 'planning',
@@ -68,7 +68,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         setFormData({
           project_title: project.project_title || '',
           project_description: project.project_description || '',
-          client_id: project.client_id || '',
+          client_key: project.client_key || '',
           assigned_vendor_id: project.assigned_vendor_id || '',
           expected_deadline: formatDateForInput(project.expected_deadline),
           status: project.status || 'planning',
@@ -89,7 +89,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const handleSave = async () => {
     setSaving(true);
     setError(null);
-    
+
     try {
       const response = await fetch('/api/projects', {
         method: 'PUT',
@@ -105,7 +105,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to save changes');
       }
-      
+
       // Navigate back to project view page
       router.push(`/projects/${id}`);
     } catch (err) {
@@ -148,7 +148,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         }}>
           <p style={{ color: '#dc2626' }}>Error: {error}</p>
         </div>
-        <button 
+        <button
           onClick={() => router.push('/projects')}
           style={{
             display: 'flex',
@@ -174,7 +174,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <p style={{ color: '#6b7280' }}>Project not found</p>
-        <button 
+        <button
           onClick={() => router.push('/projects')}
           style={{
             display: 'flex',
@@ -219,10 +219,10 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
               <ArrowLeft style={{ width: '1.25rem', height: '1.25rem' }} />
               Back to Project
             </button>
-            
-            <h1 style={{ 
-              fontSize: '1.875rem', 
-              fontWeight: 'bold', 
+
+            <h1 style={{
+              fontSize: '1.875rem',
+              fontWeight: 'bold',
               color: '#1A5276',
               margin: 0,
               fontFamily: 'var(--font-headline)'
@@ -246,7 +246,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             >
               Cancel
             </button>
-            
+
             <button
               onClick={handleSave}
               disabled={saving}
@@ -286,19 +286,19 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         )}
 
         <div className="professional-card" style={{ padding: '2rem' }}>
-          <h2 style={{ 
-            fontSize: '1.25rem', 
-            fontWeight: '600', 
+          <h2 style={{
+            fontSize: '1.25rem',
+            fontWeight: '600',
             marginBottom: '1.5rem',
             color: '#111827'
           }}>
             Project Information
           </h2>
-          
+
           <div style={{ display: 'grid', gap: '1.5rem' }}>
             {/* Basic Information */}
             <div>
-              <label className="form-label" style={{ 
+              <label className="form-label" style={{
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '600',
@@ -324,7 +324,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             </div>
 
             <div>
-              <label className="form-label" style={{ 
+              <label className="form-label" style={{
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '600',
@@ -354,7 +354,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             {/* Assignment and Status */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
               <div>
-                <label className="form-label" style={{ 
+                <label className="form-label" style={{
                   display: 'block',
                   fontSize: '0.875rem',
                   fontWeight: '600',
@@ -364,8 +364,8 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   Client
                 </label>
                 <select
-                  value={formData.client_id}
-                  onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
+                  value={formData.client_key}
+                  onChange={(e) => setFormData({ ...formData, client_key: e.target.value })}
                   className="form-input"
                   style={{
                     width: '100%',
@@ -377,7 +377,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 >
                   <option value="">Select client</option>
                   {clients.map(client => (
-                    <option key={client.client_id} value={client.client_id}>
+                    <option key={client.client_key} value={client.client_key}>
                       {client.client_name}
                     </option>
                   ))}
@@ -385,7 +385,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
               </div>
 
               <div>
-                <label className="form-label" style={{ 
+                <label className="form-label" style={{
                   display: 'block',
                   fontSize: '0.875rem',
                   fontWeight: '600',
@@ -418,7 +418,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
               <div>
-                <label className="form-label" style={{ 
+                <label className="form-label" style={{
                   display: 'block',
                   fontSize: '0.875rem',
                   fontWeight: '600',
@@ -449,7 +449,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
               </div>
 
               <div>
-                <label className="form-label" style={{ 
+                <label className="form-label" style={{
                   display: 'block',
                   fontSize: '0.875rem',
                   fontWeight: '600',
@@ -474,7 +474,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
               </div>
 
               <div>
-                <label className="form-label" style={{ 
+                <label className="form-label" style={{
                   display: 'block',
                   fontSize: '0.875rem',
                   fontWeight: '600',
@@ -502,7 +502,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
 
             {/* Additional Details */}
             <div>
-              <label className="form-label" style={{ 
+              <label className="form-label" style={{
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '600',
@@ -530,7 +530,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             </div>
 
             <div>
-              <label className="form-label" style={{ 
+              <label className="form-label" style={{
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '600',
