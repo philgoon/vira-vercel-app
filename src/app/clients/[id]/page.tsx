@@ -8,7 +8,7 @@ import { Client } from '@/types';
 export default function ClientDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
-  
+
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,18 +18,18 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
       try {
         console.log('Fetching client with ID:', id);
         const response = await fetch(`/api/clients?id=${id}`);
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch client');
         }
-        
+
         const data = await response.json();
-        const clientData = data.clients?.find((c: Client) => c.client_id.toString() === id);
-        
+        const clientData = data.clients?.find((c: Client) => c.client_key.toString() === id);
+
         if (!clientData) {
           throw new Error('Client not found');
         }
-        
+
         setClient(clientData);
         console.log('Client loaded:', clientData);
       } catch (err) {
@@ -72,7 +72,7 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
         }}>
           <p style={{ color: '#dc2626' }}>Error: {error || 'Client not found'}</p>
         </div>
-        <button 
+        <button
           onClick={() => router.push('/clients')}
           style={{
             display: 'flex',
@@ -126,7 +126,7 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
               <ArrowLeft style={{ width: '1.25rem', height: '1.25rem' }} />
               Back to Clients
             </button>
-            
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{
                 width: '3rem',
@@ -141,19 +141,19 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
                   {client.client_name.charAt(0)}
                 </span>
               </div>
-              
+
               <div>
-                <h1 style={{ 
-                  fontSize: '1.875rem', 
-                  fontWeight: 'bold', 
+                <h1 style={{
+                  fontSize: '1.875rem',
+                  fontWeight: 'bold',
                   color: '#1A5276',
                   margin: 0,
                   fontFamily: 'var(--font-headline)'
                 }}>
                   {client.client_name}
                 </h1>
-                <p style={{ 
-                  color: '#6b7280', 
+                <p style={{
+                  color: '#6b7280',
                   margin: '0.25rem 0 0 0',
                   fontSize: '0.875rem'
                 }}>
@@ -190,15 +190,15 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
           {/* Main Information */}
           <div className="professional-card" style={{ padding: '2rem' }}>
-            <h2 style={{ 
-              fontSize: '1.25rem', 
-              fontWeight: '600', 
+            <h2 style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
               marginBottom: '1.5rem',
               color: '#111827'
             }}>
               Client Information
             </h2>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -207,7 +207,7 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
                 </div>
                 <p style={{ margin: 0, color: '#6b7280' }}>{client.industry || 'Not specified'}</p>
               </div>
-              
+
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                   <MapPin style={{ width: '1rem', height: '1rem', color: '#1A5276' }} />
@@ -215,7 +215,7 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
                 </div>
                 <p style={{ margin: 0, color: '#6b7280' }}>{client.time_zone || 'Not specified'}</p>
               </div>
-              
+
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                   <Phone style={{ width: '1rem', height: '1rem', color: '#1A5276' }} />
@@ -223,7 +223,7 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
                 </div>
                 <p style={{ margin: 0, color: '#6b7280' }}>{client.preferred_contact || 'Not specified'}</p>
               </div>
-              
+
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                   <Calendar style={{ width: '1rem', height: '1rem', color: '#1A5276' }} />
@@ -232,20 +232,20 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
                 <p style={{ margin: 0, color: '#6b7280' }}>{formatDate(client.created_date)}</p>
               </div>
             </div>
-            
+
             {client.client_notes && (
               <div style={{ marginTop: '1.5rem' }}>
-                <label style={{ 
-                  fontWeight: '600', 
-                  color: '#374151', 
+                <label style={{
+                  fontWeight: '600',
+                  color: '#374151',
                   fontSize: '0.875rem',
                   display: 'block',
                   marginBottom: '0.5rem'
                 }}>
                   Notes
                 </label>
-                <p style={{ 
-                  margin: 0, 
+                <p style={{
+                  margin: 0,
                   color: '#6b7280',
                   backgroundColor: '#f9fafb',
                   padding: '1rem',
@@ -260,15 +260,15 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
 
           {/* Statistics Card */}
           <div className="professional-card" style={{ padding: '2rem' }}>
-            <h3 style={{ 
-              fontSize: '1.125rem', 
-              fontWeight: '600', 
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: '600',
               marginBottom: '1.5rem',
               color: '#111827'
             }}>
               Project Statistics
             </h3>
-            
+
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <div style={{
                 width: '4rem',
@@ -284,9 +284,9 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
                   {client.total_projects || 0}
                 </span>
               </div>
-              <p style={{ 
-                margin: 0, 
-                fontSize: '0.875rem', 
+              <p style={{
+                margin: 0,
+                fontSize: '0.875rem',
                 color: '#6b7280',
                 fontWeight: '500'
               }}>
@@ -294,15 +294,15 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
               </p>
             </div>
 
-            <div style={{ 
+            <div style={{
               padding: '1rem',
               backgroundColor: '#f9fafb',
               borderRadius: '0.375rem',
               border: '1px solid #e5e7eb'
             }}>
-              <p style={{ 
-                margin: 0, 
-                fontSize: '0.75rem', 
+              <p style={{
+                margin: 0,
+                fontSize: '0.75rem',
                 color: '#6b7280',
                 textAlign: 'center'
               }}>
