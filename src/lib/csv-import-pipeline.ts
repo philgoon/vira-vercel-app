@@ -502,7 +502,7 @@ export class CSVImportPipeline {
       }
 
       // STEP 2: Identify missing vendors and FAIL FAST with helpful suggestions
-      const existingVendorNames = new Set(existingVendors?.map(v => v.vendor_name) || []);
+      const existingVendorNames = new Set(existingVendors?.map(v => v.vendor_name).filter((name): name is string => typeof name === 'string') || []);
       const missingVendors = vendorNames.filter(name => !existingVendorNames.has(name));
 
       if (missingVendors.length > 0) {
