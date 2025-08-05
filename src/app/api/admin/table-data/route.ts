@@ -21,19 +21,13 @@ export async function GET(request: NextRequest) {
     switch (table) {
       case 'vendors':
         query = supabase
-          .from('vendors_enhanced')
-          .select('*');
-        break;
-
-      case 'clients':
-        query = supabase
-          .from('clients')
+          .from('vendors')
           .select('*');
         break;
 
       case 'projects':
         query = supabase
-          .from('projects_consolidated')
+          .from('projects')
           .select('*');
         break;
 

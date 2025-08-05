@@ -33,6 +33,7 @@ export interface Vendor {
   onboarding_date?: string | null;
   overall_rating?: number | null;
   industry?: string | null;
+  service_category?: string | null;
   skills?: string | null;
   portfolio_url?: string | null;
   sample_work_urls?: string | null;

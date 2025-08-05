@@ -264,7 +264,7 @@ export default function DashboardPage() {
                   </div>
                 </Link>
 
-                <Link href="/ratings" style={{ textDecoration: 'none' }}>
+                <Link href="/rate-project" style={{ textDecoration: 'none' }}>
                   <div className="professional-card" style={{
                     padding: '1.5rem',
                     textAlign: 'center',
@@ -296,7 +296,7 @@ export default function DashboardPage() {
                       {stats.ratings}
                     </h3>
                     <p style={{ color: '#6b7280', fontWeight: '500', marginBottom: '0.5rem' }}>Ratings</p>
-                    <p style={{ color: '#D97706', fontSize: '0.875rem', fontWeight: '500' }}>Review →</p>
+                    <p style={{ color: '#D97706', fontSize: '0.875rem', fontWeight: '500' }}>Rate →</p>
                   </div>
                 </Link>
               </div>

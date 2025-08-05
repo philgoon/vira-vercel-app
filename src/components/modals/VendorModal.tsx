@@ -1,140 +1,138 @@
-"use client"
+'use client'
 
-import React from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription
-} from '../ui/dialog'
-import { Badge } from '../ui/badge'
-import {
-  Mail,
-  Phone,
-  Calendar,
-  Building,
-  CheckCircle,
-  Briefcase,
-  Link as LinkIcon,
-  DollarSign,
-  Clock,
-  BarChart,
-  User,
-  Star
-} from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { Vendor } from '@/types'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
 
 interface VendorModalProps {
-  vendor: Vendor
+  vendor: Vendor | null
   isOpen: boolean
   onClose: () => void
+  onSave: (updatedVendor: Partial<Vendor>) => void
 }
 
-const InfoItem = ({ icon, label, value, isLink = false }: { icon: React.ReactNode, label: string, value?: string | number | null, isLink?: boolean }) => {
-  if (!value) return null;
-  return (
-    <div className="flex items-start gap-3">
-      <div className="mt-1 text-gray-400">{icon}</div>
-      <div>
-        <p className="text-xs text-gray-500">{label}</p>
-        {isLink && typeof value === 'string' ? (
-          <a href={value.startsWith('http') ? value : `//${value}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-blue-600 hover:underline">
-            {value}
-          </a>
-        ) : (
-          <p className="text-sm font-medium text-gray-800">{value}</p>
-        )}
-      </div>
-    </div>
-  );
-};
+export default function VendorModal({ vendor, isOpen, onClose, onSave }: VendorModalProps) {
+  const [formData, setFormData] = useState<Partial<Vendor>>({})
 
-export default function VendorModal({ vendor, isOpen, onClose }: VendorModalProps) {
-  const getStatusColor = (status?: string | null) => {
-    if (!status) return 'bg-gray-100 text-gray-800 border-gray-200';
-    switch (status.toLowerCase()) {
-      case 'active': return 'bg-green-100 text-green-800 border-green-200';
-      case 'inactive': return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  useEffect(() => {
+    if (vendor) {
+      setFormData(vendor)
     }
+  }, [vendor])
+
+  if (!isOpen || !vendor) {
+    return null
+  }
+
+  const handleSave = () => {
+    onSave(formData)
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-8">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-              <Building className="w-8 h-8 text-gray-500" />
-            </div>
-            <div>
-              <DialogTitle className="text-3xl font-bold text-gray-900">{vendor.vendor_name}</DialogTitle>
-              <DialogDescription className="text-base text-gray-600 mt-1">
-                {vendor.vendor_type || 'No type specified'}
-              </DialogDescription>
-            </div>
-          </div>
+          <DialogTitle>Edit Vendor: {vendor.vendor_name}</DialogTitle>
         </DialogHeader>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-          {/* Left Column: Contact & Commercials */}
-          <div className="md:col-span-1 space-y-6">
-            {/* Contact Info */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><User className="w-4 h-4 text-gray-400" /> Contact & Logistics</h3>
-              <div className="space-y-3">
-                <InfoItem icon={<User className="w-4 h-4" />} label="Primary Contact" value={vendor.primary_contact} />
-                <InfoItem icon={<Mail className="w-4 h-4" />} label="Email" value={vendor.email} isLink={!!vendor.email} />
-                <InfoItem icon={<Clock className="w-4 h-4" />} label="Time Zone" value={vendor.time_zone} />
-                <InfoItem icon={<Phone className="w-4 h-4" />} label="Contact Preference" value={vendor.contact_preference} />
-              </div>
+        <div className="grid grid-cols-2 gap-6 p-4">
+          {/* Contact Information Section */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Vendor Details</h3>
+            <div className="space-y-2">
+              <Label htmlFor="vendor_code">Vendor Code</Label>
+              <Input id="vendor_code" value={formData.vendor_code || ''} readOnly />
             </div>
-            {/* Commercials */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><DollarSign className="w-4 h-4 text-gray-400" /> Commercials</h3>
-              <div className="space-y-3">
-                <InfoItem icon={<DollarSign className="w-4 h-4" />} label="Pricing Structure" value={vendor.pricing_structure} />
-                <InfoItem icon={<DollarSign className="w-4 h-4" />} label="Rate/Cost" value={vendor.rate_cost} />
-                <InfoItem icon={<Clock className="w-4 h-4" />} label="Availability" value={vendor.availability} />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="vendor_name">Vendor Name</Label>
+              <Input id="vendor_name" value={formData.vendor_name || ''} onChange={(e) => setFormData(prev => ({ ...prev, vendor_name: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vendor_type">Vendor Type</Label>
+              <Input id="vendor_type" value={formData.vendor_type || ''} onChange={(e) => setFormData(prev => ({ ...prev, vendor_type: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Input id="status" value={formData.status || ''} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="primary_contact">Primary Contact</Label>
+              <Input id="primary_contact" value={formData.primary_contact || ''} onChange={(e) => setFormData(prev => ({ ...prev, primary_contact: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={formData.email || ''} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="time_zone">Time Zone</Label>
+              <Input id="time_zone" value={formData.time_zone || ''} onChange={(e) => setFormData(prev => ({ ...prev, time_zone: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact_preference">Contact Preference</Label>
+              <Input id="contact_preference" value={formData.contact_preference || ''} onChange={(e) => setFormData(prev => ({ ...prev, contact_preference: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="onboarding_date">Onboarding Date</Label>
+              <Input id="onboarding_date" type="date" value={formData.onboarding_date ? new Date(formData.onboarding_date).toISOString().split('T')[0] : ''} onChange={(e) => setFormData(prev => ({ ...prev, onboarding_date: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="record_date">Record Date</Label>
+              <Input id="record_date" type="date" value={formData.record_date ? new Date(formData.record_date).toISOString().split('T')[0] : ''} onChange={(e) => setFormData(prev => ({ ...prev, record_date: e.target.value }))} />
             </div>
           </div>
 
-          {/* Right Column: Capabilities & History */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Capabilities */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><CheckCircle className="w-4 h-4 text-gray-400" /> Capabilities</h3>
-              <div className="space-y-3">
-                <InfoItem icon={<Briefcase className="w-4 h-4" />} label="Industry Focus" value={vendor.industry} />
-                <InfoItem icon={<LinkIcon className="w-4 h-4" />} label="Portfolio" value={vendor.portfolio_url} isLink={true} />
-                {vendor.skills && (
-                  <div>
-                    <p className="text-xs text-gray-500">Skills</p>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {vendor.skills.split(',').map(skill => (
-                        <Badge key={skill} variant="secondary">{skill.trim()}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+          {/* Business Information Section */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Services & Pricing</h3>
+            <div className="space-y-2">
+              <Label htmlFor="industry">Industry</Label>
+              <Input id="industry" value={formData.industry || ''} onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))} />
             </div>
-            {/* History & Status */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><BarChart className="w-4 h-4 text-gray-400" /> Performance & History</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <InfoItem icon={<Star className="w-4 h-4" />} label="Avg. Overall Rating" value={vendor.avg_overall_rating ? `${Number(vendor.avg_overall_rating).toFixed(1)}/10` : 'N/A'} />
-                <InfoItem icon={<Briefcase className="w-4 h-4" />} label="Total Rated Projects" value={vendor.total_projects ?? 0} />
-                <InfoItem icon={<Calendar className="w-4 h-4" />} label="Onboarded" value={vendor.onboarding_date ? new Date(vendor.onboarding_date).toLocaleDateString() : 'N/A'} />
-                <div>
-                  <p className="text-xs text-gray-500">Status</p>
-                  <Badge className={`mt-1 ${getStatusColor(vendor.status)}`}>{vendor.status || 'Unknown'}</Badge>
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="service_category">Service Category</Label>
+              <Input id="service_category" value={formData.service_category || ''} onChange={(e) => setFormData(prev => ({ ...prev, service_category: e.target.value }))} />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="skills">Skills</Label>
+              <Textarea id="skills" value={formData.skills || ''} onChange={(e) => setFormData(prev => ({ ...prev, skills: e.target.value }))} rows={4} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="portfolio_url">Portfolio URL</Label>
+              <Input id="portfolio_url" type="url" value={formData.portfolio_url || ''} onChange={(e) => setFormData(prev => ({ ...prev, portfolio_url: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sample_work_urls">Sample Work URLs</Label>
+              <Textarea id="sample_work_urls" value={formData.sample_work_urls || ''} onChange={(e) => setFormData(prev => ({ ...prev, sample_work_urls: e.target.value }))} rows={3} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pricing_structure">Pricing Structure</Label>
+              <Input id="pricing_structure" value={formData.pricing_structure || ''} onChange={(e) => setFormData(prev => ({ ...prev, pricing_structure: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rate_cost">Rate/Cost</Label>
+              <Input id="rate_cost" value={formData.rate_cost || ''} onChange={(e) => setFormData(prev => ({ ...prev, rate_cost: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="availability">Availability</Label>
+              <Input id="availability" value={formData.availability || ''} onChange={(e) => setFormData(prev => ({ ...prev, availability: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="overall_rating">Overall Rating</Label>
+              <Input id="overall_rating" type="number" value={formData.overall_rating || ''} onChange={(e) => setFormData(prev => ({ ...prev, overall_rating: parseFloat(e.target.value) || 0 }))} />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="col-span-2 flex gap-3 pt-4 border-t">
+            <Button onClick={handleSave} className="flex-1">
+              Save All Changes
+            </Button>
+            <Button variant="outline" onClick={onClose} className="flex-1">
+              Cancel
+            </Button>
           </div>
         </div>
       </DialogContent>
