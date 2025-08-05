@@ -93,6 +93,62 @@ export default function ProjectsPage() {
     );
   };
 
+  const handleSaveProject = async (updatedProject: Partial<Project>) => {
+    if (!selectedProject) return;
+
+    try {
+      const response = await fetch('/api/admin/update-record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tableName: 'projects',
+          idField: 'project_id',
+          idValue: selectedProject.project_id,
+          updates: updatedProject
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save project');
+      }
+
+      // Optimistic update
+      setProjects(prev => prev.map(p => p.project_id === selectedProject.project_id ? { ...p, ...updatedProject } : p));
+      setIsModalOpen(false);
+      setSelectedProject(null);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      const response = await fetch('/api/admin/delete-record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tableName: 'projects',
+          idField: 'project_id',
+          idValue: projectId
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete project');
+      }
+
+      // Optimistic update
+      setProjects(prev => prev.filter(p => p.project_id !== projectId));
+      setIsModalOpen(false);
+      setSelectedProject(null);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    }
+  };
 
   const handleProjectClick = (project: Project) => {
     setSelectedProject(project);
@@ -357,6 +413,8 @@ export default function ProjectsPage() {
             setIsModalOpen(false);
             setSelectedProject(null);
           }}
+          onSave={handleSaveProject}
+          onDelete={handleDeleteProject}
         />
       )}
 

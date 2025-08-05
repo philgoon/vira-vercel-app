@@ -89,6 +89,25 @@ export default function VendorsPage() {
     setIsModalOpen(true);
   };
 
+  // Handle vendor save
+  const handleSaveVendor = async (updatedVendor: Partial<Vendor>) => {
+    try {
+      // TODO: Implement vendor update API call
+      console.log('Saving vendor:', updatedVendor);
+
+      // Close modal after successful save
+      setIsModalOpen(false);
+      setSelectedVendor(null);
+
+      // Refresh vendors list to show updated data
+      // This will trigger the useEffect to refetch vendors
+      setSelectedCategories([...selectedCategories]);
+    } catch (error) {
+      console.error('Failed to save vendor:', error);
+      // TODO: Add proper error handling/notification
+    }
+  };
+
   return (
     <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
       {/* Header */}
@@ -303,6 +322,7 @@ export default function VendorsPage() {
             setIsModalOpen(false);
             setSelectedVendor(null);
           }}
+          onSave={handleSaveVendor}
         />
       )}
 
