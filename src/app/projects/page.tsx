@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Building } from 'lucide-react';
+import { Plus, Building, Filter } from 'lucide-react';
 import { Project, ProjectsApiResponse } from '@/types';
 import ProjectModal from '../../components/modals/ProjectModal';
 
@@ -15,11 +15,14 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Vendor name filter states
+  // [R4] Enhanced filtering states - vendor and client filtering
   const [allVendorNames, setAllVendorNames] = useState<string[]>([]);
   const [selectedVendorNames, setSelectedVendorNames] = useState<string[]>([]);
+  const [allClientNames, setAllClientNames] = useState<string[]>([]);
+  const [selectedClientNames, setSelectedClientNames] = useState<string[]>([]);
+  const [activeFilterTab, setActiveFilterTab] = useState<'vendors' | 'clients'>('vendors');
 
-  // [R7.5] Fetch projects from Supabase API
+  // [R7.5] Fetch projects from Supabase API with enhanced filtering
   useEffect(() => {
     async function fetchProjects() {
       try {
@@ -39,6 +42,16 @@ export default function ProjectsPage() {
           });
         }
 
+        // [R4] Client-side filtering for client names
+        if (selectedClientNames.length > 0) {
+          projectList = projectList.filter(project => {
+            const clientName = project.client_name;
+            return clientName && selectedClientNames.some(selectedName =>
+              clientName.toLowerCase().includes(selectedName.toLowerCase())
+            );
+          });
+        }
+
         setProjects(projectList);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch projects');
@@ -48,7 +61,7 @@ export default function ProjectsPage() {
     }
 
     fetchProjects();
-  }, [selectedVendorNames]);
+  }, [selectedVendorNames, selectedClientNames]);
 
   // [R5.3] Clear error after some time
   useEffect(() => {
@@ -58,30 +71,37 @@ export default function ProjectsPage() {
     }
   }, [error]);
 
-  // Fetch all vendor names from projects on component mount
+  // [R4] Fetch all vendor and client names from projects on component mount
   useEffect(() => {
-    async function fetchAllVendorNames() {
+    async function fetchAllFilterOptions() {
       try {
         const response = await fetch('/api/projects');
         if (response.ok) {
           const data: ProjectsApiResponse = await response.json();
           const allProjects = data.projects || [];
 
+          // Extract vendor names
           const vendorNameSet = new Set<string>();
+          const clientNameSet = new Set<string>();
+
           allProjects.forEach(project => {
             if (project.vendor_name && typeof project.vendor_name === 'string' && project.vendor_name.trim()) {
               vendorNameSet.add(project.vendor_name.trim());
             }
+            if (project.client_name && typeof project.client_name === 'string' && project.client_name.trim()) {
+              clientNameSet.add(project.client_name.trim());
+            }
           });
 
           setAllVendorNames(Array.from(vendorNameSet).sort());
+          setAllClientNames(Array.from(clientNameSet).sort());
         }
       } catch (err) {
-        console.error('Failed to fetch vendor names:', err);
+        console.error('Failed to fetch filter options:', err);
       }
     }
 
-    fetchAllVendorNames();
+    fetchAllFilterOptions();
   }, []);
 
   // Toggle vendor name selection
@@ -91,6 +111,21 @@ export default function ProjectsPage() {
         ? prev.filter(name => name !== vendorName)
         : [...prev, vendorName]
     );
+  };
+
+  // [R4] Toggle client name selection
+  const toggleClientName = (clientName: string) => {
+    setSelectedClientNames(prev =>
+      prev.includes(clientName)
+        ? prev.filter(name => name !== clientName)
+        : [...prev, clientName]
+    );
+  };
+
+  // [R4] Clear all filters
+  const clearAllFilters = () => {
+    setSelectedVendorNames([]);
+    setSelectedClientNames([]);
   };
 
   const handleSaveProject = async (updatedProject: Partial<Project>) => {
@@ -155,6 +190,10 @@ export default function ProjectsPage() {
     setIsModalOpen(true);
   };
 
+  // [R4] Calculate filter summary
+  const hasActiveFilters = selectedVendorNames.length > 0 || selectedClientNames.length > 0;
+  const filterCount = selectedVendorNames.length + selectedClientNames.length;
+
   return (
     <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
       {/* Header */}
@@ -169,7 +208,7 @@ export default function ProjectsPage() {
                 color: '#1A5276'
               }}>Projects</h1>
               <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
-                Manage and track your project portfolio
+                View completed project details, ratings, and work samples
               </p>
             </div>
             <button style={{
@@ -191,15 +230,87 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Enhanced Filters */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ padding: '1rem 1.5rem' }}>
-          {/* Vendor Name Filter Buttons */}
-          {allVendorNames.length > 0 && (
-            <div style={{ marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                Filter by Vendor Name
+          {/* Filter Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Filter style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
+              <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', margin: 0 }}>
+                Filter Projects
               </h3>
+              {hasActiveFilters && (
+                <span style={{
+                  backgroundColor: '#1A5276',
+                  color: 'white',
+                  padding: '0.125rem 0.5rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.75rem',
+                  fontWeight: '500'
+                }}>
+                  {filterCount} active
+                </span>
+              )}
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                style={{
+                  color: '#dc2626',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+
+          {/* Filter Tabs */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+            <button
+              onClick={() => setActiveFilterTab('vendors')}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                border: '1px solid',
+                borderColor: activeFilterTab === 'vendors' ? '#1A5276' : '#d1d5db',
+                backgroundColor: activeFilterTab === 'vendors' ? '#1A5276' : 'white',
+                color: activeFilterTab === 'vendors' ? 'white' : '#374151',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              Filter by Vendor ({allVendorNames.length})
+            </button>
+            <button
+              onClick={() => setActiveFilterTab('clients')}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                border: '1px solid',
+                borderColor: activeFilterTab === 'clients' ? '#1A5276' : '#d1d5db',
+                backgroundColor: activeFilterTab === 'clients' ? '#1A5276' : 'white',
+                color: activeFilterTab === 'clients' ? 'white' : '#374151',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              Filter by Client ({allClientNames.length})
+            </button>
+          </div>
+
+          {/* Vendor Name Filter Buttons */}
+          {activeFilterTab === 'vendors' && allVendorNames.length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <button
                   onClick={() => setSelectedVendorNames([])}
@@ -242,6 +353,50 @@ export default function ProjectsPage() {
             </div>
           )}
 
+          {/* Client Name Filter Buttons */}
+          {activeFilterTab === 'clients' && allClientNames.length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setSelectedClientNames([])}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '9999px',
+                    border: '1px solid',
+                    borderColor: selectedClientNames.length === 0 ? '#1A5276' : '#d1d5db',
+                    backgroundColor: selectedClientNames.length === 0 ? '#1A5276' : 'white',
+                    color: selectedClientNames.length === 0 ? 'white' : '#374151',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  All Clients
+                </button>
+                {allClientNames.map(clientName => (
+                  <button
+                    key={clientName}
+                    onClick={() => toggleClientName(clientName)}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      borderRadius: '9999px',
+                      border: '1px solid',
+                      borderColor: selectedClientNames.includes(clientName) ? '#1A5276' : '#d1d5db',
+                      backgroundColor: selectedClientNames.includes(clientName) ? '#1A5276' : 'white',
+                      color: selectedClientNames.includes(clientName) ? 'white' : '#374151',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {clientName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -292,8 +447,27 @@ export default function ProjectsPage() {
               No projects found
             </h3>
             <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
-              {selectedVendorNames.length === 0 ? 'No projects exist yet.' : `No projects found for selected vendors.`}
+              {hasActiveFilters
+                ? `No projects found for selected filters.`
+                : 'No projects exist yet.'}
             </p>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#6B8F71',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  marginRight: '0.5rem'
+                }}
+              >
+                Clear Filters
+              </button>
+            )}
             <button style={{
               padding: '0.5rem 1rem',
               backgroundColor: '#6B8F71',
@@ -308,7 +482,7 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        {/* Project List - 2 Column Layout matching vendor page style */}
+        {/* Enhanced Project List */}
         {!loading && !error && projects.length > 0 && (
           <div style={{
             display: 'grid',
@@ -361,7 +535,7 @@ export default function ProjectsPage() {
                     </h3>
                   </div>
 
-                  {/* Line 2: Client + Vendor + Rating */}
+                  {/* Line 2: Client + Vendor + Rating + Work Samples indicator */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
                     {/* Client Name */}
                     <span style={{ fontWeight: '500', color: '#1A5276' }}>
@@ -386,6 +560,20 @@ export default function ProjectsPage() {
                         `${Number(project.project_overall_rating_calc).toFixed(1)}/10` :
                         'No rating'}
                     </div>
+
+                    {/* Work Samples Indicator */}
+                    {(project.what_went_well || project.areas_for_improvement) && (
+                      <div style={{
+                        padding: '0.125rem 0.5rem',
+                        backgroundColor: '#eff6ff',
+                        color: '#1d4ed8',
+                        borderRadius: '9999px',
+                        fontSize: '0.75rem',
+                        fontWeight: '500'
+                      }}>
+                        Has feedback
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -393,18 +581,20 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        {/* Project Summary */}
+        {/* Enhanced Project Summary */}
         {!loading && !error && projects.length > 0 && (
           <div style={{ marginTop: '2rem', textAlign: 'center' }}>
             <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
               Showing {projects.length} projects
-              {selectedVendorNames.length > 0 && ` for selected vendors`}
+              {hasActiveFilters && ` with active filters`}
+              {selectedVendorNames.length > 0 && ` • Vendors: ${selectedVendorNames.join(', ')}`}
+              {selectedClientNames.length > 0 && ` • Clients: ${selectedClientNames.join(', ')}`}
             </p>
           </div>
         )}
       </div>
 
-      {/* Project Modal */}
+      {/* Enhanced Project Modal - Now Read-Only for Completed Projects */}
       {selectedProject && (
         <ProjectModal
           project={selectedProject}
@@ -413,8 +603,8 @@ export default function ProjectsPage() {
             setIsModalOpen(false);
             setSelectedProject(null);
           }}
-          onSave={handleSaveProject}
-          onDelete={handleDeleteProject}
+          onSave={selectedProject.status === 'closed' ? undefined : handleSaveProject}
+          onDelete={selectedProject.status === 'closed' ? undefined : handleDeleteProject}
         />
       )}
 

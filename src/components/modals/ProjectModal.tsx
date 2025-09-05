@@ -1,134 +1,265 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { Project } from '@/types'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Star, User, Calendar, CheckCircle, AlertCircle } from 'lucide-react'
 
 interface ProjectModalProps {
   project: Project | null
   isOpen: boolean
   onClose: () => void
-  onSave: (updatedProject: Partial<Project>) => void
-  onDelete: (projectId: string) => void
+  onSave?: (updatedProject: Partial<Project>) => void  // Made optional for read-only mode
+  onDelete?: (projectId: string) => void  // Made optional for read-only mode
 }
 
 export default function ProjectModal({ project, isOpen, onClose, onSave, onDelete }: ProjectModalProps) {
-  const [formData, setFormData] = useState<Partial<Project>>({})
-
-  useEffect(() => {
-    if (project) {
-      setFormData(project)
-    }
-  }, [project])
-
   if (!isOpen || !project) {
     return null
   }
 
-  const handleSave = () => {
-    onSave(formData)
+  // [R4] Determine if project is read-only (completed projects should not be editable)
+  const isReadOnly = project.status === 'closed'
+
+  // [R4] Calculate rating display
+  const overallRating = project.project_overall_rating_calc
+  const hasRatings = project.project_success_rating || project.quality_rating || project.communication_rating
+
+  // [R4] Format dates for display
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Not specified'
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
   }
+
+  // [R4] Rating component
+  const RatingDisplay = ({ rating, label }: { rating: number | null, label: string }) => (
+    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+      <span className="text-sm font-medium text-gray-700">{label}</span>
+      <div className="flex items-center gap-2">
+        <Star className="w-4 h-4 text-yellow-500 fill-current" />
+        <span className="font-semibold text-gray-900">
+          {rating ? `${Number(rating).toFixed(1)}/10` : 'Not rated'}
+        </span>
+      </div>
+    </div>
+  )
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Project: {project.project_title}</DialogTitle>
+          <DialogTitle className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {isReadOnly ? (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-blue-600" />
+              )}
+              <span>{isReadOnly ? 'Project Details (Read-Only)' : 'Edit Project'}</span>
+            </div>
+            <Badge variant={project.status === 'closed' ? 'default' : 'secondary'}>
+              {project.status?.toUpperCase() || 'UNKNOWN'}
+            </Badge>
+          </DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-6 p-4">
-          {/* Project Details Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg border-b pb-2">Project Details</h3>
-            <div className="space-y-2">
-              <Label htmlFor="project_title">Project Title</Label>
-              <Input id="project_title" value={formData.project_title || ''} onChange={(e) => setFormData(prev => ({ ...prev, project_title: e.target.value }))} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-4">
+          {/* Left Column - Project Overview */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Project Header */}
+            <div className="bg-white border rounded-lg p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">{project.project_title}</h2>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">Client</p>
+                    <p className="font-medium">{project.client_name || 'Not specified'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">Vendor</p>
+                    <p className="font-medium">{project.vendor_name || 'Not assigned'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">Rating Date</p>
+                    <p className="font-medium">{formatDate(project.rating_date)}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">Submitted By</p>
+                    <p className="font-medium">{project.submitted_by || 'Not specified'}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="client_name">Client Name</Label>
-              <Input id="client_name" value={formData.client_name || ''} onChange={(e) => setFormData(prev => ({ ...prev, client_name: e.target.value }))} />
+
+            {/* Work Samples & Feedback */}
+            {(project.what_went_well || project.areas_for_improvement) && (
+              <div className="bg-white border rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4">Project Feedback & Work Samples</h3>
+
+                {project.what_went_well && (
+                  <div className="mb-4">
+                    <h4 className="font-medium text-green-800 mb-2 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      What Went Well
+                    </h4>
+                    <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded">
+                      <p className="text-gray-700 whitespace-pre-wrap">{project.what_went_well}</p>
+                    </div>
+                  </div>
+                )}
+
+                {project.areas_for_improvement && (
+                  <div>
+                    <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" />
+                      Areas for Improvement
+                    </h4>
+                    <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+                      <p className="text-gray-700 whitespace-pre-wrap">{project.areas_for_improvement}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Ratings & Metrics */}
+          <div className="space-y-6">
+            {/* Overall Rating */}
+            <div className="bg-white border rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">Overall Rating</h3>
+              <div className="text-center">
+                <div className="text-4xl font-bold text-blue-600 mb-2">
+                  {overallRating ? Number(overallRating).toFixed(1) : '—'}
+                </div>
+                <div className="text-gray-500 mb-4">
+                  {overallRating ? 'out of 10' : 'Not rated'}
+                </div>
+                <div className="flex justify-center">
+                  {overallRating && (
+                    <div className="flex gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-5 h-5 ${i < Math.round(Number(overallRating) / 2)
+                              ? 'text-yellow-400 fill-current'
+                              : 'text-gray-300'
+                            }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="vendor_name">Vendor Name</Label>
-              <Input id="vendor_name" value={formData.vendor_name || ''} onChange={(e) => setFormData(prev => ({ ...prev, vendor_name: e.target.value }))} />
+
+            {/* Detailed Ratings */}
+            {hasRatings && (
+              <div className="bg-white border rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4">Detailed Ratings</h3>
+                <div className="space-y-3">
+                  <RatingDisplay rating={project.project_success_rating} label="Project Success" />
+                  <RatingDisplay rating={project.quality_rating} label="Quality" />
+                  <RatingDisplay rating={project.communication_rating} label="Communication" />
+                </div>
+              </div>
+            )}
+
+            {/* Recommendation */}
+            <div className="bg-white border rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">Recommendation</h3>
+              <div className="flex items-center gap-2">
+                {project.recommend_again ? (
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                ) : project.recommend_again === false ? (
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-gray-400" />
+                )}
+                <span className="font-medium">
+                  {project.recommend_again === true
+                    ? 'Would recommend again'
+                    : project.recommend_again === false
+                      ? 'Would not recommend again'
+                      : 'No recommendation given'}
+                </span>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Input id="status" value={formData.status || ''} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))} />
+
+            {/* Project Timestamps */}
+            <div className="bg-white border rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">Project History</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Created:</span>
+                  <span className="font-medium">{formatDate(project.created_at)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Last Updated:</span>
+                  <span className="font-medium">{formatDate(project.updated_at)}</span>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="rating_status">Rating Status</Label>
-              <select
-                id="rating_status"
-                value={formData.rating_status || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, rating_status: e.target.value as 'Needs Review' | 'Incomplete' | 'Complete' | null }))}
-                className="w-full p-2 border rounded"
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-between items-center p-6 border-t bg-gray-50">
+          <div className="text-sm text-gray-600">
+            {isReadOnly ? (
+              <span className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                This completed project is protected from editing
+              </span>
+            ) : (
+              <span>This project can be edited</span>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            {!isReadOnly && onDelete && (
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+                    onDelete(project.project_id)
+                  }
+                }}
               >
-                <option value="">Select Status</option>
-                <option value="Needs Review">Needs Review</option>
-                <option value="Incomplete">Incomplete</option>
-                <option value="Complete">Complete</option>
-              </select>
-            </div>
-          </div>
+                Delete Project
+              </Button>
+            )}
 
-          {/* Ratings Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg border-b pb-2">Ratings</h3>
-            <div className="space-y-2">
-              <Label htmlFor="project_success_rating">Success Rating</Label>
-              <Input id="project_success_rating" type="number" value={formData.project_success_rating || ''} onChange={(e) => setFormData(prev => ({ ...prev, project_success_rating: parseFloat(e.target.value) || null }))} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="quality_rating">Quality Rating</Label>
-              <Input id="quality_rating" type="number" value={formData.quality_rating || ''} onChange={(e) => setFormData(prev => ({ ...prev, quality_rating: parseFloat(e.target.value) || null }))} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="communication_rating">Communication Rating</Label>
-              <Input id="communication_rating" type="number" value={formData.communication_rating || ''} onChange={(e) => setFormData(prev => ({ ...prev, communication_rating: parseFloat(e.target.value) || null }))} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="project_overall_rating_input">Overall Rating (Input)</Label>
-              <Input id="project_overall_rating_input" type="number" value={formData.project_overall_rating_input || ''} onChange={(e) => setFormData(prev => ({ ...prev, project_overall_rating_input: parseFloat(e.target.value) || null }))} />
-            </div>
-          </div>
-
-          {/* Feedback Section */}
-          <div className="col-span-2 space-y-4">
-            <h3 className="font-semibold text-lg border-b pb-2">Feedback</h3>
-            <div className="space-y-2">
-              <Label htmlFor="what_went_well">What Went Well</Label>
-              <Textarea id="what_went_well" value={formData.what_went_well || ''} onChange={(e) => setFormData(prev => ({ ...prev, what_went_well: e.target.value }))} rows={4} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="areas_for_improvement">Areas for Improvement</Label>
-              <Textarea id="areas_for_improvement" value={formData.areas_for_improvement || ''} onChange={(e) => setFormData(prev => ({ ...prev, areas_for_improvement: e.target.value }))} rows={4} />
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="col-span-2 flex justify-between items-center pt-4 border-t">
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-                  onDelete(project.project_id)
-                }
-              }}
-            >
-              Delete Project
+            <Button variant="outline" onClick={onClose}>
+              {isReadOnly ? 'Close' : 'Cancel'}
             </Button>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={onClose}>
-                Cancel
+
+            {!isReadOnly && onSave && (
+              <Button onClick={() => onSave({})}>
+                Save Changes
               </Button>
-              <Button onClick={handleSave}>
-                Save All Changes
-              </Button>
-            </div>
+            )}
           </div>
         </div>
       </DialogContent>

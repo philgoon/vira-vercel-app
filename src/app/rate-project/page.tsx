@@ -18,7 +18,7 @@ interface RatingData {
 
 // [R4.4] Project type for rate-project page (submission workflow)
 type ProjectForSubmission = Project & {
-  rating_status: 'Incomplete' | 'Needs Review' | 'Complete';  // [R4.4] Include all three rating states
+  rating_status: 'Incomplete' | 'Complete';  // [R1] Simplified binary status system
   vendor: {
     vendor_name: string;
     service_categories?: string;
@@ -38,14 +38,8 @@ const getVendorName = (project: ProjectForSubmission): string => {
 };
 
 // Helper function to get brand colors based on rating status
-const getStatusColors = (status: 'Incomplete' | 'Needs Review' | 'Complete') => {
+const getStatusColors = (status: 'Incomplete' | 'Complete') => {  // [R1] Fixed type signature for binary system
   switch (status) {
-    case 'Needs Review':
-      return {
-        primary: '#6B8F71',      // Green - Action needed
-        background: '#F0F4F1',   // Light green background
-        text: '#2D5A32'          // Dark green text
-      };
     case 'Incomplete':
       return {
         primary: '#1A5276',      // Blue - Work in progress
@@ -95,15 +89,8 @@ export default function RateProjectPage() {
                 project.quality_rating === null ||
                 project.communication_rating === null;
 
-              let rating_status: 'Incomplete' | 'Needs Review' | 'Complete';
-
-              if (hasIncompleteQuantitativeRatings) {
-                rating_status = 'Incomplete';
-              } else if (project.project_overall_rating_calc === null) {
-                rating_status = 'Needs Review';
-              } else {
-                rating_status = 'Complete';
-              }
+              // [R1] Simplified binary status: either Incomplete or Complete
+              const rating_status: 'Incomplete' | 'Complete' = hasIncompleteQuantitativeRatings ? 'Incomplete' : 'Complete';
 
               return {
                 ...project,
@@ -126,20 +113,24 @@ export default function RateProjectPage() {
   }, []);
 
   // Filter projects based on selected filter
-  const filteredProjects = projects
-    .filter(project => {
-      if (selectedFilter === 'all') return true;
-      if (selectedFilter === 'incomplete') return project.rating_status === 'Incomplete';
-      if (selectedFilter === 'need-review') return project.rating_status === 'Needs Review';
-      if (selectedFilter === 'complete') return project.rating_status === 'Complete';
-      return true;
-    })
-    .sort((a, b) => {
-      // Sort "Needs Review" projects first, then "Complete" projects
-      if (a.rating_status === 'Needs Review' && b.rating_status !== 'Needs Review') return -1;
-      if (a.rating_status !== 'Needs Review' && b.rating_status === 'Needs Review') return 1;
-      return 0;
-    });
+  const filteredProjects = projects.filter(project => {
+    if (selectedFilter === 'all') return true;
+    if (selectedFilter === 'incomplete') return project.rating_status === 'Incomplete';
+    if (selectedFilter === 'complete') return project.rating_status === 'Complete';
+    return true; // [R1] Removed 'need-review' filter - no longer exists in binary system
+  });
+
+  // Sort projects with Incomplete first, then Complete
+  const sortedProjects = [...filteredProjects].sort((a, b) => {
+    // [R1] Simplified sorting: Incomplete projects first, then Complete
+    if (a.rating_status === 'Incomplete' && b.rating_status !== 'Incomplete') return -1;
+    if (a.rating_status !== 'Incomplete' && b.rating_status === 'Incomplete') return 1;
+
+    // Secondary sort by client name for better organization
+    const clientA = a.client?.client_name || '';
+    const clientB = b.client?.client_name || '';
+    return clientA.localeCompare(clientB);
+  });
 
   // Handle project card click
   const handleProjectClick = (project: ProjectForSubmission) => {
@@ -221,8 +212,7 @@ export default function RateProjectPage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
               {[
                 { label: 'Incomplete', value: 'incomplete' },
-                { label: 'Needs Review', value: 'need-review' },
-                { label: 'Complete', value: 'complete' },
+                { label: 'Complete', value: 'complete' },  // [R1] Removed "Needs Review" - no longer exists in binary system
                 { label: 'All', value: 'all' }
               ].map(filter => (
                 <button
@@ -278,7 +268,7 @@ export default function RateProjectPage() {
           </div>
         )}
 
-        {!loading && !error && filteredProjects.length === 0 && (
+        {!loading && !error && sortedProjects.length === 0 && (
           <div style={{ textAlign: 'center', padding: '2rem' }}>
             <div style={{
               width: '4rem',
@@ -302,7 +292,7 @@ export default function RateProjectPage() {
         )}
 
         {/* Project List - 2 Column Layout */}
-        {!loading && !error && filteredProjects.length > 0 && (
+        {!loading && !error && sortedProjects.length > 0 && (
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(2, 1fr)',
@@ -310,7 +300,7 @@ export default function RateProjectPage() {
             maxWidth: '1600px',
             margin: '0 auto'
           }}>
-            {filteredProjects.map((project) => (
+            {sortedProjects.map((project) => (
               <div
                 key={project.project_id}
                 className="professional-card"
@@ -400,10 +390,10 @@ export default function RateProjectPage() {
         )}
 
         {/* Summary */}
-        {!loading && !error && filteredProjects.length > 0 && (
+        {!loading && !error && sortedProjects.length > 0 && (  // [R1] Use sortedProjects for accurate count
           <div style={{ textAlign: 'center', marginTop: '2rem' }}>
             <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-              {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''} need{filteredProjects.length === 1 ? 's' : ''} rating review
+              {sortedProjects.length} project{sortedProjects.length !== 1 ? 's' : ''} need{sortedProjects.length === 1 ? 's' : ''} rating review
             </p>
           </div>
         )}

@@ -1,18 +1,27 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
-import { Star, TrendingUp, CheckCircle, AlertCircle, ArrowLeft, Trophy, Sparkles, Award } from 'lucide-react'
+import { Star, TrendingUp, CheckCircle, AlertCircle, ArrowLeft, Trophy, Sparkles, Award, ChevronDown, ChevronUp } from 'lucide-react'
 import { EnhancedRecommendation, LegacyRecommendation } from '@/types'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
+// [R1] Group recommendations by vendor category for expandable display
+interface CategoryGroup {
+  category: string
+  vendors: (EnhancedRecommendation | LegacyRecommendation)[]
+}
+
 function RecommendationsContent() {
   const searchParams = useSearchParams()
   const data = searchParams.get('data')
   const isEnhanced = searchParams.get('enhanced') === 'true'
+
+  // [R1] State to track which categories are expanded
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
   let recommendations: (EnhancedRecommendation | LegacyRecommendation)[] = []
 
@@ -24,9 +33,37 @@ function RecommendationsContent() {
     }
   }
 
+  // [R1] CRITICAL: Move isEnhancedRecommendation function BEFORE it's used
   const isEnhancedRecommendation = (rec: EnhancedRecommendation | LegacyRecommendation): rec is EnhancedRecommendation => {
     return 'viraScore' in rec
   }
+
+  // [R1] Group recommendations by category for organized display
+  const groupedRecommendations: CategoryGroup[] = recommendations.reduce((acc: CategoryGroup[], rec) => {
+    // [R1] Extract category from vendor_type or use a default grouping strategy
+    const category = 'vendorName' in rec
+      ? 'All Vendors'  // Single category for now - can be enhanced later
+      : 'Legacy Services'
+
+    let categoryGroup = acc.find(group => group.category === category)
+
+    if (!categoryGroup) {
+      categoryGroup = { category, vendors: [] }
+      acc.push(categoryGroup)
+    }
+
+    categoryGroup.vendors.push(rec)
+    return acc
+  }, [])
+
+  // [R1] Sort vendors within each category by ViRA score (highest first)
+  groupedRecommendations.forEach(group => {
+    group.vendors.sort((a, b) => {
+      const aScore = isEnhancedRecommendation(a) ? a.viraScore : 0
+      const bScore = isEnhancedRecommendation(b) ? b.viraScore : 0
+      return bScore - aScore
+    })
+  })
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return '#1A5276' // Brand blue for top scores
@@ -56,6 +93,23 @@ function RecommendationsContent() {
     return sentences.slice(0, 2).join('. ') + '.'
   }
 
+  // [R1] Toggle category expansion
+  const toggleCategory = (category: string) => {
+    const newExpanded = new Set(expandedCategories)
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category)
+    } else {
+      newExpanded.add(category)
+    }
+    setExpandedCategories(newExpanded)
+  }
+
+  // [R1] Get vendors to display (top 3 or all if expanded)
+  const getVendorsToShow = (categoryGroup: CategoryGroup) => {
+    const isExpanded = expandedCategories.has(categoryGroup.category)
+    return isExpanded ? categoryGroup.vendors : categoryGroup.vendors.slice(0, 3)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -68,7 +122,7 @@ function RecommendationsContent() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Your ViRA Recommendations</h1>
-                <p className="text-gray-600">AI-powered vendor matches ranked by compatibility</p>
+                <p className="text-gray-600">AI-powered vendor matches organized by category</p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -90,7 +144,7 @@ function RecommendationsContent() {
             <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
               <CheckCircle className="w-5 h-5 text-green-600" />
               <span className="text-green-800 font-medium">
-                Found {recommendations.length} perfect matches - ranked by ViRA Score
+                Found {recommendations.length} vendor matches for {searchParams.get('category') || 'your search'}
               </span>
             </div>
           )}
@@ -99,77 +153,157 @@ function RecommendationsContent() {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-6 py-8">
-        {recommendations.length > 0 ? (
-          <div className="space-y-6">
-            {recommendations.map((rec, index) => {
-              const isEnhanced = isEnhancedRecommendation(rec)
+        {groupedRecommendations.length > 0 ? (
+          <div className="space-y-8">
+            {groupedRecommendations.map((categoryGroup) => {
+              const vendorsToShow = getVendorsToShow(categoryGroup)
+              const hasMoreVendors = categoryGroup.vendors.length > 3
+              const isExpanded = expandedCategories.has(categoryGroup.category)
 
               return (
-                <Card key={index} className="overflow-hidden">
-                  {/* Ranking Header */}
-                  <div className="h-20 relative" style={{ backgroundColor: isEnhanced ? getScoreColor(rec.viraScore) : '#6E6F71' }}>
-                    <div className="flex items-center justify-between h-full px-6 text-white">
-                      <div className="flex items-center gap-4">
-                        {getRankIcon(index)}
-                        <div>
-                          <h2 className="text-xl font-bold">{rec.vendorName}</h2>
-                          <p className="text-sm opacity-90">{getRankLabel(index)}</p>
-                        </div>
-                      </div>
-
-                      {isEnhanced && (
-                        <div className="text-right">
-                          <div className="text-3xl font-bold">{rec.viraScore}</div>
-                          <div className="text-sm opacity-90">ViRA Score</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-6">
-                    {/* Key Strengths */}
-                    {isEnhanced && rec.keyStrengths && (
-                      <div className="mb-4">
-                        <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4" />
-                          Key Strengths
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {rec.keyStrengths.map((strength, idx) => (
-                            <Badge key={idx} variant="secondary" className="bg-blue-50 text-blue-700">
-                              {strength}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Concise Analysis */}
-                    <div className="mb-4">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">
-                        {isEnhanced ? 'ViRA Analysis' : 'Why This Vendor'}
-                      </h4>
-                      <p className="text-gray-700 text-sm leading-relaxed">
-                        {truncateAnalysis(rec.reason)}
+                <div key={categoryGroup.category} className="space-y-4">
+                  {/* Category Header */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">{categoryGroup.category}</h2>
+                      <p className="text-gray-600">
+                        {categoryGroup.vendors.length} vendor{categoryGroup.vendors.length !== 1 ? 's' : ''} available
                       </p>
                     </div>
 
-                    {/* Considerations */}
-                    {isEnhanced && rec.considerations && (
-                      <div className="mb-4">
-                        <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4" />
-                          Considerations
-                        </h4>
-                        <p className="text-gray-600 text-sm italic">
-                          {rec.considerations}
-                        </p>
-                      </div>
+                    {/* Show More/Less Button */}
+                    {hasMoreVendors && (
+                      <Button
+                        variant="outline"
+                        onClick={() => toggleCategory(categoryGroup.category)}
+                        className="flex items-center gap-2"
+                      >
+                        {isExpanded ? (
+                          <>
+                            <ChevronUp className="w-4 h-4" />
+                            Show Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-4 h-4" />
+                            See More Vendors ({categoryGroup.vendors.length - 3} more)
+                          </>
+                        )}
+                      </Button>
                     )}
-
                   </div>
-                </Card>
+
+                  {/* Vendors in this category */}
+                  <div className="space-y-6">
+                    {vendorsToShow.map((rec, index) => {
+                      const isEnhanced = isEnhancedRecommendation(rec)
+                      const globalIndex = categoryGroup.vendors.indexOf(rec)
+
+                      return (
+                        <Card key={`${categoryGroup.category}-${index}`} className="overflow-hidden">
+                          {/* Ranking Header */}
+                          <div className="h-20 relative" style={{ backgroundColor: isEnhanced ? getScoreColor(rec.viraScore) : '#6E6F71' }}>
+                            <div className="flex items-center justify-between h-full px-6 text-white">
+                              <div className="flex items-center gap-4">
+                                {getRankIcon(globalIndex)}
+                                <div>
+                                  <h2 className="text-xl font-bold">{rec.vendorName}</h2>
+                                  <p className="text-sm opacity-90">{getRankLabel(globalIndex)}</p>
+                                </div>
+                              </div>
+
+                              {isEnhanced && (
+                                <div className="text-right">
+                                  <div className="text-3xl font-bold">{rec.viraScore}</div>
+                                  <div className="text-sm opacity-90">ViRA Score</div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Content */}
+                          <div className="p-6">
+                            {/* Key Strengths */}
+                            {isEnhanced && rec.keyStrengths && (
+                              <div className="mb-4">
+                                <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                  <TrendingUp className="w-4 h-4" />
+                                  Key Strengths
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {rec.keyStrengths.map((strength, idx) => (
+                                    <Badge key={idx} variant="secondary" className="bg-blue-50 text-blue-700">
+                                      {strength}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Pricing Information */}
+                            <div style={{
+                              padding: '1rem',
+                              backgroundColor: '#f0f9ff',
+                              borderRadius: '0.375rem',
+                              border: '1px solid #0ea5e9',
+                              marginBottom: '1rem'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                <span style={{ fontSize: '1rem', fontWeight: '600', color: '#0c4a6e' }}>💰 Pricing</span>
+                              </div>
+                              <div style={{ fontSize: '0.875rem', color: '#0c4a6e' }}>
+                                <div><strong>Structure:</strong> {rec.pricingStructure || 'Not specified'}</div>
+                                <div><strong>Rate:</strong> {rec.rateCost || 'Contact for pricing'}</div>
+                              </div>
+                            </div>
+
+                            {/* [R4] Experience section - compact format */}
+                            <div className="mb-4">
+                              <h4 className="font-medium text-gray-900 mb-2">📊 Experience</h4>
+                              <div className="space-y-1">
+                                {/* Total Projects */}
+                                <div className="text-sm text-gray-700">
+                                  <span className="font-medium">Total Projects:</span> {rec.totalProjects || 0} completed
+                                </div>
+
+                                {/* Client Names - deduplicated comma-separated list */}
+                                {rec.clientNames && rec.clientNames.length > 0 && (
+                                  <div className="text-sm text-gray-700">
+                                    <span className="font-medium">Clients:</span> {Array.from(new Set(rec.clientNames)).join(', ')}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Concise Analysis */}
+                            <div className="mb-4">
+                              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                                {isEnhanced ? 'ViRA Analysis' : 'Why This Vendor'}
+                              </h4>
+                              <p className="text-gray-700 text-sm leading-relaxed">
+                                {truncateAnalysis(rec.reason)}
+                              </p>
+                            </div>
+
+                            {/* Considerations */}
+                            {isEnhanced && rec.considerations && (
+                              <div className="mb-4">
+                                <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                  <AlertCircle className="w-4 h-4" />
+                                  Considerations
+                                </h4>
+                                <p className="text-gray-600 text-sm italic">
+                                  {rec.considerations}
+                                </p>
+                              </div>
+                            )}
+
+                          </div>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                </div>
               )
             })}
 

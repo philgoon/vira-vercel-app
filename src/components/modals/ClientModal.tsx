@@ -12,22 +12,34 @@ import { Badge } from '../ui/badge'
 import {
   Calendar,
   Building2,
-  CheckCircle
+  CheckCircle,
+  Users,
+  Briefcase,
+  Star
 } from 'lucide-react'
 import { Client } from '@/types'
+
+interface ClientVendorData {
+  vendorName: string;
+  projects: Array<{
+    title: string;
+    rating: number | null;
+  }>;
+}
 
 interface ClientModalProps {
   client: Client | null
   isOpen: boolean
   onClose: () => void
+  vendorData?: ClientVendorData[]
 }
 
-export default function ClientModal({ client, isOpen, onClose }: ClientModalProps) {
+export default function ClientModal({ client, isOpen, onClose, vendorData = [] }: ClientModalProps) {
   if (!client) return null
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-start gap-4">
             <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
@@ -39,15 +51,18 @@ export default function ClientModal({ client, isOpen, onClose }: ClientModalProp
                 <Badge className="bg-green-100 text-green-800 border-green-200">
                   Active Client
                 </Badge>
+                <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                  {vendorData.length} {vendorData.length === 1 ? 'Vendor' : 'Vendors'}
+                </Badge>
               </div>
               <DialogDescription className="text-base">
-                Client Summary
+                Complete vendor and project overview for strategic decision making
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
           {/* Client Information */}
           <div className="p-6 bg-white rounded-lg border shadow-sm">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -62,6 +77,10 @@ export default function ClientModal({ client, isOpen, onClose }: ClientModalProp
               <div className="text-sm">
                 <span className="text-gray-600 font-medium">Total Projects:</span>
                 <div className="text-gray-900 mt-1">{client.total_projects}</div>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600 font-medium">Active Vendors:</span>
+                <div className="text-gray-900 mt-1">{vendorData.length}</div>
               </div>
             </div>
           </div>
@@ -82,24 +101,74 @@ export default function ClientModal({ client, isOpen, onClose }: ClientModalProp
             </div>
           </div>
 
-          {/* Status Overview */}
-          <div className="p-6 bg-white rounded-lg border shadow-sm lg:col-span-2">
+          {/* Quick Stats */}
+          <div className="p-6 bg-white rounded-lg border shadow-sm">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-500" />
-              Client Status
+              Performance
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-3">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">Active</div>
-                <div className="text-sm text-gray-600">Status</div>
+                <div className="text-2xl font-bold text-green-600">{client.total_projects}</div>
+                <div className="text-sm text-gray-600">Total Projects</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{client.total_projects}</div>
-                <div className="text-sm text-gray-600">Total Projects</div>
+                <div className="text-2xl font-bold text-blue-600">{vendorData.length}</div>
+                <div className="text-sm text-gray-600">Vendors Used</div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* [R4] Vendor & Projects Details - The main business value section */}
+        {vendorData.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Users className="w-6 h-6 text-indigo-500" />
+              Vendor & Project Details
+            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {vendorData.map((vendor, idx) => (
+                <div key={idx} className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-lg text-gray-800">{vendor.vendorName}</h4>
+                    <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200">
+                      {vendor.projects.length} {vendor.projects.length === 1 ? 'Project' : 'Projects'}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {vendor.projects.map((project, projectIdx) => (
+                      <div key={projectIdx} className="flex items-start justify-between p-2 bg-white rounded border">
+                        <div className="flex-1">
+                          <div className="flex items-start gap-2">
+                            <Briefcase className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm font-medium text-gray-800 leading-tight">{project.title}</span>
+                          </div>
+                        </div>
+                        {project.rating && (
+                          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                            <Star className="w-4 h-4 text-yellow-500" />
+                            <span className="text-sm font-semibold text-gray-700">{project.rating}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty State for No Vendors */}
+        {vendorData.length === 0 && (
+          <div className="mt-6 p-8 bg-gray-50 rounded-lg text-center">
+            <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">No Vendor Data Available</h3>
+            <p className="text-gray-500">This client doesn't have any associated vendor projects yet.</p>
+          </div>
+        )}
 
         {/* Quick Stats Bar */}
         <div className="mt-6 pt-4 border-t">

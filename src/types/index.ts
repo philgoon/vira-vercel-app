@@ -81,15 +81,52 @@ export interface VendorsApiResponse {
 }
 
 // Recommendation interfaces for ViRA matching system
+export interface ClientRating {
+  client: string;
+  avgRating: number;
+  projectCount: number;
+}
+
 export interface EnhancedRecommendation {
-  vendorName: string
-  viraScore: number
-  keyStrengths: string[]
-  reason: string
-  considerations: string
+  vendorName: string;
+  viraScore: number;
+  reason: string;
+  keyStrengths: string[];
+  considerations: string;
+  pricingStructure?: string;
+  rateCost?: string;
+  totalProjects?: number; // [R3] Added totalProjects field for project count display
+  clientNames?: string[]; // [R4] Added clientNames field for client display in Experience section - DEPRECATED
+  clientRatings?: ClientRating[]; // [R4.1] Enhanced client display with average ratings per client
 }
 
 export interface LegacyRecommendation {
-  vendorName: string
-  reason: string
+  vendorName: string;
+  viraScore: number;
+  reason: string;
+  keyStrengths: string[];
+  considerations: string;
+  pricingStructure?: string;  // [R2] Added for compatibility with pricing display
+  rateCost?: string;          // [R2] Added for compatibility with pricing display
+  totalProjects?: number;     // [R3] Added for compatibility with project count display
+  clientNames?: string[];     // [R4] Added for compatibility with client display - DEPRECATED
+  clientRatings?: ClientRating[]; // [R4.1] Enhanced client display with average ratings per client
+}
+
+// [R1] [vendor-cost-display] Enhanced vendor interface for vendor cost display
+export interface PricingInfo {
+  rate_type: 'per_word' | 'hourly' | 'fixed_project' | 'per_piece';
+  rate: number;
+  description?: string;
+}
+
+export interface EnhancedVendor extends Vendor {
+  pricing?: PricingInfo[];
+  client_names?: string[];
+  enhanced_data?: boolean;
+}
+
+// [R1] Enhanced vendors API response interface
+export interface EnhancedVendorsApiResponse {
+  vendors: EnhancedVendor[];
 }

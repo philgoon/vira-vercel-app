@@ -11,11 +11,14 @@ import {
   FileText,
   Sparkles,
   Clock,
-  Star,
   TrendingUp,
   Users,
   Award,
-  ArrowRight
+  ArrowRight,
+  Code,
+  Search,
+  Megaphone,
+  BarChart3
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
@@ -54,7 +57,7 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
   // Enhanced service categories with visual elements
   const enhancedCategories: ServiceCategory[] = serviceCategories.map((category, index) => ({
     id: category,
-    name: category,
+    name: formatCategoryForDisplay(category),
     description: getCategoryDescription(category),
     icon: getCategoryIcon(category, index),
     color: getCategoryColor(index),
@@ -62,29 +65,52 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
   }))
 
   function getCategoryDescription(category: string): string {
+    // [R1] Updated to match the ACTUAL database categories (with underscores)
     const descriptions: Record<string, string> = {
-      'Web Development': 'Custom websites, web applications, and digital experiences',
-      'Mobile Development': 'iOS, Android, and cross-platform mobile applications',
-      'Digital Marketing': 'SEO, PPC, social media, and content marketing strategies',
-      'Graphic Design': 'Branding, visual identity, and creative design solutions',
-      'Consulting': 'Strategic advisory, business analysis, and expert guidance',
-      'Software Development': 'Custom software solutions and system integrations',
-      'E-commerce': 'Online stores, payment systems, and digital commerce platforms'
+      'content': 'Content writing, copywriting, and content strategy services',
+      'data': 'Business intelligence, analytics, and data-driven insights',
+      'graphic_design': 'Branding, visual identity, and creative design solutions',
+      'paid_media': 'PPC advertising, social media ads, and paid marketing campaigns',
+      'proofreading': 'Content editing, proofreading, and quality assurance services',
+      'seo': 'Search engine optimization and organic traffic growth strategies',
+      'social_media': 'Social media management, content, and community engagement',
+      'webdev': 'Custom websites, web applications, and digital development'
     }
     return descriptions[category] || 'Professional services and solutions'
   }
 
+  // [R1] Format categories for display while preserving database values
+  function formatCategoryForDisplay(category: string): string {
+    const formatted: Record<string, string> = {
+      'content': 'Content Creation',
+      'data': 'Data Analysis',
+      'graphic_design': 'Graphic Design',
+      'paid_media': 'Paid Media',
+      'proofreading': 'Proofreading',
+      'seo': 'SEO',
+      'social_media': 'Social Media',
+      'webdev': 'Web Development'
+    }
+    return formatted[category] || category.split('_').map(word =>
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ')
+  }
+
   function getCategoryIcon(category: string, index: number) {
-    const icons = [
-      <Target key="target" className="w-6 h-6" />,
-      <FileText key="file" className="w-6 h-6" />,
-      <TrendingUp key="trend" className="w-6 h-6" />,
-      <Users key="users" className="w-6 h-6" />,
-      <Award key="award" className="w-6 h-6" />,
-      <Sparkles key="sparkles" className="w-6 h-6" />,
-      <Star key="star" className="w-6 h-6" />
-    ]
-    return icons[index % icons.length]
+    // [R1] Assign specific icons to each category for better user experience
+    const categoryIcons: Record<string, React.ReactNode> = {
+      'content': <FileText key="content" className="w-6 h-6" />,
+      'data': <BarChart3 key="data" className="w-6 h-6" />,
+      'graphic_design': <Sparkles key="graphic_design" className="w-6 h-6" />,
+      'paid_media': <Megaphone key="paid_media" className="w-6 h-6" />,
+      'proofreading': <CheckCircle key="proofreading" className="w-6 h-6" />,
+      'seo': <Search key="seo" className="w-6 h-6" />,
+      'social_media': <Users key="social_media" className="w-6 h-6" />,
+      'webdev': <Code key="webdev" className="w-6 h-6" />
+    }
+
+    // Return specific icon or fallback to generic Award icon
+    return categoryIcons[category] || <Award key={`fallback-${index}`} className="w-6 h-6" />
   }
 
   function getCategoryColor(index: number): string {

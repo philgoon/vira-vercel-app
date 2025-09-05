@@ -2,34 +2,132 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building, Briefcase, Calendar } from 'lucide-react';
+import { Building, Briefcase, Calendar, Users } from 'lucide-react';
 import { Client } from '@/types';
 import ClientModal from '@/components/modals/ClientModal';
 
+interface Project {
+  project_id: string;
+  client_name: string;
+  project_title: string;
+  vendor_name: string;
+  project_overall_rating_calc: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ClientVendorData {
+  vendorName: string;
+  projects: Array<{
+    title: string;
+    rating: number | null;
+  }>;
+}
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [clientVendors, setClientVendors] = useState<Record<string, ClientVendorData[]>>({});
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // [R7.8] Fetch clients from Supabase API
-  useEffect(() => {
-    async function fetchClients() {
-      try {
-        const response = await fetch('/api/clients');
-        if (!response.ok) throw new Error('Failed to fetch clients');
+  // [R4] [client-page-enhancement] Group vendors and projects by client
+  const groupVendorsByClient = (projects: Project[]) => {
+    const clientVendorMap: Record<string, ClientVendorData[]> = {};
 
-        const data = await response.json();
-        setClients(data || []);
+    // [R4] Defensive programming - ensure projects is always an array
+    const safeProjects = Array.isArray(projects) ? projects : [];
+
+    console.log('=== CLIENT VENDOR GROUPING DEBUG ===');
+    console.log('Total projects to process:', safeProjects.length);
+
+    safeProjects.forEach(project => {
+      const { client_name, vendor_name, project_title, project_overall_rating_calc } = project;
+
+      // [R4] Debug specific client
+      if (client_name === 'Bergen Oral & Maxillofacial Surgery') {
+        console.log('Bergen project:', {
+          client_name,
+          vendor_name,
+          project_title,
+          rating: project_overall_rating_calc
+        });
+      }
+
+      // [R4] Skip if essential data is missing
+      if (!client_name || !vendor_name || !project_title) {
+        console.log('Skipping project due to missing data:', { client_name, vendor_name, project_title });
+        return;
+      }
+
+      if (!clientVendorMap[client_name]) {
+        clientVendorMap[client_name] = [];
+      }
+
+      // Find existing vendor for this client
+      let vendorData = clientVendorMap[client_name].find(v => v.vendorName === vendor_name);
+
+      if (!vendorData) {
+        vendorData = {
+          vendorName: vendor_name,
+          projects: []
+        };
+        clientVendorMap[client_name].push(vendorData);
+      }
+
+      // Add project to vendor
+      vendorData.projects.push({
+        title: project_title,
+        rating: project_overall_rating_calc
+      });
+    });
+
+    // [R4] Debug results
+    console.log('Bergen vendor map result:', clientVendorMap['Bergen Oral & Maxillofacial Surgery']);
+
+    return clientVendorMap;
+  };
+
+  // [R4] Fetch both clients and projects data
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [clientsResponse, projectsResponse] = await Promise.all([
+          fetch('/api/clients'),
+          fetch('/api/projects')
+        ]);
+
+        if (!clientsResponse.ok || !projectsResponse.ok) {
+          throw new Error('Failed to fetch data');
+        }
+
+        const clientsData = await clientsResponse.json();
+        const response = await projectsResponse.json();
+
+        // [R4] CRITICAL FIX: Extract projects array from API response object
+        const projectsData = response.projects || [];
+
+        // [R4] Defensive programming with proper error handling
+        setClients(Array.isArray(clientsData) ? clientsData : []);
+
+        // Group vendors and projects by client - ensure projectsData is array
+        const safeProjectsData = Array.isArray(projectsData) ? projectsData : [];
+        const vendorMap = groupVendorsByClient(safeProjectsData);
+        setClientVendors(vendorMap);
+
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch clients');
+        console.error('Error fetching client/project data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
+        // [R4] Set safe defaults on error
+        setClients([]);
+        setClientVendors({});
       } finally {
         setLoading(false);
       }
     }
 
-    fetchClients();
+    fetchData();
   }, []);
 
   return (
@@ -46,13 +144,12 @@ export default function ClientsPage() {
                 color: '#1A5276'
               }}>Clients</h1>
               <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
-                Manage your client relationships and project history
+                Manage your client relationships with vendor and project overview
               </p>
             </div>
           </div>
         </div>
       </div>
-
 
       {/* Content */}
       <div style={{ padding: '1.5rem' }}>
@@ -117,78 +214,105 @@ export default function ClientsPage() {
           </div>
         )}
 
-        {/* Client List - 2 Column Layout matching vendor page style */}
+        {/* Client List - Enhanced with vendor/project information */}
         {!loading && !error && clients.length > 0 && (
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '1rem',
+            gap: '1.5rem',
             maxWidth: '1600px',
             margin: '0 auto'
           }}>
-            {clients.map((client) => (
-              <div
-                key={client.client_key}
-                className="professional-card"
-                onClick={() => {
-                  setSelectedClient(client);
-                  setIsModalOpen(true);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '1rem 1.5rem',
-                  minHeight: '5rem',
-                  cursor: 'pointer'
-                }}
-              >
-                {/* Client Avatar */}
-                <div style={{
-                  width: '3rem',
-                  height: '3rem',
-                  backgroundColor: '#1A5276',
-                  borderRadius: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '1rem',
-                  flexShrink: 0
-                }}>
-                  <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'white' }}>
-                    {client.client_name.charAt(0)}
-                  </span>
-                </div>
-
-                {/* Main Client Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                    <h3 style={{
-                      fontSize: '1.125rem',
-                      fontWeight: '600',
-                      color: '#111827',
-                      margin: 0
+            {clients.map((client) => {
+              const vendorData = clientVendors[client.client_name] || [];
+              return (
+                <div
+                  key={client.client_key}
+                  className="professional-card"
+                  onClick={() => {
+                    setSelectedClient(client);
+                    setIsModalOpen(true);
+                  }}
+                  style={{
+                    padding: '1.5rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {/* Client Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+                    <div style={{
+                      width: '3rem',
+                      height: '3rem',
+                      backgroundColor: '#1A5276',
+                      borderRadius: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: '1rem',
+                      flexShrink: 0
                     }}>
-                      {client.client_name}
-                    </h3>
+                      <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'white' }}>
+                        {client.client_name.charAt(0)}
+                      </span>
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{
+                        fontSize: '1.25rem',
+                        fontWeight: '600',
+                        color: '#111827',
+                        margin: 0,
+                        marginBottom: '0.25rem'
+                      }}>
+                        {client.client_name}
+                      </h3>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Briefcase style={{ width: '1rem', height: '1rem' }} />
+                          <span>{client.total_projects} {client.total_projects === 1 ? 'project' : 'projects'}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Calendar style={{ width: '1rem', height: '1rem' }} />
+                          <span>
+                            Last: {client.last_project_date ? new Date(client.last_project_date).toLocaleDateString() : 'N/A'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Users style={{ width: '1rem', height: '1rem' }} />
+                          <span>{vendorData.length} {vendorData.length === 1 ? 'vendor' : 'vendors'}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Briefcase style={{ width: '1rem', height: '1rem' }} />
-                      <span>
-                        {client.total_projects} {client.total_projects === 1 ? 'project' : 'projects'}
-                      </span>
+                  {/* [R4] Quick preview of top vendors */}
+                  {vendorData.length > 0 && (
+                    <div style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      borderTop: '1px solid #e5e7eb',
+                      paddingTop: '0.75rem'
+                    }}>
+                      <div style={{ fontWeight: '500', marginBottom: '0.5rem' }}>Recent Vendors:</div>
+                      {vendorData.slice(0, 2).map((vendor, idx) => (
+                        <div key={idx} style={{ marginBottom: '0.25rem' }}>
+                          • {vendor.vendorName} ({vendor.projects.length} {vendor.projects.length === 1 ? 'project' : 'projects'})
+                        </div>
+                      ))}
+                      {vendorData.length > 2 && (
+                        <div style={{ fontStyle: 'italic', color: '#9ca3af' }}>
+                          +{vendorData.length - 2} more vendors...
+                        </div>
+                      )}
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#9ca3af' }}>
+                        Click to see all projects and vendors
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Calendar style={{ width: '1rem', height: '1rem' }} />
-                      <span>
-                        Last project: {client.last_project_date ? new Date(client.last_project_date).toLocaleDateString() : 'N/A'}
-                      </span>
-                    </div>
-                  </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -196,7 +320,7 @@ export default function ClientsPage() {
         {!loading && !error && clients.length > 0 && (
           <div style={{ marginTop: '2rem', textAlign: 'center' }}>
             <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-              Showing {clients.length} clients
+              Showing {clients.length} clients with vendor and project details
             </p>
           </div>
         )}
@@ -211,6 +335,7 @@ export default function ClientsPage() {
             setIsModalOpen(false);
             setSelectedClient(null);
           }}
+          vendorData={clientVendors[selectedClient.client_name] || []}
         />
       )}
 

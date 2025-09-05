@@ -10,6 +10,7 @@ interface VendorProfile {
   vendor_type?: string;
   skills?: string;
   pricing_structure?: string;
+  rate_cost?: string;  // [R2] Added rate_cost field to interface
 }
 
 interface VendorPerformance {
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
     console.log(`Step 1: Fetching candidate profiles for category: ${serviceCategory}`);
     const { data: vendorProfiles, error: profilesError } = await supabase
       .from('vendors')
-      .select('vendor_id, vendor_name, vendor_type, skills, pricing_structure')
+      .select('vendor_id, vendor_name, vendor_type, skills, pricing_structure, rate_cost')  // [R2] Added rate_cost for pricing display
       .eq('status', 'active')
       .ilike('vendor_type', `%${serviceCategory}%`);
 
@@ -86,7 +87,8 @@ export async function POST(request: Request) {
           vendor_name: profile.vendor_name,
           vendor_type: profile.vendor_type,
           skills: profile.skills,
-          pricing_structure: profile.pricing_structure
+          pricing_structure: profile.pricing_structure,
+          rate_cost: profile.rate_cost  // [R2] Added rate_cost to profile object
         },
         performance: {
           avg_success: performance.avg_success,
@@ -123,6 +125,7 @@ DESCRIPTIVE PROFILE:
 - Primary Service Category: ${vendor.profile.vendor_type || 'Not specified'}
 - Key Skills: ${vendor.profile.skills || 'Not specified'}
 - Typical Pricing: ${vendor.profile.pricing_structure || 'Not specified'}
+- Rate/Cost: ${vendor.profile.rate_cost || 'Contact for pricing'}  // [R2] Added rate_cost to AI prompt
 
 PERFORMANCE SUMMARY:
 - Total Rated Projects: ${vendor.performance.rated_projects ?? 'N/A'}
@@ -146,12 +149,24 @@ ANALYSIS REQUIREMENTS:
 
 CRITICAL: You must return ONLY a valid JSON array, no explanatory text before or after.
 
-OUTPUT FORMAT (JSON array of top 3-5 vendors):
+OUTPUT FORMAT (JSON array of ALL qualified vendors, ranked by ViRA score):
 - vendorName: string (exact vendor name)
 - viraScore: number (0-100)
 - reason: string (150-200 words explaining the score, referencing specifics from their profile, performance, and history)
 - keyStrengths: array of 2-3 specific strengths, derived from the data
 - considerations: string (any important considerations or potential concerns based on the data)
+- pricingStructure: string (pricing structure from vendor profile, or "Not specified")
+- rateCost: string (rate/cost information from vendor profile, or "Contact for pricing")
+- totalProjects: number (total rated projects from vendor performance, or 0)
+- clientNames: array of strings (client names from project history, or empty array if none available)
+- category: string (service category from vendor profile for frontend grouping)
+
+RANKING REQUIREMENTS:
+- Return ALL vendors regardless of ViRA score (complete vendor marketplace)
+- Rank by ViRA score (highest first)  
+- Include comprehensive analysis for each vendor
+- Each vendor should receive thorough evaluation regardless of score
+- Let users decide quality thresholds based on ViRA scores and analysis
 
 EXAMPLE:
 [
@@ -160,7 +175,11 @@ EXAMPLE:
     "viraScore": 92,
     "reason": "This vendor is an exceptional match due to their deep expertise in [Skill], reflected in their project history. Their average overall rating of 9.1/10 across 25 projects shows consistent high performance. Positive feedback on projects like 'X' and 'Y' specifically mention their proactive communication, which aligns well with the stated project needs.",
     "keyStrengths": ["High Client Satisfaction (9.1 avg rating)", "Proven On-time Delivery", "Specific expertise in [Skill]"],
-    "considerations": "Their pricing structure is premium, which should be aligned with the project budget."
+    "considerations": "Their pricing structure is premium, which should be aligned with the project budget.",
+    "pricingStructure": "per hour",
+    "rateCost": "$125/hour",
+    "totalProjects": 25,
+    "clientNames": ["Acme Corp", "TechStart Inc", "Global Solutions", "Innovation Labs"]
   }
 ]
     `;

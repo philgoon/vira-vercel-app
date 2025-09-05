@@ -17,7 +17,7 @@ export default function VendorsPage() {
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // [R7.2] Fetch vendors from Supabase API
+  // [R1] [vendor-cost-display] Fetch vendors with pricing from existing API
   useEffect(() => {
     async function fetchVendors() {
       try {
@@ -29,7 +29,7 @@ export default function VendorsPage() {
 
         // Client-side filtering for categories (using vendor_type)
         if (selectedCategories.length > 0) {
-          vendorList = vendorList.filter(vendor => {
+          vendorList = vendorList.filter((vendor: Vendor) => {
             const vendorType = vendor.vendor_type;
             return vendorType && selectedCategories.some(selectedCat =>
               vendorType.toLowerCase().includes(selectedCat.toLowerCase())
@@ -58,7 +58,7 @@ export default function VendorsPage() {
           const allVendors = data.vendors || [];
 
           const categorySet = new Set<string>();
-          allVendors.forEach(vendor => {
+          allVendors.forEach((vendor: Vendor) => {
             if (vendor.vendor_type && typeof vendor.vendor_type === 'string' && vendor.vendor_type.trim()) {
               categorySet.add(vendor.vendor_type.trim());
             }
@@ -108,6 +108,34 @@ export default function VendorsPage() {
     }
   };
 
+  // [R1] [vendor-cost-display] Helper function to format pricing for display - FIXED: Handle existing $ signs
+  const formatPricingDisplay = (vendor: Vendor) => {
+    if (!vendor.pricing_structure || !vendor.rate_cost) {
+      return 'Pricing available on request';
+    }
+
+    // Clean the rate_cost to handle existing formatting
+    const rateCost = vendor.rate_cost.toString();
+    const pricingStructure = vendor.pricing_structure.toLowerCase();
+
+    // If rate_cost already starts with $, use it as-is, otherwise add $
+    const cleanRate = rateCost.startsWith('$') ? rateCost : `$${rateCost}`;
+
+    // Format based on pricing structure, avoiding duplicate units
+    if (pricingStructure.includes('word')) {
+      return `${cleanRate}/word`;
+    } else if (pricingStructure.includes('hour')) {
+      // Avoid duplicate "/hour" if it's already in the rate_cost
+      return rateCost.includes('/hour') ? cleanRate : `${cleanRate}/hour`;
+    } else if (pricingStructure.includes('project') || pricingStructure.includes('fixed')) {
+      return rateCost.includes('/project') ? cleanRate : `${cleanRate}/project`;
+    } else if (pricingStructure.includes('piece')) {
+      return rateCost.includes('/piece') ? cleanRate : `${cleanRate}/piece`;
+    } else {
+      return cleanRate;
+    }
+  };
+
   return (
     <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
       {/* Header */}
@@ -120,7 +148,7 @@ export default function VendorsPage() {
             color: '#1A5276'
           }}>Our Vendors</h1>
           <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
-            Discover vetted professionals for your next project
+            Discover vetted professionals with transparent pricing
           </p>
         </div>
       </div>
@@ -173,7 +201,6 @@ export default function VendorsPage() {
               ))}
             </div>
           </div>
-
         </div>
       </div>
 
@@ -212,7 +239,7 @@ export default function VendorsPage() {
           </div>
         )}
 
-        {/* Vendor List - 2 Column Layout */}
+        {/* Vendor List - 2 Column Layout with Enhanced Data */}
         {!loading && !error && vendors.length > 0 && (
           <div style={{
             display: 'grid',
@@ -230,7 +257,7 @@ export default function VendorsPage() {
                   display: 'flex',
                   alignItems: 'center',
                   padding: '1rem 1.5rem',
-                  minHeight: '5rem',
+                  minHeight: '6rem', // Increased to accommodate pricing
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
@@ -273,7 +300,8 @@ export default function VendorsPage() {
                     </h3>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                  {/* First row: Category, Projects, Rating */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
                     <span style={{ fontWeight: '500', color: '#1A5276' }}>
                       {vendor.vendor_type || 'Service Provider'}
                     </span>
@@ -297,6 +325,20 @@ export default function VendorsPage() {
                         'No ratings'}
                     </div>
                   </div>
+
+                  {/* [R1] [vendor-cost-display] Second row: Pricing Display - Critical Business Value */}
+                  <div style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#059669',
+                    backgroundColor: '#f0fdf4',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '0.375rem',
+                    border: '1px solid #bbf7d0',
+                    display: 'inline-block'
+                  }}>
+                    💰 {formatPricingDisplay(vendor)}
+                  </div>
                 </div>
               </div>
             ))}
@@ -316,13 +358,13 @@ export default function VendorsPage() {
       {/* Vendor Modal */}
       {selectedVendor && (
         <VendorModal
-          vendor={selectedVendor}
+          vendor={selectedVendor as Vendor} // Type compatibility for modal
           isOpen={isModalOpen}
           onClose={() => {
             setIsModalOpen(false);
             setSelectedVendor(null);
           }}
-          onSave={handleSaveVendor}
+          onSave={handleSaveVendor as (updatedVendor: Partial<Vendor>) => Promise<void>}
         />
       )}
 
