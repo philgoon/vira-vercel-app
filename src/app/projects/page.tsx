@@ -574,6 +574,26 @@ export default function ProjectsPage() {
                         Has feedback
                       </div>
                     )}
+
+                    {/* [R-QW1] Timeline Status Badge */}
+                    {project.timeline_status && (
+                      <div style={{
+                        padding: '0.125rem 0.5rem',
+                        backgroundColor:
+                          project.timeline_status === 'Early' ? '#d1fae5' :
+                          project.timeline_status === 'On-Time' ? '#dbeafe' :
+                          '#fee2e2',
+                        color:
+                          project.timeline_status === 'Early' ? '#065f46' :
+                          project.timeline_status === 'On-Time' ? '#1e40af' :
+                          '#991b1b',
+                        borderRadius: '9999px',
+                        fontSize: '0.75rem',
+                        fontWeight: '500'
+                      }}>
+                        {project.timeline_status}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

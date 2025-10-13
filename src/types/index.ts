@@ -18,6 +18,7 @@ export interface Project {
   created_at: string;
   updated_at: string;
   rating_status: 'Needs Review' | 'Incomplete' | 'Complete' | null;
+  timeline_status: 'Early' | 'On-Time' | 'Late' | null; // [R-QW1] Admin-set project timeline performance
 }
 
 export interface Vendor {

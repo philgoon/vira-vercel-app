@@ -17,7 +17,8 @@ import {
   Users,
   Calendar,
   Loader2,
-  CheckCircle
+  CheckCircle,
+  Clock // [R-QW1] Added Clock icon for timeline status
 } from 'lucide-react'
 import { Project } from '@/types'
 
@@ -48,6 +49,7 @@ interface RatingData {
   improvement_feedback: string
   overall_rating: number
   vendor_recommendation: boolean
+  timeline_status: 'Early' | 'On-Time' | 'Late' | null // [R-QW1] Timeline status during rating
 }
 
 // Union type to handle different vendor data structures from API
@@ -78,7 +80,8 @@ export default function RatingSubmissionModal({
     communication_rating: 0,
     positive_feedback: '',
     improvement_feedback: '',
-    vendor_recommendation: false
+    vendor_recommendation: false,
+    timeline_status: null as 'Early' | 'On-Time' | 'Late' | null // [R-QW1] Timeline status state
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   // Pre-populate with existing data for incomplete ratings
@@ -184,7 +187,8 @@ export default function RatingSubmissionModal({
         communication_rating: 0,
         positive_feedback: '',
         improvement_feedback: '',
-        vendor_recommendation: false
+        vendor_recommendation: false,
+        timeline_status: null // [R-QW1] Reset timeline status
       })
 
       onClose()
@@ -351,6 +355,54 @@ export default function RatingSubmissionModal({
                   </div>
                 </button>
               </div>
+            </div>
+
+            {/* [R-QW1] Timeline Status */}
+            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <label className="text-sm font-medium text-purple-900 mb-3 block flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Project Timeline Status
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRatings(prev => ({ ...prev, timeline_status: 'Early' }))}
+                  className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                    ratings.timeline_status === 'Early'
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-gray-300 bg-white text-gray-600 hover:border-green-300'
+                  }`}
+                >
+                  Early
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRatings(prev => ({ ...prev, timeline_status: 'On-Time' }))}
+                  className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                    ratings.timeline_status === 'On-Time'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 bg-white text-gray-600 hover:border-blue-300'
+                  }`}
+                >
+                  On-Time
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRatings(prev => ({ ...prev, timeline_status: 'Late' }))}
+                  className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                    ratings.timeline_status === 'Late'
+                      ? 'border-red-500 bg-red-50 text-red-700'
+                      : 'border-gray-300 bg-white text-gray-600 hover:border-red-300'
+                  }`}
+                >
+                  Late
+                </button>
+              </div>
+              {!ratings.timeline_status && (
+                <p className="text-xs text-purple-600 mt-2 text-center">
+                  Optional: How did this project perform against timeline?
+                </p>
+              )}
             </div>
 
             {/* Overall Rating Display */}

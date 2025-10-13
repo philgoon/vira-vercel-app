@@ -11,6 +11,7 @@ interface RatingRequestBody {
   positive_feedback?: string;
   improvement_feedback?: string;
   vendor_recommendation: boolean;
+  timeline_status?: 'Early' | 'On-Time' | 'Late' | null; // [R-QW1] Timeline status from rating form
 }
 
 // Shared function to prepare data for the 'projects' table
@@ -27,6 +28,9 @@ const prepareProjectUpdateData = (body: RatingRequestBody) => {
 
     // Recommendation
     recommend_again: body.vendor_recommendation,
+
+    // [R-QW1] Timeline Status
+    timeline_status: body.timeline_status || null,
 
     // Timestamps
     updated_at: new Date().toISOString(),
@@ -46,7 +50,8 @@ export async function POST(request: Request) {
     const updateData = {
       ...prepareProjectUpdateData(body),
       rating_date: new Date().toISOString(), // Set the rating date on initial submission
-      status: 'rated', // Update project status to signify completion of rating
+      // [R-QW1] Don't change status - keep it as 'closed' or whatever it currently is
+      // The database has a status enum constraint, and 'rated' is not a valid value
     };
 
     const { data, error } = await supabase
