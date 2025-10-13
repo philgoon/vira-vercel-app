@@ -200,23 +200,28 @@ EXAMPLE:
 ]
     `;
 
-    // Step 5: Call GPT-5 Responses API and process the response
-    console.log('Step 5: Calling GPT-5 and processing response...');
+    // Step 5: Call OpenAI Chat Completions API and process the response
+    console.log('Step 5: Calling OpenAI GPT-4 and processing response...');
     let recommendations;
     try {
-      // [R-QW2+C3] Using GPT-5 Responses API with reasoning and structured output
-      const result = await openai.responses.create({
-        model: "gpt-5",
-        input: prompt,
-        reasoning: {
-          effort: "medium"  // Balance between speed and reasoning depth
-        },
-        text: {
-          verbosity: "medium"  // Appropriate detail level for vendor analysis
-        }
+      // [R-QW2+C3] Using OpenAI Chat Completions API for vendor recommendations
+      const result = await openai.chat.completions.create({
+        model: "gpt-4-turbo-preview",  // Using GPT-4 Turbo for fast, high-quality analysis
+        messages: [
+          {
+            role: "system",
+            content: "You are ViRA (Vendor Intelligence & Recommendation Assistant), an expert AI system that analyzes comprehensive vendor data to provide strategic recommendations. You MUST return ONLY a valid JSON array with no additional text before or after."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,  // Balanced creativity for vendor analysis
+        max_tokens: 4000   // Sufficient for analyzing multiple vendors
       });
 
-      const aiResponse = result.output_text;
+      const aiResponse = result.choices[0].message.content || '';
       const jsonMatch = aiResponse.match(/\[\s*{[\s\S]*}\s*\]/);
       if (!jsonMatch) throw new Error("No JSON array found in AI response");
       recommendations = JSON.parse(jsonMatch[0]);
