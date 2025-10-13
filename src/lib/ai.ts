@@ -1,11 +1,11 @@
-// [R1.3] src/lib/ai.ts: Initializes and exports the Google Generative AI client.
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// [R1.3] [R-QW2+C3] src/lib/ai.ts: Initializes and exports the OpenAI client for GPT-5.
+import OpenAI from 'openai';
 
 // [R4.1] Ensure the API key is handled securely and not exposed client-side.
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.OPENAI_API_KEY;
 
 if (!apiKey) {
-  throw new Error('GEMINI_API_KEY is not set in environment variables.');
+  throw new Error('OPENAI_API_KEY is not set in environment variables.');
 }
 
-export const genAI = new GoogleGenerativeAI(apiKey);
+export const openai = new OpenAI({ apiKey });

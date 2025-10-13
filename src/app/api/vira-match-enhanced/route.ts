@@ -1,7 +1,7 @@
-// [R7.0] Final Refactored ViRA Match API - Uses a 3-source data enrichment strategy
+// [R7.0] [R-QW2+C3] Final Refactored ViRA Match API - Uses GPT-5 and 3-source data enrichment
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { genAI } from '@/lib/ai';
+import { openai } from '@/lib/ai';
 
 // Define comprehensive interfaces for our data structures
 interface VendorProfile {
@@ -123,7 +123,7 @@ export async function POST(request: Request) {
     });
 
     // Step 4: Build the ultimate high-context AI prompt
-    console.log('Step 4: Building high-context prompt for Gemini AI...');
+    console.log('Step 4: Building high-context prompt for GPT-5...');
     const prompt = `
 You are ViRA (Vendor Intelligence & Recommendation Assistant), an expert AI system that analyzes comprehensive vendor data to provide strategic recommendations.
 
@@ -200,14 +200,24 @@ EXAMPLE:
 ]
     `;
 
-    // Step 5: Call Gemini API and process the response
-    console.log('Step 5: Calling Gemini and processing response...');
+    // Step 5: Call GPT-5 Responses API and process the response
+    console.log('Step 5: Calling GPT-5 and processing response...');
     let recommendations;
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-latest' });
-      const result = await model.generateContent(prompt);
-      const geminiResponse = await result.response.text();
-      const jsonMatch = geminiResponse.match(/\[\s*{[\s\S]*}\s*\]/);
+      // [R-QW2+C3] Using GPT-5 Responses API with reasoning and structured output
+      const result = await openai.responses.create({
+        model: "gpt-5",
+        input: prompt,
+        reasoning: {
+          effort: "medium"  // Balance between speed and reasoning depth
+        },
+        text: {
+          verbosity: "medium"  // Appropriate detail level for vendor analysis
+        }
+      });
+
+      const aiResponse = result.output_text;
+      const jsonMatch = aiResponse.match(/\[\s*{[\s\S]*}\s*\]/);
       if (!jsonMatch) throw new Error("No JSON array found in AI response");
       recommendations = JSON.parse(jsonMatch[0]);
     } catch (aiError) {
