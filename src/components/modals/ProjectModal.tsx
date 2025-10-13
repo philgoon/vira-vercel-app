@@ -1,10 +1,11 @@
 'use client'
 
+import { useState } from 'react' // [R-QW1] Added for timeline status state
 import { Project } from '@/types'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Star, User, Calendar, CheckCircle, AlertCircle } from 'lucide-react'
+import { Star, User, Calendar, CheckCircle, AlertCircle, Clock } from 'lucide-react' // [R-QW1] Added Clock icon
 
 interface ProjectModalProps {
   project: Project | null
@@ -15,6 +16,12 @@ interface ProjectModalProps {
 }
 
 export default function ProjectModal({ project, isOpen, onClose, onSave, onDelete }: ProjectModalProps) {
+  // [R-QW1] Timeline status state
+  const [timelineStatus, setTimelineStatus] = useState<'Early' | 'On-Time' | 'Late' | null>(
+    project?.timeline_status || null
+  )
+  const [hasChanges, setHasChanges] = useState(false)
+
   if (!isOpen || !project) {
     return null
   }
@@ -34,6 +41,20 @@ export default function ProjectModal({ project, isOpen, onClose, onSave, onDelet
       month: 'short',
       day: 'numeric'
     })
+  }
+
+  // [R-QW1] Handle timeline status change
+  const handleTimelineStatusChange = (newStatus: 'Early' | 'On-Time' | 'Late' | null) => {
+    setTimelineStatus(newStatus)
+    setHasChanges(true)
+  }
+
+  // [R-QW1] Save timeline status changes
+  const handleSaveTimelineStatus = () => {
+    if (onSave && hasChanges) {
+      onSave({ timeline_status: timelineStatus })
+      setHasChanges(false)
+    }
   }
 
   // [R4] Rating component
@@ -204,6 +225,65 @@ export default function ProjectModal({ project, isOpen, onClose, onSave, onDelet
                       ? 'Would not recommend again'
                       : 'No recommendation given'}
                 </span>
+              </div>
+            </div>
+
+            {/* [R-QW1] Timeline Status */}
+            <div className="bg-white border rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Timeline Status
+              </h3>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleTimelineStatusChange('Early')}
+                    disabled={isReadOnly}
+                    className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                      timelineStatus === 'Early'
+                        ? 'border-green-500 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-green-300'
+                    } ${isReadOnly ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    Early
+                  </button>
+                  <button
+                    onClick={() => handleTimelineStatusChange('On-Time')}
+                    disabled={isReadOnly}
+                    className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                      timelineStatus === 'On-Time'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300'
+                    } ${isReadOnly ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    On-Time
+                  </button>
+                  <button
+                    onClick={() => handleTimelineStatusChange('Late')}
+                    disabled={isReadOnly}
+                    className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                      timelineStatus === 'Late'
+                        ? 'border-red-500 bg-red-50 text-red-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-red-300'
+                    } ${isReadOnly ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    Late
+                  </button>
+                </div>
+                {hasChanges && !isReadOnly && (
+                  <Button
+                    onClick={handleSaveTimelineStatus}
+                    className="w-full"
+                    size="sm"
+                  >
+                    Save Timeline Status
+                  </Button>
+                )}
+                {!timelineStatus && !isReadOnly && (
+                  <p className="text-xs text-gray-500 text-center">
+                    Select a timeline status for this project
+                  </p>
+                )}
               </div>
             </div>
 
