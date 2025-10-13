@@ -50,13 +50,25 @@ export async function POST(request: Request) {
     // Step 1: Get Base Candidate Profiles from 'vendors' table
     // [R-QW2+C3] Updated to use service_categories array field with fallback to legacy vendor_type
     console.log(`Step 1: Fetching candidate profiles for category: ${serviceCategory}`);
-    const { data: vendorProfiles, error: profilesError } = await supabase
+
+    // Fetch all active vendors and filter in JavaScript (simpler and more reliable than PostgREST array operators)
+    const { data: allVendors, error: profilesError } = await supabase
       .from('vendors')
-      .select('vendor_id, vendor_name, vendor_type, service_categories, skills, pricing_structure, rate_cost')  // [R-QW2+C3] Added service_categories array
-      .eq('status', 'active')
-      .or(`service_categories.cs.{${serviceCategory}},vendor_type.ilike.%${serviceCategory}%`); // [R-QW2+C3] Match array contains OR legacy field ilike
+      .select('vendor_id, vendor_name, vendor_type, service_categories, skills, pricing_structure, rate_cost')
+      .eq('status', 'active');
 
     if (profilesError) throw new Error(`Failed to fetch vendor profiles: ${profilesError.message}`);
+
+    // [R-QW2+C3] Filter vendors: match if service_categories array contains category OR vendor_type matches
+    const vendorProfiles = allVendors?.filter(vendor => {
+      // Check array field first (preferred)
+      if (vendor.service_categories && Array.isArray(vendor.service_categories)) {
+        return vendor.service_categories.includes(serviceCategory);
+      }
+      // Fallback to legacy vendor_type field
+      return vendor.vendor_type?.toLowerCase().includes(serviceCategory.toLowerCase());
+    }) || [];
+
     if (!vendorProfiles || vendorProfiles.length === 0) {
       return NextResponse.json({ recommendations: [], message: `No active vendors found for service category: ${serviceCategory}` });
     }
