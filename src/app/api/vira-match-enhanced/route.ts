@@ -204,7 +204,7 @@ EXAMPLE:
     console.log('Step 5: Calling Gemini and processing response...');
     let recommendations;
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-latest' });
       const result = await model.generateContent(prompt);
       const geminiResponse = await result.response.text();
       const jsonMatch = geminiResponse.match(/\[\s*{[\s\S]*}\s*\]/);
