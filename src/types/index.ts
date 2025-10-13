@@ -34,7 +34,8 @@ export interface Vendor {
   onboarding_date?: string | null;
   overall_rating?: number | null;
   industry?: string | null;
-  service_category?: string | null;
+  service_category?: string | null; // [DEPRECATED] Use service_categories array instead
+  service_categories?: string[] | null; // [R-QW2+C3] Array of service categories for multi-service vendors
   skills?: string | null;
   portfolio_url?: string | null;
   sample_work_urls?: string | null;

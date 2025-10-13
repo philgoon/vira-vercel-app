@@ -10,7 +10,7 @@ export default function ViRAMatchPage() {
   const [serviceCategories, setServiceCategories] = useState<string[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
 
-  // [R3.1] Load service categories from vendors table
+  // [R3.1] [R-QW2+C3] Load service categories from vendors table using new service_categories array
   useEffect(() => {
     async function loadServiceCategories() {
       try {
@@ -20,14 +20,19 @@ export default function ViRAMatchPage() {
           console.log('RAW VENDORS API RESPONSE:', data); // Enhanced DEBUG
           const { vendors }: { vendors: Vendor[] } = data;
 
+          // [R-QW2+C3] Extract unique categories from service_categories array field
           const categories = [...new Set(
             vendors
               ?.flatMap((vendor: Vendor) => {
-                // Use the correct field from the updated Vendor type
-                const serviceCategory = vendor.vendor_type; // CORRECTED: Was service_category
-                if (typeof serviceCategory === 'string' && serviceCategory.trim() !== '') {
+                // Use new service_categories array field (preferred)
+                if (vendor.service_categories && Array.isArray(vendor.service_categories)) {
+                  return vendor.service_categories.filter(cat => cat && cat.trim() !== '');
+                }
+                // Fallback to old service_category field for backwards compatibility
+                const legacyCategory = vendor.service_category || vendor.vendor_type;
+                if (typeof legacyCategory === 'string' && legacyCategory.trim() !== '') {
                   // Handle comma-separated strings by splitting them
-                  return serviceCategory.split(',').map(cat => cat.trim());
+                  return legacyCategory.split(',').map(cat => cat.trim());
                 }
                 return []; // Return an empty array if no category, flatMap will remove it
               })

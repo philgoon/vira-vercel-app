@@ -8,6 +8,7 @@ interface VendorProfile {
   vendor_id: string;
   vendor_name: string;
   vendor_type?: string;
+  service_categories?: string[];  // [R-QW2+C3] Multi-service vendor array
   skills?: string;
   pricing_structure?: string;
   rate_cost?: string;  // [R2] Added rate_cost field to interface
@@ -47,12 +48,13 @@ export async function POST(request: Request) {
     }
 
     // Step 1: Get Base Candidate Profiles from 'vendors' table
+    // [R-QW2+C3] Updated to use service_categories array field with fallback to legacy vendor_type
     console.log(`Step 1: Fetching candidate profiles for category: ${serviceCategory}`);
     const { data: vendorProfiles, error: profilesError } = await supabase
       .from('vendors')
-      .select('vendor_id, vendor_name, vendor_type, skills, pricing_structure, rate_cost')  // [R2] Added rate_cost for pricing display
+      .select('vendor_id, vendor_name, vendor_type, service_categories, skills, pricing_structure, rate_cost')  // [R-QW2+C3] Added service_categories array
       .eq('status', 'active')
-      .ilike('vendor_type', `%${serviceCategory}%`);
+      .or(`service_categories.cs.{${serviceCategory}},vendor_type.ilike.%${serviceCategory}%`); // [R-QW2+C3] Match array contains OR legacy field ilike
 
     if (profilesError) throw new Error(`Failed to fetch vendor profiles: ${profilesError.message}`);
     if (!vendorProfiles || vendorProfiles.length === 0) {
@@ -86,6 +88,7 @@ export async function POST(request: Request) {
           vendor_id: profile.vendor_id,
           vendor_name: profile.vendor_name,
           vendor_type: profile.vendor_type,
+          service_categories: profile.service_categories,  // [R-QW2+C3] Multi-service categories array
           skills: profile.skills,
           pricing_structure: profile.pricing_structure,
           rate_cost: profile.rate_cost  // [R2] Added rate_cost to profile object
@@ -122,7 +125,7 @@ ${enrichedVendors.map(vendor => `
 VENDOR: ${vendor.profile.vendor_name}
 
 DESCRIPTIVE PROFILE:
-- Primary Service Category: ${vendor.profile.vendor_type || 'Not specified'}
+- Service Categories: ${vendor.profile.service_categories && vendor.profile.service_categories.length > 0 ? vendor.profile.service_categories.join(', ') : (vendor.profile.vendor_type || 'Not specified')}
 - Key Skills: ${vendor.profile.skills || 'Not specified'}
 - Typical Pricing: ${vendor.profile.pricing_structure || 'Not specified'}
 - Rate/Cost: ${vendor.profile.rate_cost || 'Contact for pricing'}  // [R2] Added rate_cost to AI prompt
@@ -143,6 +146,7 @@ ${vendor.history.slice(0, 3).map(h => `
 
 ANALYSIS REQUIREMENTS:
 1.  **Project Fit (40%):** How well do the vendor's skills and described services match the project scope?
+    - [R-QW2+C3] NOTE: Some vendors offer multiple service categories. Treat all services equally when scoring, but MENTION in the "reason" or "considerations" if this is a secondary service for them (not their primary specialty).
 2.  **Performance & Reliability (40%):** Analyze their quantitative history. Are they consistent? Do they have a high recommendation rate and strong overall ratings?
 3.  **Qualitative Match (20%):** Read the "What Went Well" and "Areas for Improvement" sections. Does their past feedback suggest they would be a good cultural and process fit for this specific project?
 4.  **Final Score:** Assign a comprehensive ViRA Score (0-100) based on your integrated analysis.
