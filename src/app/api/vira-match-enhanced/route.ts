@@ -200,27 +200,31 @@ EXAMPLE:
 ]
     `;
 
-    // Step 5: Call GPT-5 Responses API and process the response
-    console.log('Step 5: Calling GPT-5 Responses API...');
+    // Step 5: Call GPT-5-mini Responses API for fast, cost-optimized recommendations
+    console.log('Step 5: Calling GPT-5-mini Responses API...');
     let recommendations;
     try {
-      // [R-QW2+C3] Using GPT-5 Responses API with reasoning for vendor recommendations
+      // [R-QW2+C3] Using GPT-5-mini with low reasoning for fast vendor recommendations
       const result = await openai.responses.create({
-        model: "gpt-5",
+        model: "gpt-5-mini",  // Cost-optimized model balancing speed, cost, and capability
         input: prompt,
         reasoning: {
-          effort: "medium"  // Balance between speed and reasoning depth for vendor analysis
+          effort: "low"  // Faster responses for vendor analysis (good for structured tasks)
         },
         text: {
-          verbosity: "medium"  // Appropriate detail level for comprehensive vendor recommendations
+          verbosity: "low"  // Concise output for faster response time
         },
         max_output_tokens: 4000  // Sufficient for analyzing multiple vendors
       });
 
       const aiResponse = result.output_text || '';
-      console.log('GPT-5 response received, parsing JSON...');
+      console.log('GPT-5-mini response received, parsing JSON...');
+      console.log('Response preview:', aiResponse.substring(0, 500));
       const jsonMatch = aiResponse.match(/\[\s*{[\s\S]*}\s*\]/);
-      if (!jsonMatch) throw new Error("No JSON array found in AI response");
+      if (!jsonMatch) {
+        console.error('Full AI response:', aiResponse);
+        throw new Error("No JSON array found in AI response");
+      }
       recommendations = JSON.parse(jsonMatch[0]);
       console.log(`Successfully parsed ${recommendations.length} vendor recommendations`);
     } catch (aiError) {
