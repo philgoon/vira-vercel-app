@@ -42,6 +42,9 @@ export interface Vendor {
   pricing_structure?: string | null;
   rate_cost?: string | null;
   availability?: string | null;
+  availability_status?: 'Available' | 'Limited' | 'Unavailable' | 'On Leave' | null; // [R-QW3] Vendor capacity status
+  availability_notes?: string | null; // [R-QW3] Optional notes about availability
+  available_from?: string | null; // [R-QW3] Date when vendor becomes available (ISO date string)
   record_date?: string | null;
   created_at: string;
   updated_at: string;

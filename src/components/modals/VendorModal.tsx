@@ -149,6 +149,38 @@ export default function VendorModal({ vendor, isOpen, onClose }: VendorModalProp
                 <p className="text-gray-900">{displayValue(vendor.availability)}</p>
               </div>
 
+              {/* [R-QW3] Capacity Status Section */}
+              <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
+                <Label className="text-sm font-medium text-gray-600 mb-2 block">Capacity Status</Label>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-xs text-gray-500">Current Status</p>
+                    <p className="text-lg font-bold" style={{
+                      color:
+                        vendor.availability_status === 'Available' ? '#166534' :
+                        vendor.availability_status === 'Limited' ? '#92400e' :
+                        vendor.availability_status === 'On Leave' ? '#1e40af' :
+                        vendor.availability_status === 'Unavailable' ? '#991b1b' :
+                        '#6b7280'
+                    }}>
+                      {vendor.availability_status || 'Not Set'}
+                    </p>
+                  </div>
+                  {vendor.availability_notes && (
+                    <div>
+                      <p className="text-xs text-gray-500">Notes</p>
+                      <p className="text-sm text-gray-700">{vendor.availability_notes}</p>
+                    </div>
+                  )}
+                  {vendor.available_from && (
+                    <div>
+                      <p className="text-xs text-gray-500">Available From</p>
+                      <p className="text-sm font-medium text-gray-900">{formatDate(vendor.available_from)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Performance Metrics - FIXED: Using actual database fields */}
               <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-400">
                 <Label className="text-sm font-medium text-gray-600">Performance Metrics (Database)</Label>

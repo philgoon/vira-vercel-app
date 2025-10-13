@@ -6,7 +6,10 @@
       "Bash(curl:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm run dev:*)",
+      "Bash(cat:*)",
+      "Bash(balances speed, cost, and capability\"\n- Vendor recommendation is a well-defined structured task (good fit for mini)\n- Low reasoning effort is appropriate for JSON-formatted output tasks\n\nDebugging JSON Parsing:\n- Added response preview (first 500 chars) to see what GPT-5 returns\n- Added full response logging on parse failure\n- Will help identify if model is returning explanatory text before JSON\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": []
   }

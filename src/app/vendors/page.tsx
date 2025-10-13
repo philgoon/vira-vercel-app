@@ -324,6 +324,31 @@ export default function VendorsPage() {
                         `${Number(vendor.avg_overall_rating).toFixed(1)}/10` :
                         'No ratings'}
                     </div>
+
+                    {/* [R-QW3] Availability Status Badge */}
+                    {vendor.availability_status && (
+                      <div style={{
+                        padding: '0.125rem 0.5rem',
+                        backgroundColor:
+                          vendor.availability_status === 'Available' ? '#dcfce7' :
+                          vendor.availability_status === 'Limited' ? '#fef3c7' :
+                          vendor.availability_status === 'On Leave' ? '#dbeafe' :
+                          '#fee2e2', // Unavailable
+                        color:
+                          vendor.availability_status === 'Available' ? '#166534' :
+                          vendor.availability_status === 'Limited' ? '#92400e' :
+                          vendor.availability_status === 'On Leave' ? '#1e40af' :
+                          '#991b1b', // Unavailable
+                        borderRadius: '9999px',
+                        fontSize: '0.75rem',
+                        fontWeight: '500'
+                      }}>
+                        {vendor.availability_status === 'Available' ? '✓ Available' :
+                         vendor.availability_status === 'Limited' ? '⚠ Limited' :
+                         vendor.availability_status === 'On Leave' ? '🏖 On Leave' :
+                         '✕ Unavailable'}
+                      </div>
+                    )}
                   </div>
 
                   {/* [R1] [vendor-cost-display] Second row: Pricing Display - Critical Business Value */}
