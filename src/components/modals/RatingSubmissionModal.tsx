@@ -6,19 +6,19 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter
+  DialogDescription
 } from '../ui/dialog'
-import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import {
   Star,
   Building2,
-  Users,
   Calendar,
   Loader2,
   CheckCircle,
-  Clock // [R-QW1] Added Clock icon for timeline status
+  Clock,
+  HelpCircle,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react'
 import { Project } from '@/types'
 
@@ -49,7 +49,7 @@ interface RatingData {
   improvement_feedback: string
   overall_rating: number
   vendor_recommendation: boolean
-  timeline_status: 'Early' | 'On-Time' | 'Late' | null // [R-QW1] Timeline status during rating
+  timeline_status: 'Early' | 'On-Time' | 'Late' | null
 }
 
 // Union type to handle different vendor data structures from API
@@ -61,7 +61,6 @@ type ProjectWithVendor = {
 
 // Helper function to safely get vendor name from different project structures
 const getVendorName = (project: ProjectWithVendor): string => {
-  // Try different possible vendor name locations
   if (project.vendor?.vendor_name) return project.vendor.vendor_name;
   if (project.vendor_name) return project.vendor_name;
   if (project.vendors?.vendor_name) return project.vendors.vendor_name;
@@ -74,6 +73,10 @@ export default function RatingSubmissionModal({
   onClose,
   onSubmit
 }: RatingSubmissionModalProps) {
+  // [M4] Multi-step wizard state
+  const [currentStep, setCurrentStep] = useState(1)
+  const totalSteps = 5
+  
   const [ratings, setRatings] = useState({
     project_success_rating: 0,
     quality_rating: 0,
@@ -81,16 +84,46 @@ export default function RatingSubmissionModal({
     positive_feedback: '',
     improvement_feedback: '',
     vendor_recommendation: false,
-    timeline_status: null as 'Early' | 'On-Time' | 'Late' | null // [R-QW1] Timeline status state
+    timeline_status: null as 'Early' | 'On-Time' | 'Late' | null
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // [M4] Step validation and navigation
+  const canProceedToNextStep = () => {
+    switch (currentStep) {
+      case 1: return ratings.project_success_rating > 0
+      case 2: return ratings.quality_rating > 0
+      case 3: return ratings.communication_rating > 0
+      case 4: return ratings.positive_feedback.length >= 20 || ratings.improvement_feedback.length >= 20 // At least one
+      case 5: return true
+      default: return false
+    }
+  }
+
+  const nextStep = () => {
+    if (canProceedToNextStep() && currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
+
+  // Reset to step 1 when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStep(1)
+    }
+  }, [isOpen])
+
   // Pre-populate with existing data for incomplete ratings
   useEffect(() => {
     if (project && typeof project.project_success_rating !== 'undefined') {
-      // Extract existing rating data from project object using correct database field names
       const existingData: Partial<typeof ratings> = {};
 
-      // Map database fields to modal state fields
       if (typeof project.project_success_rating === 'number') {
         existingData.project_success_rating = project.project_success_rating;
       }
@@ -100,7 +133,6 @@ export default function RatingSubmissionModal({
       if (typeof project.communication_rating === 'number') {
         existingData.communication_rating = project.communication_rating;
       }
-      // Map database field names to modal field names
       if (project.what_went_well) {
         existingData.positive_feedback = project.what_went_well;
       }
@@ -111,17 +143,9 @@ export default function RatingSubmissionModal({
         existingData.vendor_recommendation = project.recommend_again;
       }
 
-      // Update state with existing data
-      if (Object.keys(existingData).length > 0) {
-        setRatings(prev => ({
-          ...prev,
-          ...existingData
-        }));
-      }
+      setRatings(prev => ({ ...prev, ...existingData }));
     }
   }, [project]);
-
-  if (!project) return null
 
   const handleRatingChange = (dimension: string, value: number) => {
     setRatings(prev => ({ ...prev, [dimension]: value }))
@@ -129,31 +153,21 @@ export default function RatingSubmissionModal({
 
   const calculateOverallRating = () => {
     const { project_success_rating, quality_rating, communication_rating } = ratings
-    const total = project_success_rating + quality_rating + communication_rating
-    return total > 0 ? Number((total / 3).toFixed(1)) : 0
+    if (project_success_rating === 0 || quality_rating === 0 || communication_rating === 0) {
+      return 0
+    }
+    return Math.round((project_success_rating + quality_rating + communication_rating) / 3)
   }
 
   const handleSubmit = async () => {
     const overall_rating = calculateOverallRating()
 
-    // Enhanced logging for debugging
-    console.log('=== RATING SUBMISSION DEBUG ===')
-    console.log('Project object:', project)
-    console.log('Project ID:', project.project_id)
-    console.log('Assigned Vendor ID:', project.vendor_id)
-    console.log('Current ratings state:', ratings)
-    console.log('Calculated overall rating:', overall_rating)
-
     if (overall_rating === 0) {
-      console.log('❌ Submission blocked: No ratings provided')
-      alert('Please provide at least one rating before submitting.')
+      alert('Please provide ratings for all dimensions.')
       return
     }
 
-    // Validate vendor assignment with detailed logging
     if (!project.vendor_id) {
-      console.log('❌ Submission blocked: No vendor assigned to project')
-      console.log('Project vendor_id is:', project.vendor_id)
       alert('Cannot submit rating: No vendor assigned to this project.')
       return
     }
@@ -165,32 +179,9 @@ export default function RatingSubmissionModal({
       overall_rating
     }
 
-    console.log('📤 Submission data being sent:', submissionData)
-    console.log('Data types:', {
-      project_id: typeof submissionData.project_id,
-      vendor_id: typeof submissionData.vendor_id,
-      project_success_rating: typeof submissionData.project_success_rating,
-      quality_rating: typeof submissionData.quality_rating,
-      communication_rating: typeof submissionData.communication_rating,
-      overall_rating: typeof submissionData.overall_rating
-    })
-
     setIsSubmitting(true)
     try {
-      console.log('🚀 Calling onSubmit with data...')
       await onSubmit(submissionData)
-
-      // Reset form
-      setRatings({
-        project_success_rating: 0,
-        quality_rating: 0,
-        communication_rating: 0,
-        positive_feedback: '',
-        improvement_feedback: '',
-        vendor_recommendation: false,
-        timeline_status: null // [R-QW1] Reset timeline status
-      })
-
       onClose()
     } catch (error) {
       console.error('Failed to submit rating:', error)
@@ -200,282 +191,461 @@ export default function RatingSubmissionModal({
     }
   }
 
-  const StarRating = ({
-    dimension,
-    value,
-    onChange,
-    label
-  }: {
-    dimension: string
-    value: number
-    onChange: (dimension: string, value: number) => void
-    label: string
-  }) => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700">{label}</label>
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
-          <button
-            key={star}
-            type="button"
-            onClick={() => onChange(dimension, star)}
-            className="transition-colors hover:scale-110"
-          >
-            <Star
-              className={`w-5 h-5 ${star <= value
-                ? 'fill-yellow-400 text-yellow-400'
-                : 'text-gray-300 hover:text-yellow-300'
-                }`}
-            />
-          </button>
-        ))}
-        <span className="ml-2 text-sm text-gray-600">
-          {value > 0 ? `${value}/10` : 'Not rated'}
-        </span>
-      </div>
-    </div>
-  )
+  if (!isOpen || !project) {
+    return null
+  }
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-start gap-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-              {project.project_title.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1">
-              <DialogTitle className="text-2xl font-bold mb-2">
-                Rate Project: {project.project_title}
-              </DialogTitle>
-
-              {/* Prominent Vendor Display */}
-              <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-800">Rating vendor:</span>
-                  <span className="text-lg font-bold text-blue-900">
-                    {getVendorName(project)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 mb-2 flex-wrap">
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                  {project.status}
-                </Badge>
-                {project.vendor_name && (
-                  <Badge variant="outline">
-                    {project.vendor_name}
-                  </Badge>
-                )}
-              </div>
-              <DialogDescription className="text-base">
-                Please rate this project and provide your recommendation for this vendor.
-              </DialogDescription>
-            </div>
-          </div>
+          <DialogTitle className="text-2xl font-bold">
+            Rate Project
+          </DialogTitle>
+          <DialogDescription className="text-base">
+            <strong>Project:</strong> {project.project_title}
+          </DialogDescription>
         </DialogHeader>
 
-        {/* Project Context */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg mb-6">
-          <div className="flex items-center gap-2 text-sm">
-            <Building2 className="w-4 h-4" style={{ color: '#1A5276' }} />
-            <span className="font-medium">Vendor:</span>
-            <span>{getVendorName(project)}</span>
+        {/* [M4] Progress Bar */}
+        <div className="px-6 py-4 border-b">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">
+              Step {currentStep} of {totalSteps}
+            </span>
+            <span className="text-sm text-gray-500">
+              {Math.round((currentStep / totalSteps) * 100)}% Complete
+            </span>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Users className="w-4 h-4" style={{ color: '#1A5276' }} />
-            <span className="font-medium">Category:</span>
-            <span>{'N/A'}</span>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+            />
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Calendar className="w-4 h-4" style={{ color: '#1A5276' }} />
-            <span className="font-medium">Status:</span>
-            <span>{project.status || 'N/A'}</span>
+          {/* Step indicators */}
+          <div className="flex justify-between mt-3">
+            {[1, 2, 3, 4, 5].map((step) => (
+              <div key={step} className="flex flex-col items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                  step < currentStep ? 'bg-green-500 text-white' :
+                  step === currentStep ? 'bg-blue-600 text-white' :
+                  'bg-gray-200 text-gray-500'
+                }`}>
+                  {step < currentStep ? '✓' : step}
+                </div>
+                <span className="text-xs mt-1 text-gray-600">
+                  {step === 1 ? 'Success' : step === 2 ? 'Quality' : step === 3 ? 'Comm.' : step === 4 ? 'Feedback' : 'Review'}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Rating Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-6">
-            <StarRating
-              dimension="project_success_rating"
-              value={ratings.project_success_rating}
-              onChange={handleRatingChange}
-              label="Project Success"
-            />
-
-            <StarRating
-              dimension="quality_rating"
-              value={ratings.quality_rating}
-              onChange={handleRatingChange}
-              label="Quality of Work"
-            />
-
-            <StarRating
-              dimension="communication_rating"
-              value={ratings.communication_rating}
-              onChange={handleRatingChange}
-              label="Communication"
-            />
+        {/* Project Context Card - Shows on all steps */}
+        <div className="px-6 py-3 bg-blue-50 border-l-4 border-blue-500">
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-blue-600" />
+              <span><strong>Vendor:</strong> {getVendorName(project)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-blue-600" />
+              <span><strong>Date:</strong> {formatDate(project.rating_date)}</span>
+            </div>
           </div>
+        </div>
 
-          <div className="space-y-6">
-            {/* Vendor Recommendation */}
-            <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-              <label className="text-sm font-medium text-amber-900 mb-3 block">
-                Would you recommend this vendor? 🤝
-              </label>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRatings(prev => ({ ...prev, vendor_recommendation: true }))}
-                  className={`flex-1 p-3 rounded-lg border-2 transition-all ${ratings.vendor_recommendation
-                    ? 'border-green-500 bg-green-50 text-green-700'
-                    : 'border-gray-300 bg-white text-gray-600 hover:border-green-300'
-                    }`}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <CheckCircle className="w-5 h-5" />
-                    <span className="font-medium">Yes, Recommend</span>
+        {/* [M4] Step Content */}
+        <div className="px-6 py-6 min-h-[400px]">
+          
+          {/* Step 1: Project Success Rating */}
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Project Success</h3>
+                <p className="text-gray-600">Did this project meet its goals and objectives?</p>
+              </div>
+              
+              <div className="bg-blue-50 p-6 rounded-lg border border-blue-200 mb-6">
+                <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5" />
+                  What to consider:
+                </h4>
+                <ul className="space-y-2 text-sm text-blue-800">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>Were all deliverables completed as specified?</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>Did the project achieve its intended objectives?</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>Were stakeholders satisfied with the outcome?</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex justify-center">
+                <div className="space-y-4">
+                  <div className="flex gap-2 justify-center">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => handleRatingChange('project_success_rating', star)}
+                        className="transition-all hover:scale-125"
+                      >
+                        <Star
+                          className={`w-10 h-10 ${star <= ratings.project_success_rating
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-gray-300 hover:text-yellow-300'
+                          }`}
+                        />
+                      </button>
+                    ))}
                   </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRatings(prev => ({ ...prev, vendor_recommendation: false }))}
-                  className={`flex-1 p-3 rounded-lg border-2 transition-all ${!ratings.vendor_recommendation
-                    ? 'border-red-500 bg-red-50 text-red-700'
-                    : 'border-gray-300 bg-white text-gray-600 hover:border-red-300'
-                    }`}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="w-5 h-5 text-center">❌</span>
-                    <span className="font-medium">No, Don&apos;t Recommend</span>
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-blue-600">
+                      {ratings.project_success_rating > 0 ? `${ratings.project_success_rating}/10` : 'Select a rating'}
+                    </span>
                   </div>
-                </button>
+                </div>
               </div>
             </div>
+          )}
 
-            {/* [R-QW1] Timeline Status */}
-            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <label className="text-sm font-medium text-purple-900 mb-3 block flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                Project Timeline Status
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRatings(prev => ({ ...prev, timeline_status: 'Early' }))}
-                  className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                    ratings.timeline_status === 'Early'
+          {/* Step 2: Quality Rating */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Quality of Work</h3>
+                <p className="text-gray-600">How would you rate the quality of the final deliverables?</p>
+              </div>
+              
+              <div className="bg-purple-50 p-6 rounded-lg border border-purple-200 mb-6">
+                <h4 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5" />
+                  What to consider:
+                </h4>
+                <ul className="space-y-2 text-sm text-purple-800">
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 mt-0.5">•</span>
+                    <span>Attention to detail and thoroughness</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 mt-0.5">•</span>
+                    <span>Professional finish and polish</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 mt-0.5">•</span>
+                    <span>Adherence to standards and best practices</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex justify-center">
+                <div className="space-y-4">
+                  <div className="flex gap-2 justify-center">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => handleRatingChange('quality_rating', star)}
+                        className="transition-all hover:scale-125"
+                      >
+                        <Star
+                          className={`w-10 h-10 ${star <= ratings.quality_rating
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-gray-300 hover:text-yellow-300'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-purple-600">
+                      {ratings.quality_rating > 0 ? `${ratings.quality_rating}/10` : 'Select a rating'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Communication Rating */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Communication</h3>
+                <p className="text-gray-600">How well did the vendor communicate throughout the project?</p>
+              </div>
+              
+              <div className="bg-green-50 p-6 rounded-lg border border-green-200 mb-6">
+                <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5" />
+                  What to consider:
+                </h4>
+                <ul className="space-y-2 text-sm text-green-800">
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 mt-0.5">•</span>
+                    <span>Responsiveness to emails and messages</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 mt-0.5">•</span>
+                    <span>Clarity and frequency of updates</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 mt-0.5">•</span>
+                    <span>Proactive communication about issues</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex justify-center">
+                <div className="space-y-4">
+                  <div className="flex gap-2 justify-center">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => handleRatingChange('communication_rating', star)}
+                        className="transition-all hover:scale-125"
+                      >
+                        <Star
+                          className={`w-10 h-10 ${star <= ratings.communication_rating
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-gray-300 hover:text-yellow-300'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-green-600">
+                      {ratings.communication_rating > 0 ? `${ratings.communication_rating}/10` : 'Select a rating'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Detailed Feedback */}
+          {currentStep === 4 && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Detailed Feedback</h3>
+                <p className="text-gray-600">Share specific examples to help improve future projects</p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    What went well? ✓
+                  </label>
+                  <span className={`text-xs ${
+                    ratings.positive_feedback.length >= 50 ? 'text-green-600 font-medium' : 'text-gray-400'
+                  }`}>
+                    {ratings.positive_feedback.length} chars {ratings.positive_feedback.length >= 50 ? '✓' : '(50+ recommended)'}
+                  </span>
+                </div>
+                <textarea
+                  value={ratings.positive_feedback}
+                  onChange={(e) => setRatings(prev => ({ ...prev, positive_feedback: e.target.value }))}
+                  className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={4}
+                  placeholder="Example: 'Vendor delivered all features on time with excellent quality. Communication was proactive with daily updates...'"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Areas for improvement ⚠
+                  </label>
+                  <span className={`text-xs ${
+                    ratings.improvement_feedback.length >= 30 ? 'text-green-600 font-medium' : 'text-gray-400'
+                  }`}>
+                    {ratings.improvement_feedback.length} chars {ratings.improvement_feedback.length >= 30 ? '✓' : '(30+ recommended)'}
+                  </span>
+                </div>
+                <textarea
+                  value={ratings.improvement_feedback}
+                  onChange={(e) => setRatings(prev => ({ ...prev, improvement_feedback: e.target.value }))}
+                  className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={4}
+                  placeholder="Example: 'Response times could be faster - sometimes 48+ hours. More frequent status updates would help track progress...'"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 5: Final Review */}
+          {currentStep === 5 && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Review & Submit</h3>
+                <p className="text-gray-600">Review your ratings and add final details</p>
+              </div>
+
+              {/* Summary */}
+              <div className="bg-gray-50 p-6 rounded-lg">
+                <h4 className="font-semibold text-gray-900 mb-4">Rating Summary</h4>
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Success</p>
+                    <p className="text-2xl font-bold text-blue-600">{ratings.project_success_rating}/10</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Quality</p>
+                    <p className="text-2xl font-bold text-purple-600">{ratings.quality_rating}/10</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Communication</p>
+                    <p className="text-2xl font-bold text-green-600">{ratings.communication_rating}/10</p>
+                  </div>
+                </div>
+                <div className="text-center pt-4 border-t">
+                  <p className="text-sm text-gray-600">Overall Rating</p>
+                  <p className="text-4xl font-bold text-blue-600">{calculateOverallRating()}/10</p>
+                </div>
+              </div>
+
+              {/* Recommendation */}
+              <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <label className="text-sm font-medium text-amber-900 mb-3 block">
+                  Would you recommend this vendor? 🤝
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRatings(prev => ({ ...prev, vendor_recommendation: true }))}
+                    className={`flex-1 p-3 rounded-lg border-2 transition-all ${ratings.vendor_recommendation
                       ? 'border-green-500 bg-green-50 text-green-700'
                       : 'border-gray-300 bg-white text-gray-600 hover:border-green-300'
-                  }`}
-                >
-                  Early
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRatings(prev => ({ ...prev, timeline_status: 'On-Time' }))}
-                  className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                    ratings.timeline_status === 'On-Time'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 bg-white text-gray-600 hover:border-blue-300'
-                  }`}
-                >
-                  On-Time
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRatings(prev => ({ ...prev, timeline_status: 'Late' }))}
-                  className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                    ratings.timeline_status === 'Late'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-medium">Yes, Recommend</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRatings(prev => ({ ...prev, vendor_recommendation: false }))}
+                    className={`flex-1 p-3 rounded-lg border-2 transition-all ${!ratings.vendor_recommendation
                       ? 'border-red-500 bg-red-50 text-red-700'
                       : 'border-gray-300 bg-white text-gray-600 hover:border-red-300'
-                  }`}
-                >
-                  Late
-                </button>
-              </div>
-              {!ratings.timeline_status && (
-                <p className="text-xs text-purple-600 mt-2 text-center">
-                  Optional: How did this project perform against timeline?
-                </p>
-              )}
-            </div>
-
-            {/* Overall Rating Display */}
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <label className="text-sm font-medium text-blue-900 mb-2 block">
-                Overall Rating (Calculated)
-              </label>
-              <div className="flex items-center gap-2">
-                <div className="text-2xl font-bold text-blue-600">
-                  {calculateOverallRating()}/10
-                </div>
-                <div className="flex">
-                  <Star className="w-6 h-6 fill-blue-400 text-blue-400" />
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="w-5 h-5 text-center">❌</span>
+                      <span className="font-medium">No, Don&apos;t Recommend</span>
+                    </div>
+                  </button>
                 </div>
               </div>
+
+              {/* Timeline Status */}
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <label className="text-sm font-medium text-purple-900 mb-3 block flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Project Timeline Status
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRatings(prev => ({ ...prev, timeline_status: 'Early' }))}
+                    className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                      ratings.timeline_status === 'Early'
+                        ? 'border-green-500 bg-green-50 text-green-700'
+                        : 'border-gray-300 bg-white text-gray-600 hover:border-green-300'
+                    }`}
+                  >
+                    Early
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRatings(prev => ({ ...prev, timeline_status: 'On-Time' }))}
+                    className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                      ratings.timeline_status === 'On-Time'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-300 bg-white text-gray-600 hover:border-blue-300'
+                    }`}
+                  >
+                    On-Time
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRatings(prev => ({ ...prev, timeline_status: 'Late' }))}
+                    className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                      ratings.timeline_status === 'Late'
+                        ? 'border-red-500 bg-red-50 text-red-700'
+                        : 'border-gray-300 bg-white text-gray-600 hover:border-red-300'
+                    }`}
+                  >
+                    Late
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Structured Feedback Text Areas */}
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">
-              What went well?
-            </label>
-            <textarea
-              value={ratings.positive_feedback}
-              onChange={(e) => setRatings(prev => ({ ...prev, positive_feedback: e.target.value }))}
-              className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              rows={4}
-              placeholder="Share what worked well in this project..."
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">
-              Areas for improvement
-            </label>
-            <textarea
-              value={ratings.improvement_feedback}
-              onChange={(e) => setRatings(prev => ({ ...prev, improvement_feedback: e.target.value }))}
-              className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              rows={4}
-              placeholder="Share areas that could be improved..."
-            />
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2">
+        {/* Navigation Buttons */}
+        <div className="flex justify-between px-6 py-4 border-t bg-gray-50">
           <Button
             variant="outline"
-            onClick={onClose}
+            onClick={currentStep === 1 ? onClose : prevStep}
             disabled={isSubmitting}
           >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting || calculateOverallRating() === 0}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Submitting...
-              </>
+            {currentStep === 1 ? (
+              'Cancel'
             ) : (
               <>
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Submit Rating
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
               </>
             )}
           </Button>
-        </DialogFooter>
+
+          {currentStep < totalSteps ? (
+            <Button
+              onClick={nextStep}
+              disabled={!canProceedToNextStep()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Next
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Submit Rating
+                </>
+              )}
+            </Button>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   )
