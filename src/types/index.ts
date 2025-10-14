@@ -58,13 +58,16 @@ export interface Client {
   client_name: string;
   total_projects: number;
   last_project_date: string;
-  // [M2] Client profile fields for enhanced matching
-  industry?: string | null;
-  target_audience?: string | null;
-  brand_voice?: string | null;
-  marketing_brief?: string | null;
-  budget_range?: string | null;
-  notes?: string | null;
+  profile_id: string
+  client_id: string
+  industry?: string
+  target_audience?: string
+  brand_voice?: string
+  marketing_brief?: string
+  budget_range?: string
+  notes?: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Rating {
@@ -177,4 +180,70 @@ export interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+}
+
+// ============================================================================
+// [C1] Sprint 4: Vendor Portal Types
+// ============================================================================
+
+export interface VendorInvite {
+  invite_id: string
+  email: string
+  invite_token: string
+  invited_by?: string
+  status: 'pending' | 'accepted' | 'expired' | 'cancelled'
+  expires_at: string
+  created_at: string
+  accepted_at?: string
+  notes?: string
+}
+
+export interface VendorApplication {
+  application_id: string
+  invite_id?: string
+  
+  // Basic Information
+  vendor_name: string
+  email: string
+  primary_contact?: string
+  phone?: string
+  website?: string
+  
+  // Services & Expertise
+  industry?: string
+  service_category?: string
+  skills?: string
+  
+  // Pricing
+  pricing_structure?: string
+  rate_cost?: string
+  
+  // Availability
+  availability?: string
+  availability_status?: 'Available' | 'Limited' | 'On Leave' | 'Unavailable'
+  available_from?: string
+  availability_notes?: string
+  
+  // Portfolio & Samples
+  portfolio_url?: string
+  sample_work_urls?: string
+  
+  // Application Status
+  status: 'pending' | 'approved' | 'rejected'
+  reviewed_by?: string
+  reviewed_at?: string
+  rejection_reason?: string
+  
+  // Metadata
+  submitted_at: string
+  created_vendor_id?: string
+  notes?: string
+}
+
+export interface VendorUser {
+  vendor_user_id: string
+  vendor_id: string
+  user_id: string
+  status: 'active' | 'inactive' | 'suspended'
+  created_at: string
 }
