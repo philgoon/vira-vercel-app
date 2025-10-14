@@ -2,9 +2,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building, Briefcase, Calendar, Users } from 'lucide-react';
+import { Building, Briefcase, Calendar, Users, Edit } from 'lucide-react';
 import { Client } from '@/types';
 import ClientModal from '@/components/modals/ClientModal';
+import ClientProfileModal from '@/components/modals/ClientProfileModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Project {
   project_id: string;
@@ -29,8 +31,10 @@ export default function ClientsPage() {
   const [clientVendors, setClientVendors] = useState<Record<string, ClientVendorData[]>>({});
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isAdmin } = useAuth();
 
   // [R4] [client-page-enhancement] Group vendors and projects by client
   const groupVendorsByClient = (projects: Project[]) => {
@@ -267,21 +271,38 @@ export default function ClientsPage() {
                         {client.client_name}
                       </h3>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <Briefcase style={{ width: '1rem', height: '1rem' }} />
-                          <span>{client.total_projects} {client.total_projects === 1 ? 'project' : 'projects'}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Briefcase style={{ width: '1rem', height: '1rem' }} />
+                            <span>{client.total_projects} {client.total_projects === 1 ? 'project' : 'projects'}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Calendar style={{ width: '1rem', height: '1rem' }} />
+                            <span>
+                              Last: {client.last_project_date ? new Date(client.last_project_date).toLocaleDateString() : 'N/A'}
+                            </span>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <Calendar style={{ width: '1rem', height: '1rem' }} />
-                          <span>
-                            Last: {client.last_project_date ? new Date(client.last_project_date).toLocaleDateString() : 'N/A'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <Users style={{ width: '1rem', height: '1rem' }} />
-                          <span>{vendorData.length} {vendorData.length === 1 ? 'vendor' : 'vendors'}</span>
-                        </div>
+                        {isAdmin && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedClient(client);
+                              setIsProfileModalOpen(true);
+                            }}
+                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-xs font-medium"
+                            title="Edit Client Profile"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            Edit Profile
+                          </button>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Users style={{ width: '1rem', height: '1rem' }} />
+                        <span>{vendorData.length} {vendorData.length === 1 ? 'vendor' : 'vendors'}</span>
                       </div>
                     </div>
                   </div>
@@ -336,6 +357,26 @@ export default function ClientsPage() {
             setSelectedClient(null);
           }}
           vendorData={clientVendors[selectedClient.client_name] || []}
+        />
+      )}
+
+      {/* Client Profile Modal */}
+      {selectedClient && (
+        <ClientProfileModal
+          client={selectedClient}
+          isOpen={isProfileModalOpen}
+          onClose={() => {
+            setIsProfileModalOpen(false);
+            setSelectedClient(null);
+          }}
+          onSave={(updatedClient) => {
+            // Update the client in the list
+            setClients(clients.map(c => 
+              c.client_key === updatedClient.client_key ? updatedClient : c
+            ));
+            setIsProfileModalOpen(false);
+            setSelectedClient(null);
+          }}
         />
       )}
 

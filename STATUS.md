@@ -42,11 +42,28 @@
 - **Features Verified**: Login/logout, role-based navigation, protected routes, user management
 - **Blockers**: None - production ready
 
-### **Sprint 3: Client Profiles & Review UX** (Week 5-6)
-- [ ] [M2] Client Profile System
+### **Sprint 3: Client Profiles & Review UX** (Week 5-6) - 🔄 IN PROGRESS
+- [ ] [M2] Client Profile System - NEXT
 - [ ] [M1] Enhanced Project Detail View
 - [ ] [M3] Vendor Ratings Filter by Project/Client
 - [ ] [M4] Review Training System
+
+**Sprint 3 Plan**:
+- **Feature 1**: Client Profile System (M2)
+  - Add client profile fields to database
+  - Create ClientProfileModal for editing
+  - Add "Edit Client" button to clients page
+  - Admin-only access control
+- **Feature 2**: Enhanced Project Detail View (M1)
+  - Refactor ProjectModal with tabs
+  - Show comprehensive project data
+  - No database changes needed
+- **Feature 3**: Vendor Ratings Filter (M3)
+  - Add client/project filters to VendorModal
+  - Query optimization for filtered ratings
+- **Feature 4**: Review Training System (M4)
+  - Create training page with examples
+  - Add guided prompts to rating forms
 
 ### **Sprint 4: Vendor Portal & Automation** (Week 7-8)
 - [ ] [C1] In-App Vendor Onboarding Portal

@@ -58,6 +58,13 @@ export interface Client {
   client_name: string;
   total_projects: number;
   last_project_date: string;
+  // [M2] Client profile fields for enhanced matching
+  industry?: string | null;
+  target_audience?: string | null;
+  brand_voice?: string | null;
+  marketing_brief?: string | null;
+  budget_range?: string | null;
+  notes?: string | null;
 }
 
 export interface Rating {
