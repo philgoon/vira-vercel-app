@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
-import { SidebarNav } from '@/components/layout/SidebarNav';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { LayoutContent } from '@/components/layout/LayoutContent';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -27,19 +28,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${poppins.variable}`} style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', backgroundColor: '#f9fafb' }}>
-        <div style={{ display: 'flex', height: '100vh', backgroundColor: '#f9fafb' }}>
-          {/* Sidebar */}
-          <div style={{ width: '16rem', flexShrink: 0 }}>
-            <SidebarNav />
-          </div>
-          
-          {/* Main Content */}
-          <main style={{ flex: 1, overflow: 'auto' }}>
-            <div style={{ height: '100%' }}>
-              {children}
-            </div>
-          </main>
-        </div>
+        <AuthProvider>
+          <LayoutContent>{children}</LayoutContent>
+        </AuthProvider>
       </body>
     </html>
   );

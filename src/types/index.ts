@@ -135,3 +135,39 @@ export interface EnhancedVendor extends Vendor {
 export interface EnhancedVendorsApiResponse {
   vendors: EnhancedVendor[];
 }
+
+// ============================================================================
+// [R-FOUNDATION] Sprint 2: Authentication & User Management Types
+// ============================================================================
+
+export type UserRole = 'admin' | 'team' | 'vendor';
+
+export interface UserProfile {
+  user_id: string; // UUID from Supabase auth.users
+  email: string;
+  full_name: string | null;
+  role: UserRole;
+  vendor_id: string | null; // Links to vendors table for vendor role
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  profile: UserProfile | null;
+}
+
+export interface AuthContextType {
+  user: AuthUser | null;
+  profile: UserProfile | null;
+  isLoading: boolean;
+  isAdmin: boolean;
+  isTeam: boolean;
+  isVendor: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+}

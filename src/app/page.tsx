@@ -12,6 +12,7 @@ import {
   Search,
   TrendingUp
 } from 'lucide-react';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 interface DatabaseStats {
   vendors: number;
@@ -68,7 +69,8 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
+    <ProtectedRoute>
+      <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
       {/* Header */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ padding: '1.5rem' }}>
@@ -431,5 +433,6 @@ export default function DashboardPage() {
         }
       `}</style>
     </div>
+    </ProtectedRoute>
   );
 }

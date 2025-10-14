@@ -2,19 +2,28 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Users, GitCompareArrows, Building, Star } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Users, GitCompareArrows, Building, Star, UserCog } from 'lucide-react';
+import { UserHeader } from './UserHeader';
+import { useAuth } from '@/contexts/AuthContext';
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/vira-match', label: 'ViRA Match', icon: GitCompareArrows },
-  { href: '/rate-project', label: 'Reviews', icon: Star },
-  { href: '/vendors', label: 'Vendors', icon: Users },
-  { href: '/clients', label: 'Clients', icon: Building },
-  { href: '/projects', label: 'Projects', icon: Briefcase },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'team', 'vendor'] },
+  { href: '/vira-match', label: 'ViRA Match', icon: GitCompareArrows, roles: ['admin', 'team'] },
+  { href: '/rate-project', label: 'Reviews', icon: Star, roles: ['admin', 'team'] },
+  { href: '/vendors', label: 'Vendors', icon: Users, roles: ['admin', 'team'] },
+  { href: '/clients', label: 'Clients', icon: Building, roles: ['admin', 'team'] },
+  { href: '/projects', label: 'Projects', icon: Briefcase, roles: ['admin', 'team'] },
+  { href: '/users', label: 'Users', icon: UserCog, roles: ['admin'] },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { profile } = useAuth();
+
+  // Filter nav items based on user role
+  const visibleNavItems = navItems.filter(item => 
+    !profile || item.roles.includes(profile.role)
+  );
 
   return (
     <div style={{
@@ -54,7 +63,7 @@ export function SidebarNav() {
 
       {/* Navigation */}
       <nav style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
@@ -90,14 +99,12 @@ export function SidebarNav() {
         })}
       </nav>
 
-      {/* Footer */}
+      {/* Footer - User Info */}
       <div style={{
         padding: '1rem',
         borderTop: '1px solid #34495E'
       }}>
-        <div style={{ padding: '0.5rem 1rem', fontSize: '0.75rem', color: '#95a5a6' }}>
-          ViRA v1.0
-        </div>
+        <UserHeader />
       </div>
     </div>
   );
