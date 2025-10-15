@@ -310,22 +310,11 @@ export default function ProjectsPage() {
 
           {/* Vendor Name Filter Buttons */}
           {activeFilterTab === 'vendors' && allVendorNames.length > 0 && (
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div className="filter-group">
+              <div className="filter-buttons">
                 <button
                   onClick={() => setSelectedVendorNames([])}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '9999px',
-                    border: '1px solid',
-                    borderColor: selectedVendorNames.length === 0 ? '#1A5276' : '#d1d5db',
-                    backgroundColor: selectedVendorNames.length === 0 ? '#1A5276' : 'white',
-                    color: selectedVendorNames.length === 0 ? 'white' : '#374151',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className={`filter-btn ${selectedVendorNames.length === 0 ? 'active' : ''}`}
                 >
                   All Vendors
                 </button>
@@ -333,18 +322,7 @@ export default function ProjectsPage() {
                   <button
                     key={vendorName}
                     onClick={() => toggleVendorName(vendorName)}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      borderRadius: '9999px',
-                      border: '1px solid',
-                      borderColor: selectedVendorNames.includes(vendorName) ? '#1A5276' : '#d1d5db',
-                      backgroundColor: selectedVendorNames.includes(vendorName) ? '#1A5276' : 'white',
-                      color: selectedVendorNames.includes(vendorName) ? 'white' : '#374151',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      transition: 'all 0.2s ease'
-                    }}
+                    className={`filter-btn ${selectedVendorNames.includes(vendorName) ? 'active' : ''}`}
                   >
                     {vendorName}
                   </button>
@@ -355,22 +333,11 @@ export default function ProjectsPage() {
 
           {/* Client Name Filter Buttons */}
           {activeFilterTab === 'clients' && allClientNames.length > 0 && (
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div className="filter-group">
+              <div className="filter-buttons">
                 <button
                   onClick={() => setSelectedClientNames([])}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '9999px',
-                    border: '1px solid',
-                    borderColor: selectedClientNames.length === 0 ? '#1A5276' : '#d1d5db',
-                    backgroundColor: selectedClientNames.length === 0 ? '#1A5276' : 'white',
-                    color: selectedClientNames.length === 0 ? 'white' : '#374151',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className={`filter-btn ${selectedClientNames.length === 0 ? 'active' : ''}`}
                 >
                   All Clients
                 </button>
@@ -378,18 +345,7 @@ export default function ProjectsPage() {
                   <button
                     key={clientName}
                     onClick={() => toggleClientName(clientName)}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      borderRadius: '9999px',
-                      border: '1px solid',
-                      borderColor: selectedClientNames.includes(clientName) ? '#1A5276' : '#d1d5db',
-                      backgroundColor: selectedClientNames.includes(clientName) ? '#1A5276' : 'white',
-                      color: selectedClientNames.includes(clientName) ? 'white' : '#374151',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      transition: 'all 0.2s ease'
-                    }}
+                    className={`filter-btn ${selectedClientNames.includes(clientName) ? 'active' : ''}`}
                   >
                     {clientName}
                   </button>

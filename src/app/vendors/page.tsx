@@ -157,25 +157,12 @@ export default function VendorsPage() {
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ padding: '1rem 1.5rem' }}>
           {/* Category Filter Buttons */}
-          <div style={{ marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-              Filter by Category
-            </h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div className="filter-group">
+            <label className="filter-label">Filter by Category</label>
+            <div className="filter-buttons">
               <button
                 onClick={() => setSelectedCategories([])}
-                style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: '9999px',
-                  border: '1px solid',
-                  borderColor: selectedCategories.length === 0 ? '#1A5276' : '#d1d5db',
-                  backgroundColor: selectedCategories.length === 0 ? '#1A5276' : 'white',
-                  color: selectedCategories.length === 0 ? 'white' : '#374151',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease'
-                }}
+                className={`filter-btn ${selectedCategories.length === 0 ? 'active' : ''}`}
               >
                 All Categories
               </button>
@@ -183,18 +170,7 @@ export default function VendorsPage() {
                 <button
                   key={category}
                   onClick={() => toggleCategory(category)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '9999px',
-                    border: '1px solid',
-                    borderColor: selectedCategories.includes(category) ? '#1A5276' : '#d1d5db',
-                    backgroundColor: selectedCategories.includes(category) ? '#1A5276' : 'white',
-                    color: selectedCategories.includes(category) ? 'white' : '#374151',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className={`filter-btn ${selectedCategories.includes(category) ? 'active' : ''}`}
                 >
                   {category}
                 </button>
