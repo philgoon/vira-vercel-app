@@ -9,6 +9,7 @@ import ProjectModal from '@/components/modals/ProjectModal'
 import SendInviteModal from '@/components/modals/SendInviteModal'
 import CSVImport from '@/components/admin/CSVImport'
 import ReviewAssignment from '@/components/admin/ReviewAssignment'
+import ReviewMonitoringDashboard from '@/components/admin/ReviewMonitoringDashboard'
 import { supabase } from '@/lib/supabase'
 import { getRoleDisplayName, getRoleBadgeColor } from '@/lib/auth'
 import {
@@ -976,12 +977,21 @@ export default function AdminDashboard() {
                 {/* Reviews Tab */}
                 {activeTab === 'reviews' && (
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                      <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>
-                        Review Assignments
+                    {/* Monitoring Dashboard */}
+                    <div style={{ marginBottom: '2rem' }}>
+                      <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+                        Review Workflow Monitoring
                       </h3>
+                      <ReviewMonitoringDashboard />
                     </div>
-                    <ReviewAssignment />
+
+                    {/* Assignment Management */}
+                    <div style={{ marginTop: '3rem' }}>
+                      <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+                        Assign Reviewers
+                      </h3>
+                      <ReviewAssignment />
+                    </div>
                   </div>
                 )}
 
