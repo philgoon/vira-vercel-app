@@ -455,7 +455,7 @@
 
   .filter-btn {
     padding: 0.5rem 1rem;
-    border-radius: 9999px;
+    border-radius: var(--radius);
     border: 1px solid hsl(var(--border));
     background-color: hsl(var(--background));
     color: hsl(var(--muted-foreground));
