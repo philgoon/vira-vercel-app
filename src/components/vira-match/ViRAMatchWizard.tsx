@@ -159,10 +159,12 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
     setError(null)
 
     try {
-      const response = await fetch('/api/vira-match-enhanced', {
+      // Use new semantic search API
+      const response = await fetch('/api/vira-match-semantic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          projectDescription: data.projectScope,
           serviceCategory: data.serviceCategory,
           projectScope: data.projectScope
         }),
@@ -175,8 +177,8 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
       const result = await response.json()
 
       const params = new URLSearchParams()
-      params.set('data', JSON.stringify(result.recommendations))
-      params.set('enhanced', 'true')
+      params.set('data', JSON.stringify(result))
+      params.set('semantic', 'true') // Flag for semantic search results
       router.push(`/recommendations?${params.toString()}`)
 
     } catch (err: unknown) {
