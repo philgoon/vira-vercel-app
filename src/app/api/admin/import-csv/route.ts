@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import Papa from 'papaparse'
 import OpenAI from 'openai'
+import { generateProjectEmbedding } from '@/lib/embeddings'
 
 interface CSVRecord {
   'Ticket Title': string;
@@ -229,6 +230,18 @@ export async function POST(req: NextRequest) {
       summariesGenerated++
     }
 
+    // 4b. Generate Embedding for Semantic Search (if description exists)
+    let descriptionEmbedding = null
+    if (description && description.trim().length > 0) {
+      try {
+        descriptionEmbedding = await generateProjectEmbedding(title, description)
+        console.log(`✅ Generated embedding for: ${title}`)
+      } catch (error) {
+        console.error(`Failed to generate embedding for ${title}:`, error)
+        // Continue without embedding - not critical for import
+      }
+    }
+
     // 5. Create Project
     const { data: newProject, error: insertError } = await supabaseAdmin
       .from('projects')
@@ -236,6 +249,7 @@ export async function POST(req: NextRequest) {
         project_title: title,
         project_description: description || null,
         project_summary: projectSummary || null,
+        description_embedding: descriptionEmbedding,
         client_name: company,
         submitted_by: submittedBy || null,
         ticket_status: ticketStatus || 'closed',
