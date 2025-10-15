@@ -205,11 +205,9 @@ export default function RateProjectPage() {
       {/* Filters */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ padding: '1rem 1.5rem' }}>
-          <div style={{ marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-              Filter by Status
-            </h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div className="filter-group">
+            <label className="filter-label">Filter by Status</label>
+            <div className="filter-buttons">
               {[
                 { label: 'Incomplete', value: 'incomplete' },
                 { label: 'Complete', value: 'complete' },  // [R1] Removed "Needs Review" - no longer exists in binary system
@@ -218,18 +216,7 @@ export default function RateProjectPage() {
                 <button
                   key={filter.value}
                   onClick={() => setSelectedFilter(filter.value)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '9999px',
-                    border: '1px solid',
-                    borderColor: selectedFilter === filter.value ? '#1A5276' : '#d1d5db',
-                    backgroundColor: selectedFilter === filter.value ? '#1A5276' : 'white',
-                    color: selectedFilter === filter.value ? 'white' : '#374151',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className={`filter-btn ${selectedFilter === filter.value ? 'active' : ''}`}
                 >
                   {filter.label}
                 </button>
