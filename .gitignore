@@ -58,3 +58,5 @@ windsurf_deployment.yaml
 *.csv
 *.txt
 !README.md
+
+.vercel
