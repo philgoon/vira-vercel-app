@@ -480,4 +480,104 @@
   .filter-btn.active:hover {
     opacity: 0.9;
   }
+
+  /* ========================================
+     LIST CARDS (Vendors, Projects, Clients)
+     Consistent card styling across all list pages
+     ======================================== */
+
+  /* Base list card - clickable, hoverable */
+  .list-card {
+    background-color: white;
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    border: 1px solid hsl(var(--border));
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .list-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -3px rgb(0 0 0 / 0.1);
+  }
+
+  /* Horizontal layout for list items */
+  .list-card-horizontal {
+    display: flex;
+    align-items: center;
+    min-height: 5rem;
+  }
+
+  /* Avatar circle with letter */
+  .list-card-avatar {
+    width: 3rem;
+    height: 3rem;
+    background-color: hsl(var(--primary));
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    flex-shrink: 0;
+  }
+
+  .list-card-avatar-text {
+    font-size: 1.125rem;
+    font-weight: bold;
+    color: hsl(var(--primary-foreground));
+  }
+
+  /* Main content area */
+  .list-card-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Card title */
+  .list-card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: hsl(var(--foreground));
+    margin: 0 0 0.25rem 0;
+  }
+
+  /* Metadata row */
+  .list-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .list-card-meta-primary {
+    font-weight: 500;
+    color: hsl(var(--primary));
+  }
+
+  .list-card-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  /* Client cards (slightly different layout) */
+  .list-card-client {
+    padding: 1.5rem;
+  }
+
+  .list-card-client-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .list-card-client-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: hsl(var(--foreground));
+    margin: 0 0 0.25rem 0;
+  }
 }
