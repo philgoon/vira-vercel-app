@@ -35,10 +35,14 @@ export default function ReviewAssignment() {
   const loadData = async () => {
     setLoading(true)
     try {
-      // Load projects
+      // Load projects (only those without reviews - need ratings)
       const projectsRes = await fetch('/api/admin/table-data?table=projects')
       const projectsData = await projectsRes.json()
-      const allProjects = projectsData.data || []
+      const allProjects = (projectsData.data || []).filter((p: Project) => {
+        // Only show projects that DON'T have a review yet
+        // A project has a review if it has all three rating fields filled
+        return !p.project_success_rating || !p.quality_rating || !p.communication_rating
+      })
 
       // Load reviewers (admin + team roles)
       const { data: { user } } = await (await import('@/lib/supabase')).supabase.auth.getUser()
