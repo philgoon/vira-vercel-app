@@ -24,7 +24,15 @@ export function ProtectedRoute({
   const router = useRouter();
 
   useEffect(() => {
+    // Check if we're in skip auth mode
+    const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true';
+
     if (!isLoading) {
+      // In skip auth mode, allow all access
+      if (skipAuth) {
+        return;
+      }
+
       // Not authenticated - redirect to login
       if (!user) {
         router.push(redirectTo);
@@ -64,6 +72,14 @@ export function ProtectedRoute({
         </div>
       </div>
     );
+  }
+
+  // Check if we're in skip auth mode
+  const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true';
+
+  // In skip auth mode, render children immediately
+  if (skipAuth) {
+    return <>{children}</>;
   }
 
   // Don't render children until auth check complete

@@ -51,6 +51,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize auth state
   useEffect(() => {
+    // Check if we're in skip auth mode
+    const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true';
+
+    if (skipAuth) {
+      // In skip auth mode, set a mock admin user
+      const mockProfile: UserProfile = {
+        user_id: 'skip-auth-user',
+        email: 'admin@skip-auth.test',
+        full_name: 'Skip Auth Admin',
+        role: 'admin',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        last_login_at: new Date().toISOString(),
+      };
+
+      setUser({
+        id: 'skip-auth-user',
+        email: 'admin@skip-auth.test',
+        profile: mockProfile,
+      });
+      setProfile(mockProfile);
+      setIsLoading(false);
+      return;
+    }
+
+    // Normal auth flow
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -79,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           profile: profileData,
         });
         setProfile(profileData);
-        
+
         if (event === 'SIGNED_IN') {
           updateLastLogin(session.user.id);
         }

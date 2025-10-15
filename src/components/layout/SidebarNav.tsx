@@ -2,18 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Users, GitCompareArrows, Building, Star, UserCog } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Users, GitCompareArrows, Building, Star, UserCog, Settings, Store } from 'lucide-react';
 import { UserHeader } from './UserHeader';
 import { useAuth } from '@/contexts/AuthContext';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'team', 'vendor'] },
+  { href: '/vendor-portal', label: 'Vendor Portal', icon: Store, roles: ['vendor'] },
   { href: '/vira-match', label: 'ViRA Match', icon: GitCompareArrows, roles: ['admin', 'team'] },
   { href: '/rate-project', label: 'Reviews', icon: Star, roles: ['admin', 'team'] },
   { href: '/vendors', label: 'Vendors', icon: Users, roles: ['admin', 'team'] },
   { href: '/clients', label: 'Clients', icon: Building, roles: ['admin', 'team'] },
   { href: '/projects', label: 'Projects', icon: Briefcase, roles: ['admin', 'team'] },
-  { href: '/users', label: 'Users', icon: UserCog, roles: ['admin'] },
+  { href: '/admin', label: 'Admin', icon: Settings, roles: ['admin'] },
 ];
 
 export function SidebarNav() {
@@ -38,27 +40,30 @@ export function SidebarNav() {
         padding: '1.5rem',
         borderBottom: '1px solid #34495E'
       }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }}>
-          <div style={{
-            width: '2rem',
-            height: '2rem',
-            backgroundColor: '#6B8F71',
-            borderRadius: '0.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '1.25rem', height: '1.25rem', color: 'white' }}>
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-            </svg>
-          </div>
-          <h1 style={{
-            fontSize: '1.5rem',
-            fontFamily: 'var(--font-headline)',
-            fontWeight: '600',
-            color: '#ECF0F1'
-          }}>ViRA</h1>
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }}>
+            <div style={{
+              width: '2rem',
+              height: '2rem',
+              backgroundColor: '#6B8F71',
+              borderRadius: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '1.25rem', height: '1.25rem', color: 'white' }}>
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+              </svg>
+            </div>
+            <h1 style={{
+              fontSize: '1.5rem',
+              fontFamily: 'var(--font-headline)',
+              fontWeight: '600',
+              color: '#ECF0F1'
+            }}>ViRA</h1>
+          </Link>
+          <NotificationBell />
+        </div>
       </div>
 
       {/* Navigation */}
