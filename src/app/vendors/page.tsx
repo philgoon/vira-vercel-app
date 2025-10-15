@@ -227,64 +227,32 @@ export default function VendorsPage() {
             {vendors.map((vendor) => (
               <div
                 key={vendor.vendor_id}
-                className="professional-card"
+                className="list-card list-card-horizontal"
                 onClick={() => handleVendorClick(vendor)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '1rem 1.5rem',
-                  minHeight: '6rem', // Increased to accommodate pricing
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                }}
+                style={{ minHeight: '6rem' }}
               >
                 {/* Vendor Avatar */}
-                <div style={{
-                  width: '3rem',
-                  height: '3rem',
-                  backgroundColor: '#1A5276',
-                  borderRadius: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '1rem',
-                  flexShrink: 0
-                }}>
-                  <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'white' }}>
+                <div className="list-card-avatar">
+                  <span className="list-card-avatar-text">
                     {vendor.vendor_name.charAt(0)}
                   </span>
                 </div>
 
                 {/* Main Vendor Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                    <h3 style={{
-                      fontSize: '1.125rem',
-                      fontWeight: '600',
-                      color: '#111827',
-                      margin: 0
-                    }}>
-                      {vendor.vendor_name}
-                    </h3>
-                  </div>
+                <div className="list-card-content">
+                  <h3 className="list-card-title">
+                    {vendor.vendor_name}
+                  </h3>
 
                   {/* First row: Category, Projects, Rating */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                    <span style={{ fontWeight: '500', color: '#1A5276' }}>
+                  <div className="list-card-meta" style={{ marginBottom: '0.5rem' }}>
+                    <span className="list-card-meta-primary">
                       {vendor.vendor_type || 'Service Provider'}
                     </span>
 
                     {/* Project Count */}
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                      {vendor.total_projects || 0} projects
+                    <span className="list-card-meta-item">
+                      {vendor.total_projects || 0} {vendor.total_projects === 1 ? 'project' : 'projects'}
                     </span>
 
                     {/* Rating Badge */}

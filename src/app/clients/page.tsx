@@ -232,42 +232,22 @@ export default function ClientsPage() {
               return (
                 <div
                   key={client.client_key}
-                  className="professional-card"
+                  className="list-card list-card-client"
                   onClick={() => {
                     setSelectedClient(client);
                     setIsModalOpen(true);
                   }}
-                  style={{
-                    padding: '1.5rem',
-                    cursor: 'pointer'
-                  }}
                 >
                   {/* Client Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-                    <div style={{
-                      width: '3rem',
-                      height: '3rem',
-                      backgroundColor: '#1A5276',
-                      borderRadius: '0.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: '1rem',
-                      flexShrink: 0
-                    }}>
-                      <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'white' }}>
+                  <div className="list-card-client-header">
+                    <div className="list-card-avatar">
+                      <span className="list-card-avatar-text">
                         {client.client_name.charAt(0)}
                       </span>
                     </div>
 
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{
-                        fontSize: '1.25rem',
-                        fontWeight: '600',
-                        color: '#111827',
-                        margin: 0,
-                        marginBottom: '0.25rem'
-                      }}>
+                    <div className="list-card-content">
+                      <h3 className="list-card-client-title">
                         {client.client_name}
                       </h3>
 

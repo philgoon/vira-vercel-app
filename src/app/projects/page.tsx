@@ -450,56 +450,31 @@ export default function ProjectsPage() {
             {projects.map((project) => (
               <div
                 key={project.project_id}
-                className="professional-card"
+                className="list-card list-card-horizontal"
                 onClick={() => handleProjectClick(project)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '1rem 1.5rem',
-                  minHeight: '5rem',
-                  cursor: 'pointer'
-                }}
               >
                 {/* Project Avatar */}
-                <div style={{
-                  width: '3rem',
-                  height: '3rem',
-                  backgroundColor: '#1A5276',
-                  borderRadius: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '1rem',
-                  flexShrink: 0
-                }}>
-                  <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'white' }}>
+                <div className="list-card-avatar">
+                  <span className="list-card-avatar-text">
                     {project.project_title.charAt(0)}
                   </span>
                 </div>
 
                 {/* Main Project Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {/* Line 1: Clean project title only */}
-                  <div style={{ marginBottom: '0.25rem' }}>
-                    <h3 style={{
-                      fontSize: '1.125rem',
-                      fontWeight: '600',
-                      color: '#111827',
-                      margin: 0
-                    }}>
-                      {project.project_title}
-                    </h3>
-                  </div>
+                <div className="list-card-content">
+                  <h3 className="list-card-title">
+                    {project.project_title}
+                  </h3>
 
                   {/* Line 2: Client + Vendor + Rating + Work Samples indicator */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                  <div className="list-card-meta">
                     {/* Client Name */}
-                    <span style={{ fontWeight: '500', color: '#1A5276' }}>
+                    <span className="list-card-meta-primary">
                       {project.client_name || 'No Client'}
                     </span>
 
                     {/* Vendor Name */}
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    <span className="list-card-meta-item">
                       {project.vendor_name || 'Unassigned'}
                     </span>
 
