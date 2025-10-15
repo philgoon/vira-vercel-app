@@ -53,26 +53,27 @@ export default function ViRAMatchPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-blue-900 font-headline">
-                ViRA Match
-              </h1>
-              <p className="mt-2 text-gray-600">
-                AI-powered vendor recommendations • {' '}
-                <Link
-                  href="/"
-                  className="font-medium text-blue-900 hover:text-blue-700 underline"
-                >
-                  Back to Dashboard
-                </Link>
-              </p>
-            </div>
-          </div>
+      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ padding: '1.5rem' }}>
+          <h1 style={{
+            fontSize: '1.875rem',
+            fontFamily: 'var(--font-headline)',
+            fontWeight: 'bold',
+            color: '#1A5276'
+          }}>
+            ViRA Match
+          </h1>
+          <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
+            AI-powered vendor recommendations • {' '}
+            <Link
+              href="/"
+              style={{ fontWeight: 500, color: '#1A5276', textDecoration: 'underline' }}
+            >
+              Back to Dashboard
+            </Link>
+          </p>
         </div>
       </div>
 
