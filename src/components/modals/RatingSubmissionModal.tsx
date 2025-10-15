@@ -167,6 +167,11 @@ export default function RatingSubmissionModal({
       return
     }
 
+    if (!project) {
+      alert('Project data is missing.')
+      return
+    }
+
     if (!project.vendor_id) {
       alert('Cannot submit rating: No vendor assigned to this project.')
       return
