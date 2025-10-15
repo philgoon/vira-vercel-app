@@ -6,6 +6,7 @@
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarNav } from './SidebarNav';
+import { TopHeader } from './TopHeader';
 
 export function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -36,8 +37,9 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
         </div>
         
         {/* Main Content */}
-        <main style={{ flex: 1, overflow: 'auto' }}>
-          <div style={{ height: '100%' }}>
+        <main style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <TopHeader />
+          <div style={{ flex: 1, overflow: 'auto' }}>
             {children}
           </div>
         </main>
