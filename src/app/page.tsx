@@ -21,20 +21,49 @@ interface DatabaseStats {
   ratings: number;
 }
 
+interface TopVendor {
+  vendor_id: string;
+  vendor_name: string;
+  avg_overall_rating: number;
+  total_projects: number;
+  rated_projects: number;
+}
+
+interface ReviewStats {
+  total: number;
+  completed: number;
+  pending: number;
+  completionRate: number;
+}
+
+interface AnalyticsData {
+  topVendors: TopVendor[];
+  reviewStats: ReviewStats;
+  recentActivity: Array<{
+    project_id: string;
+    project_title: string;
+    vendor_name: string;
+    project_overall_rating_calc: number;
+    updated_at: string;
+  }>;
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DatabaseStats | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        // Test each table with correct names
-        const [vendorsResult, projectsResult, clientsResult, ratingsResult] = await Promise.all([
+        // Fetch both stats and analytics
+        const [vendorsResult, projectsResult, clientsResult, ratingsResult, analyticsResult] = await Promise.all([
           supabase.from('vendors').select('vendor_id', { count: 'exact', head: true }),
           supabase.from('projects').select('project_id', { count: 'exact', head: true }),
           supabase.from('clients_summary').select('*', { count: 'exact', head: true }),
           supabase.from('projects_with_vendor').select('*', { count: 'exact', head: true }).eq('rating_status', 'Complete'),
+          fetch('/api/dashboard'),
         ]);
 
         // Debug logging
@@ -57,6 +86,12 @@ export default function DashboardPage() {
           clients: clientsResult.count || 0,
           ratings: ratingsResult.count || 0,
         });
+
+        // Load analytics data
+        if (analyticsResult.ok) {
+          const analyticsData = await analyticsResult.json();
+          setAnalytics(analyticsData);
+        }
 
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
@@ -302,6 +337,89 @@ export default function DashboardPage() {
                   </div>
                 </Link>
               </div>
+
+              {/* Analytics Sections */}
+              {analytics && (
+                <div style={{ marginBottom: '3rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
+                  
+                  {/* Review Progress */}
+                  {analytics.reviewStats.total > 0 && (
+                    <div className="bg-card border rounded-lg p-6 shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-foreground">Review Progress</h3>
+                        <Link href="/admin?tab=reviews" className="text-primary hover:underline text-sm font-medium">
+                          Manage →
+                        </Link>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Completion Rate</span>
+                          <span className="font-bold text-foreground">{analytics.reviewStats.completionRate}%</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                          <div 
+                            className="bg-success h-full rounded-full transition-all duration-500"
+                            style={{ width: `${analytics.reviewStats.completionRate}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-sm pt-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-success rounded-full" />
+                            <span className="text-muted-foreground">{analytics.reviewStats.completed} Complete</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-warning rounded-full" />
+                            <span className="text-muted-foreground">{analytics.reviewStats.pending} Pending</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Top Performers */}
+                  {analytics.topVendors.length > 0 && (
+                    <div className="bg-card border rounded-lg p-6 shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                          <TrendingUp className="w-5 h-5 text-primary" />
+                          Top Performers
+                        </h3>
+                        <Link href="/vendors" className="text-primary hover:underline text-sm font-medium">
+                          View All →
+                        </Link>
+                      </div>
+                      <div className="space-y-3">
+                        {analytics.topVendors.slice(0, 5).map((vendor, index) => (
+                          <Link
+                            key={vendor.vendor_id}
+                            href={`/vendors/${vendor.vendor_id}`}
+                            className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors group"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                                {index + 1}
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-foreground text-sm group-hover:text-primary transition-colors">
+                                  {vendor.vendor_name}
+                                </h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {vendor.rated_projects} rated project{vendor.rated_projects !== 1 ? 's' : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Star className="w-4 h-4 text-warning fill-warning" />
+                              <span className="font-bold text-foreground">{vendor.avg_overall_rating.toFixed(1)}</span>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              )}
 
               {/* Hero Section - Primary Business Actions */}
               <div style={{ marginBottom: '2rem' }}>
