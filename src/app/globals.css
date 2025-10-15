@@ -3,7 +3,61 @@
 @tailwind utilities;
 
 :root {
-  /* Brand Colors */
+  /* ========================================
+     PROFESSIONAL BLUE THEME
+     Uses existing brand colors (#1A5276, #6B8F71)
+     shadcn/ui compatible CSS variables
+     ======================================== */
+  
+  /* Base Colors */
+  --background: 0 0% 100%;                    /* White */
+  --foreground: 222.2 84% 4.9%;               /* Near black */
+  
+  /* Primary - Deep Blue (#1A5276) */
+  --primary: 203 89% 29%;
+  --primary-foreground: 0 0% 100%;
+  
+  /* Secondary - Sage Green (#6B8F71) */
+  --secondary: 155 26% 49%;
+  --secondary-foreground: 0 0% 100%;
+  
+  /* Accent - Bright Blue */
+  --accent: 213 100% 50%;
+  --accent-foreground: 0 0% 100%;
+  
+  /* Muted/Subtle Elements */
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  
+  /* Card/Panel Background */
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  
+  /* Popover/Dropdown Background */
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  
+  /* Borders */
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  
+  /* Ring/Focus State */
+  --ring: 203 89% 29%;
+  
+  /* Status Colors */
+  --success: 142 76% 36%;                     /* Green */
+  --warning: 38 92% 50%;                      /* Orange */
+  --destructive: 0 84.2% 60.2%;               /* Red */
+  --destructive-foreground: 0 0% 98%;
+  
+  /* Chart Colors (for analytics) */
+  --chart-1: 203 89% 29%;                     /* Primary Blue */
+  --chart-2: 155 26% 49%;                     /* Secondary Green */
+  --chart-3: 38 92% 50%;                      /* Orange */
+  --chart-4: 263 70% 60%;                     /* Purple */
+  --chart-5: 173 58% 39%;                     /* Teal */
+  
+  /* Legacy Brand Colors (for backward compatibility) */
   --color-single: #1A5276;
   --color-single-50: #E8F4F8;
   --color-single-100: #D1E9F1;
@@ -37,6 +91,9 @@
   /* Font families */
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-headline: var(--font-poppins), system-ui, sans-serif;
+  
+  /* Border Radius */
+  --radius: 0.5rem;
 }
 
 @layer base {
