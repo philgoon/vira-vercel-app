@@ -61,8 +61,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: 'admin@skip-auth.test',
         full_name: 'Skip Auth Admin',
         role: 'admin',
+        vendor_id: null,
         is_active: true,
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         last_login_at: new Date().toISOString(),
       };
 
