@@ -548,7 +548,7 @@ export default function VendorApplicationPage() {
                 <Button 
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="btn-success"
                 >
                   {submitting ? (
                     <>

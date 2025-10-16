@@ -82,7 +82,7 @@ export default function UsersPage() {
             <h2 className="text-lg font-semibold text-gray-900">
               All Users ({users.length})
             </h2>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+            <button className="btn-primary" style={{ fontSize: '0.875rem' }}>
               <Plus className="w-4 h-4" />
               Add User
             </button>

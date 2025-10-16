@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Briefcase, Users, GitCompareArrows, Building, Star, UserCog, Settings, Store } from 'lucide-react';
 import { UserHeader } from './UserHeader';
 import { useAuth } from '@/contexts/AuthContext';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'team', 'vendor'] },
@@ -37,7 +38,10 @@ export function SidebarNav() {
       {/* Header */}
       <div style={{
         padding: '1.5rem',
-        borderBottom: '1px solid #34495E'
+        borderBottom: '1px solid #34495E',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }}>
           <div style={{
@@ -60,6 +64,9 @@ export function SidebarNav() {
             color: '#ECF0F1'
           }}>ViRA</h1>
         </Link>
+        
+        {/* Notification Bell */}
+        <NotificationBell />
       </div>
 
       {/* Navigation */}

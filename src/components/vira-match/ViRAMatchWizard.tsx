@@ -49,6 +49,7 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [charCount, setCharCount] = useState(0)
   const router = useRouter()
 
   const watchedCategory = watch('serviceCategory')
@@ -114,24 +115,13 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
   }
 
   function getCategoryColor(index: number): string {
-    const colors = [
-      'text-blue-600', 'text-purple-600', 'text-green-600', 'text-orange-600',
-      'text-pink-600', 'text-indigo-600', 'text-red-600'
-    ]
-    return colors[index % colors.length]
+    // Brand color: Primary Blue for all icons
+    return 'text-primary'
   }
 
   function getCategoryBgColor(index: number): string {
-    const bgColors = [
-      'bg-blue-50 hover:bg-blue-100 border-blue-200',
-      'bg-purple-50 hover:bg-purple-100 border-purple-200',
-      'bg-green-50 hover:bg-green-100 border-green-200',
-      'bg-orange-50 hover:bg-orange-100 border-orange-200',
-      'bg-pink-50 hover:bg-pink-100 border-pink-200',
-      'bg-indigo-50 hover:bg-indigo-100 border-indigo-200',
-      'bg-red-50 hover:bg-red-100 border-red-200'
-    ]
-    return bgColors[index % bgColors.length]
+    // Use subtle gray background for all cards, consistent with brand
+    return 'bg-gray-50 hover:bg-gray-100 border-gray-200'
   }
 
   const handleCategorySelect = (categoryId: string) => {
@@ -196,27 +186,50 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Progress Header */}
+      {/* Visual Step Wizard Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">Find Your Perfect Vendor</h1>
-          <Badge variant="outline" className="px-3 py-1">
-            Step {currentStep} of 3
-          </Badge>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="relative">
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="h-2 rounded-full transition-all duration-300 ease-out"
-              style={{ backgroundColor: '#1A5276', width: `${progress}%` }}
-            />
+        <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">Find Your Perfect Vendor</h1>
+        
+        {/* Step Circles */}
+        <div className="flex items-center justify-center mb-6">
+          {/* Step 1 */}
+          <div className="flex flex-col items-center">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold transition-all ${
+              currentStep >= 1 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'
+            }`}>
+              {currentStep > 1 ? '✓' : '1'}
+            </div>
+            <span className="mt-2 text-xs font-medium text-gray-600">Choose Category</span>
           </div>
-          <div className="flex justify-between mt-2 text-sm text-gray-600">
-            <span className={currentStep >= 1 ? 'font-medium' : ''} style={{ color: currentStep >= 1 ? '#1A5276' : '' }}>Choose Category</span>
-            <span className={currentStep >= 2 ? 'font-medium' : ''} style={{ color: currentStep >= 2 ? '#1A5276' : '' }}>Describe Project</span>
-            <span className={currentStep >= 3 ? 'font-medium' : ''} style={{ color: currentStep >= 3 ? '#1A5276' : '' }}>Get Matches</span>
+
+          {/* Line 1-2 */}
+          <div className={`h-1 w-24 mx-2 transition-all ${
+            currentStep >= 2 ? 'bg-primary' : 'bg-gray-200'
+          }`}></div>
+
+          {/* Step 2 */}
+          <div className="flex flex-col items-center">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold transition-all ${
+              currentStep >= 2 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'
+            }`}>
+              {currentStep > 2 ? '✓' : '2'}
+            </div>
+            <span className="mt-2 text-xs font-medium text-gray-600">Describe Project</span>
+          </div>
+
+          {/* Line 2-3 */}
+          <div className={`h-1 w-24 mx-2 transition-all ${
+            currentStep >= 3 ? 'bg-success' : 'bg-gray-200'
+          }`}></div>
+
+          {/* Step 3 */}
+          <div className="flex flex-col items-center">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold transition-all ${
+              currentStep >= 3 ? 'bg-success text-white' : 'bg-gray-200 text-gray-500'
+            }`}>
+              3
+            </div>
+            <span className="mt-2 text-xs font-medium text-gray-600">Get Matches</span>
           </div>
         </div>
       </div>
@@ -293,26 +306,27 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
             </div>
 
             <div className="max-w-2xl mx-auto">
-              <textarea
-                {...register('projectScope', { required: 'Please describe your project.' })}
-                className="w-full h-40 p-4 border border-gray-300 rounded-lg transition-colors"
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#1A5276'
-                  e.target.style.boxShadow = `0 0 0 2px rgba(26, 82, 118, 0.2)`
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#d1d5db'
-                  e.target.style.boxShadow = 'none'
-                }}
-                placeholder="Describe your project in detail... Include goals, requirements, timeline, special considerations, and any specific expertise needed."
-              />
+              <div className="relative">
+                <textarea
+                  {...register('projectScope', { required: 'Please describe your project.' })}
+                  className="w-full h-40 p-4 border border-gray-300 rounded-lg transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  placeholder="Describe your project in detail... Include goals, requirements, timeline, special considerations, and any specific expertise needed."
+                  onChange={(e) => setCharCount(e.target.value.length)}
+                />
+                <div className="absolute bottom-3 right-3 text-xs text-gray-500">
+                  {charCount} characters
+                  {charCount < 50 && ' • Add more detail'}
+                  {charCount >= 50 && charCount < 100 && ' • Good start!'}
+                  {charCount >= 100 && ' • Excellent detail!'}
+                </div>
+              </div>
               {errors.projectScope && (
                 <p className="mt-2 text-sm text-red-600">{errors.projectScope.message}</p>
               )}
 
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-blue-900 mb-2">💡 Tips for a great description:</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 className="font-medium text-gray-900 mb-2">💡 Tips for a great description:</h4>
+                <ul className="text-sm text-gray-700 space-y-1">
                   <li>• Include your main goals and objectives</li>
                   <li>• Mention any specific technologies or approaches</li>
                   <li>• Share your timeline and budget considerations</li>
@@ -363,33 +377,33 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
 
                   {/* Processing Steps */}
                   <div className="space-y-6">
-                    <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center animate-spin">
+                    <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border-l-4 border-primary">
+                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center animate-spin">
                         <div className="w-2 h-2 bg-white rounded-full"></div>
                       </div>
                       <div className="text-left">
-                        <h4 className="font-medium text-blue-900">Filtering Vendor Candidates</h4>
-                        <p className="text-sm text-blue-700">Analyzing {watchedCategory} specialists in our database...</p>
+                        <h4 className="font-medium text-gray-900">Filtering Vendor Candidates</h4>
+                        <p className="text-sm text-gray-700">Analyzing {watchedCategory} specialists in our database...</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-lg border-l-4 border-purple-500">
-                      <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center animate-pulse">
+                    <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border-l-4 border-primary">
+                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center animate-pulse">
                         <TrendingUp className="w-4 h-4 text-white" />
                       </div>
                       <div className="text-left">
-                        <h4 className="font-medium text-purple-900">Analyzing Performance Data</h4>
-                        <p className="text-sm text-purple-700">Evaluating ratings, project history, and client satisfaction...</p>
+                        <h4 className="font-medium text-gray-900">Analyzing Performance Data</h4>
+                        <p className="text-sm text-gray-700">Evaluating ratings, project history, and client satisfaction...</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 p-4 bg-pink-50 rounded-lg border-l-4 border-pink-500">
-                      <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center animate-bounce">
+                    <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg border-l-4 border-success">
+                      <div className="w-8 h-8 bg-success rounded-full flex items-center justify-center animate-bounce">
                         <Award className="w-4 h-4 text-white" />
                       </div>
                       <div className="text-left">
-                        <h4 className="font-medium text-pink-900">Generating Intelligent Recommendations</h4>
-                        <p className="text-sm text-pink-700">Creating your personalized ViRA scores and insights...</p>
+                        <h4 className="font-medium text-gray-900">Generating Intelligent Recommendations</h4>
+                        <p className="text-sm text-gray-700">Creating your personalized ViRA scores and insights...</p>
                       </div>
                     </div>
                   </div>
@@ -430,22 +444,22 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
                   </div>
 
                   {/* What Happens Next */}
-                  <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                  <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
                     <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
                       <Clock className="w-5 h-5 text-blue-600" />
                       What happens next:
                     </h4>
                     <div className="space-y-3 text-sm text-gray-700">
                       <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                        <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
                         <span>Our AI analyzes your requirements against our vendor database</span>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
+                        <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
                         <span>We evaluate performance history, client ratings, and specialties</span>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 bg-pink-500 rounded-full mt-2"></div>
+                        <div className="w-2 h-2 bg-success rounded-full mt-2"></div>
                         <span>You receive ranked recommendations with detailed insights</span>
                       </div>
                     </div>
@@ -462,21 +476,15 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
                       <ChevronLeft className="w-4 h-4" />
                       Back
                     </Button>
-                    <Button
+                    <button
                       type="submit"
                       disabled={isLoading}
-                      className="flex items-center gap-2 text-white"
-                      style={{ backgroundColor: '#1A5276' }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#154466'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#1A5276'
-                      }}
+                      className="btn-primary flex items-center gap-2"
+                      style={{ fontSize: '0.875rem' }}
                     >
                       Get AI Recommendations
                       <ArrowRight className="w-4 h-4" />
-                    </Button>
+                    </button>
                   </div>
                 </div>
               </>

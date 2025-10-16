@@ -43,7 +43,8 @@ export default function AccountInactivePage() {
         <div className="space-y-3">
           <a
             href="mailto:admin@example.com"
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            className="btn-primary"
+            style={{ width: '100%', padding: '0.75rem', justifyContent: 'center' }}
           >
             <Mail className="w-5 h-5" />
             Contact Administrator

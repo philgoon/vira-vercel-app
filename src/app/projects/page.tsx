@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Building, Filter, Upload } from 'lucide-react';
+import { Building, Filter } from 'lucide-react';
 import { Project, ProjectsApiResponse } from '@/types';
 import ProjectModal from '../../components/modals/ProjectModal';
 
@@ -199,29 +199,16 @@ export default function ProjectsPage() {
       {/* Header */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h1 style={{
-                fontSize: '1.875rem',
-                fontFamily: 'var(--font-headline)',
-                fontWeight: 'bold',
-                color: '#1A5276'
-              }}>Projects</h1>
-              <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
-                View completed project details, ratings, and work samples
-              </p>
-            </div>
-            <button className="btn-primary" style={{ fontSize: '0.875rem' }}>
-              <Plus style={{ width: '1rem', height: '1rem' }} />
-              Add New Project
-            </button>
-            <button
-              className="btn-primary"
-              style={{ fontSize: '0.875rem' }}
-            >
-              <Upload style={{ width: '1rem', height: '1rem' }} />
-              Import CSV
-            </button>
+          <div>
+            <h1 style={{
+              fontSize: '1.875rem',
+              fontFamily: 'var(--font-headline)',
+              fontWeight: 'bold',
+              color: '#1A5276'
+            }}>Projects</h1>
+            <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
+              View completed project details, ratings, and work samples
+            </p>
           </div>
         </div>
       </div>
@@ -406,29 +393,13 @@ export default function ProjectsPage() {
             {hasActiveFilters && (
               <button
                 onClick={clearAllFilters}
-                style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#6B8F71',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  marginRight: '0.5rem'
-                }}
+                className="btn-success"
+                style={{ fontSize: '0.875rem', marginRight: '0.5rem' }}
               >
                 Clear Filters
               </button>
             )}
-            <button style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#6B8F71',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              fontWeight: '500'
-            }}>
+            <button className="btn-success" style={{ fontSize: '0.875rem' }}>
               Create New Project
             </button>
           </div>

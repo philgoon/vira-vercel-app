@@ -127,29 +127,35 @@ export default function CSVImport() {
       <CardHeader>
         <CardTitle>Import Projects from CSV</CardTitle>
         {/* Wizard Progress */}
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center mt-6" style={{ justifyContent: 'space-between' }}>
           {steps.map((step, idx) => {
             const StepIcon = step.icon
             const isActive = currentStep === step.id
             const isCompleted = getStepIndex() > idx
             return (
-              <div key={step.id} className="flex items-center flex-1">
-                <div className="flex flex-col items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                    isCompleted ? 'bg-green-500 border-green-500 text-white' :
-                    isActive ? 'bg-blue-500 border-blue-500 text-white' :
-                    'bg-gray-200 border-gray-300 text-gray-500'
-                  }`}>
-                    <StepIcon className="w-5 h-5" />
+              <div key={step.id} className="flex items-center" style={{ flex: idx < steps.length - 1 ? 1 : '0 0 auto' }}>
+                <div className="flex flex-col items-center" style={{ minWidth: '80px' }}>
+                  <div className="rounded-full flex items-center justify-center border-2" style={{
+                    width: '3rem',
+                    height: '3rem',
+                    backgroundColor: isCompleted ? '#6B8F71' : isActive ? '#1A5276' : '#f3f4f6',
+                    borderColor: isCompleted ? '#6B8F71' : isActive ? '#1A5276' : '#e5e7eb',
+                    color: isCompleted || isActive ? 'white' : '#6E6F71'
+                  }}>
+                    <StepIcon className="w-6 h-6" />
                   </div>
-                  <span className={`text-xs mt-1 ${isActive ? 'font-semibold' : ''}`}>
+                  <span className={`text-xs mt-2 text-center ${isActive ? 'font-semibold' : ''}`}>
                     {step.label}
                   </span>
                 </div>
                 {idx < steps.length - 1 && (
-                  <div className={`h-0.5 flex-1 mx-2 ${
-                    isCompleted ? 'bg-green-500' : 'bg-gray-300'
-                  }`} />
+                  <div className="h-0.5" style={{
+                    flex: 1,
+                    backgroundColor: isCompleted ? '#6B8F71' : '#e5e7eb',
+                    minWidth: '30px',
+                    marginLeft: '0.5rem',
+                    marginRight: '0.5rem'
+                  }} />
                 )}
               </div>
             )
@@ -181,11 +187,11 @@ export default function CSVImport() {
         {/* Step 2: Preview */}
         {currentStep === 'preview' && preview && preview.preview && (
           <>
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded">
+            <div className="p-4 border rounded" style={{ backgroundColor: '#E8F4F8', borderColor: '#1A5276' }}>
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h3 className="font-semibold text-blue-800">📋 Import Preview</h3>
-                  <p className="text-sm text-blue-700">
+                  <h3 className="font-semibold" style={{ color: '#1A5276' }}>📋 Import Preview</h3>
+                  <p className="text-sm" style={{ color: '#1A5276' }}>
                     Found <strong>{preview.total_records}</strong> projects. Selected: <strong>{selectedProjects.size}</strong>
                   </p>
                 </div>
@@ -241,14 +247,14 @@ export default function CSVImport() {
             </div>
             {(preview.preview_data.some((item: any) => !item.vendor_found) || 
               preview.preview_data.some((item: any) => item.is_duplicate)) && (
-              <div className="p-4 bg-orange-50 border border-orange-300 rounded space-y-2">
+              <div className="p-4 border rounded space-y-2" style={{ backgroundColor: '#fffbeb', borderColor: '#F59E0B' }}>
                 {preview.preview_data.some((item: any) => !item.vendor_found) && (
-                  <p className="text-sm text-orange-800">
+                  <p className="text-sm" style={{ color: '#92400e' }}>
                     ⚠️ <strong>Unknown Vendors:</strong> Some vendors were not found in the system. Those projects will be skipped.
                   </p>
                 )}
                 {preview.preview_data.some((item: any) => item.is_duplicate) && (
-                  <p className="text-sm text-orange-800">
+                  <p className="text-sm" style={{ color: '#92400e' }}>
                     ⚠️ <strong>Duplicates:</strong> {preview.preview_data.filter((item: any) => item.is_duplicate).length} project(s) already exist with the same title, client, and date. They will be skipped.
                   </p>
                 )}

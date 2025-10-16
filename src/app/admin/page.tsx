@@ -392,7 +392,7 @@ export default function AdminDashboard() {
               width: '3rem',
               height: '3rem',
               border: '3px solid #1A5276',
-              borderTopColor: 'transparent',
+              borderTop: '3px solid transparent',
               borderRadius: '50%',
               margin: '0 auto 1rem',
               animation: 'spin 1s linear infinite'
@@ -427,27 +427,8 @@ export default function AdminDashboard() {
               </div>
               <button
                 onClick={() => { loadData(); loadInvites(); loadApplications(); loadUsers(); }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: 'white',
-                  color: '#1A5276',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '0.5rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 150ms'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f9fafb';
-                  e.currentTarget.style.borderColor = '#1A5276';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'white';
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                }}
+                className="btn-outline"
+                style={{ fontSize: '0.875rem' }}
               >
                 <RefreshCw style={{ width: '1rem', height: '1rem' }} />
                 Refresh All
@@ -517,25 +498,8 @@ export default function AdminDashboard() {
                       </h3>
                       <button
                         onClick={() => setSendInviteModalOpen(true)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.625rem 1rem',
-                          backgroundColor: '#1A5276',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          transition: 'background-color 150ms'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#154466';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#1A5276';
-                        }}
+                        className="btn-primary"
+                        style={{ fontSize: '0.875rem' }}
                       >
                         <Mail style={{ width: '1rem', height: '1rem' }} />
                         Send Invite
@@ -836,25 +800,8 @@ export default function AdminDashboard() {
                       </h3>
                       <button
                         onClick={() => openVendorModal(null)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.625rem 1rem',
-                          backgroundColor: '#1A5276',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          transition: 'background-color 150ms'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#154466';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#1A5276';
-                        }}
+                        className="btn-primary"
+                        style={{ fontSize: '0.875rem' }}
                       >
                         <Plus style={{ width: '1rem', height: '1rem' }} />
                         Add Vendor
@@ -891,16 +838,8 @@ export default function AdminDashboard() {
                           <span style={{ fontWeight: '500', color: '#111827' }}>{vendor.vendor_name}</span>
                           <button
                             onClick={() => openVendorModal(vendor)}
-                            style={{
-                              padding: '0.375rem 0.75rem',
-                              backgroundColor: 'white',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '0.375rem',
-                              fontSize: '0.875rem',
-                              fontWeight: '500',
-                              color: '#1A5276',
-                              cursor: 'pointer'
-                            }}
+                            className="btn-outline"
+                            style={{ fontSize: '0.875rem', padding: '0.375rem 0.75rem' }}
                           >
                             Edit
                           </button>
@@ -953,17 +892,9 @@ export default function AdminDashboard() {
                               </p>
                             </div>
                             <button
-                              onClick={() => openProjectModal(project)}
-                              style={{
-                                padding: '0.375rem 0.75rem',
-                                backgroundColor: 'white',
-                                border: '1px solid #e5e7eb',
-                                borderRadius: '0.375rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '500',
-                                color: '#1A5276',
-                                cursor: 'pointer'
-                              }}
+                              onClick={() => { setSelectedProject(project); setProjectModalOpen(true); }}
+                              className="btn-outline"
+                              style={{ fontSize: '0.875rem', padding: '0.375rem 0.75rem' }}
                             >
                               Edit
                             </button>
@@ -977,20 +908,30 @@ export default function AdminDashboard() {
                 {/* Reviews Tab */}
                 {activeTab === 'reviews' && (
                   <div>
-                    {/* Monitoring Dashboard */}
-                    <div style={{ marginBottom: '2rem' }}>
-                      <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
-                        Review Workflow Monitoring
-                      </h3>
-                      <ReviewMonitoringDashboard />
-                    </div>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '1.5rem' }}>
+                      Review Management
+                    </h3>
+                    
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', 
+                      gap: '1.5rem' 
+                    }}>
+                      {/* Monitoring Dashboard */}
+                      <div>
+                        <h4 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+                          Workflow Monitoring
+                        </h4>
+                        <ReviewMonitoringDashboard />
+                      </div>
 
-                    {/* Assignment Management */}
-                    <div style={{ marginTop: '3rem' }}>
-                      <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
-                        Assign Reviewers
-                      </h3>
-                      <ReviewAssignment />
+                      {/* Assignment Management */}
+                      <div>
+                        <h4 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+                          Assign Reviewers
+                        </h4>
+                        <ReviewAssignment />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1015,25 +956,8 @@ export default function AdminDashboard() {
                         User Management
                       </h3>
                       <button
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.625rem 1rem',
-                          backgroundColor: '#1A5276',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          transition: 'background-color 150ms'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#154466';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#1A5276';
-                        }}
+                        className="btn-primary"
+                        style={{ fontSize: '0.875rem' }}
                       >
                         <Plus style={{ width: '1rem', height: '1rem' }} />
                         Add User

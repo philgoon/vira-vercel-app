@@ -271,7 +271,8 @@ export default function ClientsPage() {
                               setSelectedClient(client);
                               setIsProfileModalOpen(true);
                             }}
-                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-xs font-medium"
+                            className="btn-primary"
+                            style={{ fontSize: '0.75rem', padding: '0.375rem 0.75rem' }}
                             title="Edit Client Profile"
                           >
                             <Edit className="w-3.5 h-3.5" />

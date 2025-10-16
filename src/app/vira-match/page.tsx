@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { Vendor } from '@/types';
 import ViRAMatchWizard from '@/components/vira-match/ViRAMatchWizard';
 
@@ -65,15 +64,6 @@ export default function ViRAMatchPage() {
           }}>
             ViRA Match
           </h1>
-          <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
-            AI-powered vendor recommendations • {' '}
-            <Link
-              href="/"
-              style={{ fontWeight: 500, color: '#1A5276', textDecoration: 'underline' }}
-            >
-              Back to Dashboard
-            </Link>
-          </p>
         </div>
       </div>
 

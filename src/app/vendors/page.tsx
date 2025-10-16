@@ -232,7 +232,7 @@ export default function VendorsPage() {
                 style={{ minHeight: '6rem' }}
               >
                 {/* Vendor Avatar */}
-                <div className="list-card-avatar">
+                <div className="list-card-avatar-lg">
                   <span className="list-card-avatar-text">
                     {vendor.vendor_name.charAt(0)}
                   </span>
@@ -245,7 +245,7 @@ export default function VendorsPage() {
                   </h3>
 
                   {/* First row: Category, Projects, Rating */}
-                  <div className="list-card-meta" style={{ marginBottom: '0.5rem' }}>
+                  <div className="list-card-meta" style={{ marginBottom: '0.5rem', flexWrap: 'wrap' }}>
                     <span className="list-card-meta-primary">
                       {vendor.vendor_type || 'Service Provider'}
                     </span>
@@ -256,14 +256,7 @@ export default function VendorsPage() {
                     </span>
 
                     {/* Rating Badge */}
-                    <div style={{
-                      padding: '0.125rem 0.5rem',
-                      backgroundColor: vendor.avg_overall_rating ? '#dcfce7' : '#f3f4f6',
-                      color: vendor.avg_overall_rating ? '#166534' : '#6b7280',
-                      borderRadius: '9999px',
-                      fontSize: '0.75rem',
-                      fontWeight: '500'
-                    }}>
+                    <div className={vendor.avg_overall_rating ? 'badge badge-rating' : 'badge badge-rating-none'}>
                       {vendor.avg_overall_rating ?
                         `${Number(vendor.avg_overall_rating).toFixed(1)}/10` :
                         'No ratings'}
@@ -271,22 +264,12 @@ export default function VendorsPage() {
 
                     {/* [R-QW3] Availability Status Badge */}
                     {vendor.availability_status && (
-                      <div style={{
-                        padding: '0.125rem 0.5rem',
-                        backgroundColor:
-                          vendor.availability_status === 'Available' ? '#dcfce7' :
-                          vendor.availability_status === 'Limited' ? '#fef3c7' :
-                          vendor.availability_status === 'On Leave' ? '#dbeafe' :
-                          '#fee2e2', // Unavailable
-                        color:
-                          vendor.availability_status === 'Available' ? '#166534' :
-                          vendor.availability_status === 'Limited' ? '#92400e' :
-                          vendor.availability_status === 'On Leave' ? '#1e40af' :
-                          '#991b1b', // Unavailable
-                        borderRadius: '9999px',
-                        fontSize: '0.75rem',
-                        fontWeight: '500'
-                      }}>
+                      <div className={`badge ${
+                        vendor.availability_status === 'Available' ? 'badge-available' :
+                        vendor.availability_status === 'Limited' ? 'badge-limited' :
+                        vendor.availability_status === 'On Leave' ? 'badge-on-leave' :
+                        'badge-unavailable'
+                      }`}>
                         {vendor.availability_status === 'Available' ? '✓ Available' :
                          vendor.availability_status === 'Limited' ? '⚠ Limited' :
                          vendor.availability_status === 'On Leave' ? '🏖 On Leave' :
@@ -296,16 +279,7 @@ export default function VendorsPage() {
                   </div>
 
                   {/* [R1] [vendor-cost-display] Second row: Pricing Display - Critical Business Value */}
-                  <div style={{
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#059669',
-                    backgroundColor: '#f0fdf4',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '0.375rem',
-                    border: '1px solid #bbf7d0',
-                    display: 'inline-block'
-                  }}>
+                  <div className="badge-price">
                     💰 {formatPricingDisplay(vendor)}
                   </div>
                 </div>

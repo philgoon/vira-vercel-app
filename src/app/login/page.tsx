@@ -117,7 +117,8 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="btn-primary"
+              style={{ width: '100%', padding: '0.75rem', justifyContent: 'center' }}
             >
               {isLoading ? (
                 <>

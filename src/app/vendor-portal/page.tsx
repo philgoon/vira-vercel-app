@@ -213,18 +213,8 @@ export default function VendorPortal() {
                     {!editing ? (
                       <button
                         onClick={handleEdit}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.625rem 1rem',
-                          backgroundColor: '#1A5276',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          fontWeight: '500',
-                          cursor: 'pointer'
-                        }}
+                        className="btn-primary"
+                        style={{ fontSize: '0.875rem' }}
                       >
                         <Edit2 size={16} />
                         Edit Profile
@@ -252,19 +242,8 @@ export default function VendorPortal() {
                         <button
                           onClick={handleSave}
                           disabled={saving}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '0.625rem 1rem',
-                            backgroundColor: '#10b981',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '0.5rem',
-                            fontWeight: '500',
-                            cursor: saving ? 'not-allowed' : 'pointer',
-                            opacity: saving ? 0.5 : 1
-                          }}
+                          className="btn-success"
+                          style={{ fontSize: '0.875rem' }}
                         >
                           <Save size={16} />
                           {saving ? 'Saving...' : 'Save Changes'}

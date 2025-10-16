@@ -219,12 +219,15 @@ export default function VendorApplicationPage() {
                       width: '3rem',
                       height: '3rem',
                       borderRadius: '50%',
-                      backgroundColor: isCompleted ? '#10b981' : isActive ? '#1A5276' : '#e5e7eb',
-                      color: 'white',
+                      backgroundColor: isCompleted ? '#6B8F71' : isActive ? '#1A5276' : '#f3f4f6',
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      borderColor: isCompleted ? '#6B8F71' : isActive ? '#1A5276' : '#e5e7eb',
+                      color: isCompleted || isActive ? 'white' : '#6E6F71',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      marginBottom: '0.5rem',
+                      marginBottom: '0.75rem',
                       transition: 'all 300ms'
                     }}>
                       {isCompleted ? <CheckCircle size={20} /> : <Icon size={20} />}
@@ -242,8 +245,11 @@ export default function VendorApplicationPage() {
                     <div style={{
                       flex: 1,
                       height: '2px',
-                      backgroundColor: isCompleted ? '#10b981' : '#e5e7eb',
-                      marginBottom: '2rem'
+                      backgroundColor: isCompleted ? '#6B8F71' : '#e5e7eb',
+                      marginBottom: '2rem',
+                      minWidth: '30px',
+                      marginLeft: '0.5rem',
+                      marginRight: '0.5rem'
                     }} />
                   )}
                 </div>
@@ -661,25 +667,7 @@ export default function VendorApplicationPage() {
             {currentStep < 5 ? (
               <button
                 onClick={nextStep}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#1A5276',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'background-color 150ms'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#154466'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#1A5276'
-                }}
+                className="btn-primary"
               >
                 Next
                 <ChevronRight size={20} />
@@ -688,28 +676,10 @@ export default function VendorApplicationPage() {
               <button
                 onClick={handleSubmit}
                 disabled={submitting || !formData.company_name || !formData.contact_name}
+                className="btn-success"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: submitting || !formData.company_name || !formData.contact_name ? '#9ca3af' : '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  fontWeight: '500',
-                  cursor: submitting || !formData.company_name || !formData.contact_name ? 'not-allowed' : 'pointer',
-                  transition: 'background-color 150ms'
-                }}
-                onMouseEnter={(e) => {
-                  if (!submitting && formData.company_name && formData.contact_name) {
-                    e.currentTarget.style.backgroundColor = '#059669'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!submitting && formData.company_name && formData.contact_name) {
-                    e.currentTarget.style.backgroundColor = '#10b981'
-                  }
+                  opacity: (submitting || !formData.company_name || !formData.contact_name) ? 0.5 : 1,
+                  cursor: (submitting || !formData.company_name || !formData.contact_name) ? 'not-allowed' : 'pointer'
                 }}
               >
                 {submitting ? 'Submitting...' : 'Submit Application'}

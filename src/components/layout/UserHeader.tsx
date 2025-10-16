@@ -27,23 +27,23 @@ export function UserHeader() {
       {/* User Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 rounded-lg transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-700 rounded-lg transition-colors"
       >
-        <div className="flex-shrink-0 w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-          <User className="w-5 h-5 text-white" />
-        </div>
-        <div className="flex-1 text-left min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">
-            {getUserDisplayName(profile)}
-          </p>
-          <p className="text-xs text-gray-500 truncate">{profile.email}</p>
-        </div>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-400 transition-transform ${
-            isOpen ? 'rotate-180' : ''
-          }`}
-        />
-      </button>
+          <div className="flex-shrink-0 w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+            <User className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-medium text-gray-100 truncate">
+              {getUserDisplayName(profile)}
+            </p>
+            <p className="text-xs text-gray-300 truncate">{profile.email}</p>
+          </div>
+          <ChevronDown
+            className={`w-4 h-4 text-gray-300 transition-transform ${
+              isOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
 
       {/* Dropdown Menu */}
       {isOpen && (

@@ -146,7 +146,7 @@ export default function ReviewAssignment() {
           const isAssigning = selectedProject === project.project_id
 
           return (
-            <Card key={project.project_id} className={!hasReviewer ? 'border-orange-300 bg-orange-50' : ''}>
+            <Card key={project.project_id} className={!hasReviewer ? 'border' : ''} style={!hasReviewer ? { borderColor: '#F59E0B', backgroundColor: '#fffbeb' } : {}}>
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
@@ -156,7 +156,7 @@ export default function ReviewAssignment() {
                     </p>
                   </div>
                   {!hasReviewer && (
-                    <span className="text-xs font-semibold text-orange-700 bg-orange-200 px-2 py-1 rounded">
+                    <span className="text-xs font-semibold px-2 py-1 rounded" style={{ color: '#92400e', backgroundColor: '#fef3c7' }}>
                       No Reviewer
                     </span>
                   )}
@@ -168,9 +168,9 @@ export default function ReviewAssignment() {
                   <div className="space-y-2">
                     <h4 className="text-sm font-semibold text-gray-700">Assigned Reviewers:</h4>
                     {projectAssignments.map((assignment) => (
-                      <div key={assignment.assignment_id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded p-2">
+                      <div key={assignment.assignment_id} className="flex items-center justify-between border rounded p-2" style={{ backgroundColor: '#f0fdf4', borderColor: '#86efac' }}>
                         <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <CheckCircle className="w-4 h-4" style={{ color: '#6B8F71' }} />
                           <span className="text-sm font-medium">
                             {assignment.user_profiles.full_name || assignment.user_profiles.email}
                           </span>
