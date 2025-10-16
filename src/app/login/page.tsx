@@ -40,17 +40,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: '#f9fafb' }}>
       <div className="max-w-md w-full">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style={{ backgroundColor: '#1A5276' }}>
             <LogIn className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 style={{
+            fontSize: '2.25rem',
+            fontFamily: 'var(--font-headline)',
+            fontWeight: 'bold',
+            color: '#1A5276',
+            marginBottom: '0.5rem'
+          }}>
             Welcome to ViRA
           </h1>
-          <p className="text-gray-600">
+          <p style={{ color: '#6b7280' }}>
             Sign in to access vendor ratings and analytics
           </p>
         </div>
@@ -86,7 +92,8 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+                style={{ outlineColor: '#1A5276' }}
                 placeholder="you@example.com"
                 disabled={isLoading}
               />
@@ -107,7 +114,8 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+                style={{ outlineColor: '#1A5276' }}
                 placeholder="••••••••"
                 disabled={isLoading}
               />
@@ -140,7 +148,9 @@ export default function LoginPage() {
               Need access?{' '}
               <a
                 href="mailto:admin@example.com"
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                style={{ color: '#1A5276', fontWeight: '500', textDecoration: 'none' }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
               >
                 Contact your administrator
               </a>
