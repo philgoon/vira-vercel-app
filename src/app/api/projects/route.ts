@@ -1,5 +1,5 @@
 // [R5.2] Enhanced projects API route with workflow status transitions
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const vendorCategory = searchParams.get('vendor_category');
 
     // [R4.2] Query projects table directly - vendor_name now in projects table
-    let query = supabase
+    let query = supabaseAdmin
       .from('projects')
       .select('*');
 
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const { data: project, error } = await supabase
+    const { data: project, error } = await supabaseAdmin
       .from('projects')
       .insert([body])
       .select()
@@ -115,7 +115,7 @@ export async function PUT(request: Request) {
       }
 
       // Get current project to validate transition
-      const { data: currentProject, error: fetchError } = await supabase
+      const { data: currentProject, error: fetchError } = await supabaseAdmin
         .from('projects')
         .select('status')
         .eq('project_id', project_id)
@@ -154,7 +154,7 @@ export async function PUT(request: Request) {
 
     console.log('Updating project with payload:', updatePayload)
 
-    const { data: updatedProject, error: updateError } = await supabase
+    const { data: updatedProject, error: updateError } = await supabaseAdmin
       .from('projects')
       .update(updatePayload)
       .eq('project_id', project_id)

@@ -1,5 +1,5 @@
 // [R4.1] Updated vendors API route using vendor_performance view for new schema
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const id = searchParams.get('id');
 
     // Step 1: Query the vendor_performance view for aggregated data
-    let performanceQuery = supabase.from('vendor_performance').select('*');
+    let performanceQuery = supabaseAdmin.from('vendor_performance').select('*');
     if (id) {
       performanceQuery = performanceQuery.eq('vendor_id', id);
     }
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     const vendorIds = performanceData.map(p => p.vendor_id);
 
     // Step 3: Query the vendors table for detailed information
-    const { data: detailData, error: detailError } = await supabase
+    const { data: detailData, error: detailError } = await supabaseAdmin
       .from('vendors')
       .select('*')
       .in('vendor_id', vendorIds);
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const { data: vendor, error } = await supabase
+    const { data: vendor, error } = await supabaseAdmin
       .from('vendors')
       .insert([body])
       .select()
@@ -105,7 +105,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Vendor ID is required' }, { status: 400 });
     }
 
-    const { data: vendor, error } = await supabase
+    const { data: vendor, error } = await supabaseAdmin
       .from('vendors')
       .update(updateData)
       .eq('vendor_id', vendor_id)
