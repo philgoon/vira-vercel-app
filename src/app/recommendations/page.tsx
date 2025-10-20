@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Star, TrendingUp, CheckCircle, AlertCircle, ArrowLeft, Trophy, Sparkles, Award, ChevronDown, ChevronUp } from 'lucide-react'
 import { EnhancedRecommendation, LegacyRecommendation } from '@/types'
@@ -17,21 +17,46 @@ interface CategoryGroup {
 
 function RecommendationsContent() {
   const searchParams = useSearchParams()
-  const data = searchParams.get('data')
+  const isSemantic = searchParams.get('semantic') === 'true'
   const isEnhanced = searchParams.get('enhanced') === 'true'
 
   // [R1] State to track which categories are expanded
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const [recommendations, setRecommendations] = useState<(EnhancedRecommendation | LegacyRecommendation)[]>([])
 
-  let recommendations: (EnhancedRecommendation | LegacyRecommendation)[] = []
-
-  if (data) {
-    try {
-      recommendations = JSON.parse(data)
-    } catch (error) {
-      console.error('Failed to parse recommendations data:', error)
+  // Load recommendations from sessionStorage or URL params after component mounts
+  useEffect(() => {
+    let data = null
+    
+    // Try sessionStorage first (for semantic search results)
+    const storedData = sessionStorage.getItem('vira-match-results')
+    if (storedData) {
+      data = storedData
+      // Clear after reading to prevent stale data
+      sessionStorage.removeItem('vira-match-results')
+      sessionStorage.removeItem('vira-match-timestamp')
+    } else {
+      // Fall back to URL params for backwards compatibility
+      data = searchParams.get('data')
     }
-  }
+
+    if (data) {
+      try {
+        const parsedData = JSON.parse(data)
+        // Handle semantic search response structure (has matches array)
+        if (parsedData.matches && Array.isArray(parsedData.matches)) {
+          setRecommendations(parsedData.matches)
+        } else if (Array.isArray(parsedData)) {
+          // Handle legacy array response
+          setRecommendations(parsedData)
+        } else {
+          console.error('Unexpected data structure:', parsedData)
+        }
+      } catch (error) {
+        console.error('Failed to parse recommendations data:', error)
+      }
+    }
+  }, [searchParams])
 
   // [R1] CRITICAL: Move isEnhancedRecommendation function BEFORE it's used
   const isEnhancedRecommendation = (rec: EnhancedRecommendation | LegacyRecommendation): rec is EnhancedRecommendation => {
@@ -40,10 +65,10 @@ function RecommendationsContent() {
 
   // [R1] Group recommendations by category for organized display
   const groupedRecommendations: CategoryGroup[] = recommendations.reduce((acc: CategoryGroup[], rec) => {
-    // [R1] Extract category from vendor_type or use a default grouping strategy
-    const category = 'vendorName' in rec
-      ? 'All Vendors'  // Single category for now - can be enhanced later
-      : 'Legacy Services'
+    // Extract category from semantic search results or legacy results
+    const category = (rec as any).service_categories?.[0] || 
+                     (rec as any).vendorType || 
+                     'All Vendors'
 
     let categoryGroup = acc.find(group => group.category === category)
 
@@ -59,8 +84,8 @@ function RecommendationsContent() {
   // [R1] Sort vendors within each category by ViRA score (highest first)
   groupedRecommendations.forEach(group => {
     group.vendors.sort((a, b) => {
-      const aScore = isEnhancedRecommendation(a) ? a.viraScore : 0
-      const bScore = isEnhancedRecommendation(b) ? b.viraScore : 0
+      const aScore = (a as any).viraScore || (a as any).match_confidence || 0
+      const bScore = (b as any).viraScore || (b as any).match_confidence || 0
       return bScore - aScore
     })
   })
@@ -87,10 +112,29 @@ function RecommendationsContent() {
   }
 
   // Truncate verbose analysis to 2-3 sentences max
-  const truncateAnalysis = (text: string): string => {
+  const truncateAnalysis = (text: string | undefined): string => {
+    if (!text) return 'No analysis available'
     const sentences = text.split('. ')
     if (sentences.length <= 2) return text
     return sentences.slice(0, 2).join('. ') + '.'
+  }
+
+  // Format category name for display
+  const formatCategoryName = (category: string): string => {
+    const categoryMap: Record<string, string> = {
+      'content': 'Content Creation',
+      'copywriting': 'Copywriting',
+      'data': 'Data Analysis',
+      'graphic_design': 'Graphic Design',
+      'paid_media': 'Paid Media',
+      'proofreading': 'Proofreading',
+      'seo': 'SEO',
+      'social_media': 'Social Media',
+      'webdev': 'Web Development'
+    }
+    return categoryMap[category] || category.split('_').map(word =>
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ')
   }
 
   // [R1] Toggle category expansion
@@ -165,7 +209,7 @@ function RecommendationsContent() {
                   {/* Category Header */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">{categoryGroup.category}</h2>
+                      <h2 className="text-2xl font-bold text-gray-900">{formatCategoryName(categoryGroup.category)}</h2>
                       <p className="text-gray-600">
                         {categoryGroup.vendors.length} vendor{categoryGroup.vendors.length !== 1 ? 's' : ''} available
                       </p>
@@ -202,22 +246,20 @@ function RecommendationsContent() {
                       return (
                         <Card key={`${categoryGroup.category}-${index}`} className="overflow-hidden">
                           {/* Ranking Header */}
-                          <div className="h-20 relative" style={{ backgroundColor: isEnhanced ? getScoreColor(rec.viraScore) : '#6E6F71' }}>
+                          <div className="h-20 relative" style={{ backgroundColor: getScoreColor((rec as any).viraScore || (rec as any).match_confidence || 0) }}>
                             <div className="flex items-center justify-between h-full px-6 text-white">
                               <div className="flex items-center gap-4">
                                 {getRankIcon(globalIndex)}
                                 <div>
-                                  <h2 className="text-xl font-bold">{rec.vendorName}</h2>
+                                  <h2 className="text-xl font-bold">{(rec as any).vendor_name || (rec as any).vendorName}</h2>
                                   <p className="text-sm opacity-90">{getRankLabel(globalIndex)}</p>
                                 </div>
                               </div>
 
-                              {isEnhanced && (
-                                <div className="text-right">
-                                  <div className="text-3xl font-bold">{rec.viraScore}</div>
-                                  <div className="text-sm opacity-90">ViRA Score</div>
-                                </div>
-                              )}
+                              <div className="text-right">
+                                <div className="text-3xl font-bold">{(rec as any).viraScore || (rec as any).match_confidence || 0}</div>
+                                <div className="text-sm opacity-90">ViRA Score</div>
+                              </div>
                             </div>
                           </div>
 
@@ -281,7 +323,7 @@ function RecommendationsContent() {
                                 {isEnhanced ? 'ViRA Analysis' : 'Why This Vendor'}
                               </h4>
                               <p className="text-gray-700 text-sm leading-relaxed">
-                                {truncateAnalysis(rec.reason)}
+                                {truncateAnalysis((rec as any).match_reasoning || (rec as any).reason)}
                               </p>
                             </div>
 

@@ -166,10 +166,12 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
 
       const result = await response.json()
 
-      const params = new URLSearchParams()
-      params.set('data', JSON.stringify(result))
-      params.set('semantic', 'true') // Flag for semantic search results
-      router.push(`/recommendations?${params.toString()}`)
+      // Store results in sessionStorage to avoid URL length limits (431 error)
+      sessionStorage.setItem('vira-match-results', JSON.stringify(result))
+      sessionStorage.setItem('vira-match-timestamp', Date.now().toString())
+      
+      // Navigate with just a flag
+      router.push('/recommendations?semantic=true')
 
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -308,21 +310,18 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
             <div className="max-w-2xl mx-auto">
               <div className="relative">
                 <textarea
-                  {...register('projectScope', { required: 'Please describe your project.' })}
+                  {...register('projectScope')}
                   className="w-full h-40 p-4 border border-gray-300 rounded-lg transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                   placeholder="Describe your project in detail... Include goals, requirements, timeline, special considerations, and any specific expertise needed."
                   onChange={(e) => setCharCount(e.target.value.length)}
                 />
                 <div className="absolute bottom-3 right-3 text-xs text-gray-500">
                   {charCount} characters
-                  {charCount < 50 && ' • Add more detail'}
+                  {charCount < 50 && ' • Add more detail for better matches'}
                   {charCount >= 50 && charCount < 100 && ' • Good start!'}
                   {charCount >= 100 && ' • Excellent detail!'}
                 </div>
               </div>
-              {errors.projectScope && (
-                <p className="mt-2 text-sm text-red-600">{errors.projectScope.message}</p>
-              )}
 
               <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <h4 className="font-medium text-gray-900 mb-2">💡 Tips for a great description:</h4>
@@ -343,7 +342,6 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
               <Button
                 type="button"
                 onClick={handleNext}
-                disabled={!watchedScope?.trim()}
                 className="flex items-center gap-2"
               >
                 Continue
