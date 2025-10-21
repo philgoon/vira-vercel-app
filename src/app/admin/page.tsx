@@ -28,7 +28,8 @@ import {
   Trash2,
   UserCog,
   Plus,
-  Settings
+  Settings,
+  Copy
 } from 'lucide-react'
 
 interface TableData {
@@ -328,6 +329,19 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleCopyInviteLink = async (inviteToken: string) => {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+    const inviteUrl = `${appUrl}/vendor/apply/${inviteToken}`
+    
+    try {
+      await navigator.clipboard.writeText(inviteUrl)
+      alert('Invite link copied to clipboard!')
+    } catch (error) {
+      console.error('Failed to copy link:', error)
+      alert('Failed to copy link. URL: ' + inviteUrl)
+    }
+  }
+
   const handleApproveApplication = async (applicationId: string) => {
     if (!confirm('Approve this vendor application? This will create a vendor account and user login.')) {
       return
@@ -570,6 +584,32 @@ export default function AdminDashboard() {
                                     <Clock style={{ width: '0.875rem', height: '0.875rem' }} />
                                     Expires: {new Date(invite.expires_at).toLocaleDateString()}
                                   </span>
+                                  <button
+                                    onClick={() => handleCopyInviteLink(invite.invite_token)}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.25rem',
+                                      padding: '0.25rem 0.5rem',
+                                      backgroundColor: '#E8F4F8',
+                                      border: '1px solid #93c5fd',
+                                      borderRadius: '0.25rem',
+                                      fontSize: '0.75rem',
+                                      fontWeight: '500',
+                                      color: '#1A5276',
+                                      cursor: 'pointer',
+                                      transition: 'all 150ms'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#dbeafe';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#E8F4F8';
+                                    }}
+                                  >
+                                    <Copy style={{ width: '0.75rem', height: '0.75rem' }} />
+                                    Copy Link
+                                  </button>
                                 </div>
                               </div>
                               <div style={{ display: 'flex', gap: '0.5rem' }}>
