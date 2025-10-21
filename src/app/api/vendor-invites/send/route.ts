@@ -1,17 +1,11 @@
 // [C1] API Route: Send Vendor Invite via Mailgun
 import { NextRequest, NextResponse } from 'next/server'
-// [RLS-FIX] Use service role client to bypass RLS, similar to /api/projects pattern
-import { createClient as createServiceClient } from '@supabase/supabase-js'
+// [RLS-FIX] Use shared supabaseAdmin from lib, matching /api/projects pattern
+import { supabaseAdmin } from '@/lib/supabase'
 import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
   try {
-    // Create service role client for bypassing RLS
-    const supabaseAdmin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
     const { email, notes } = await request.json()
 
     if (!email) {

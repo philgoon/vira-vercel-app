@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server'
-// [RLS-FIX] Use service role client to bypass RLS, similar to /api/projects pattern
-import { createClient as createServiceClient } from '@supabase/supabase-js'
+// [RLS-FIX] Use shared supabaseAdmin from lib, matching /api/projects pattern
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    // Create service role client for bypassing RLS
-    const supabaseAdmin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
     // Fetch all invites using admin client to bypass RLS
     const { data: invites, error } = await supabaseAdmin
       .from('vendor_invites')
