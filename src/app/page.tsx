@@ -1,7 +1,9 @@
 // [R2.1] ViRA Dashboard - Main dashboard with navigation and system overview
+// [C1] Sprint 4: Added vendor redirect - vendors see /vendor-portal instead
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import {
@@ -13,6 +15,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DatabaseStats {
   vendors: number;
@@ -49,10 +52,19 @@ interface AnalyticsData {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { profile, isLoading: authLoading } = useAuth();
   const [stats, setStats] = useState<DatabaseStats | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // [C1] Redirect vendors to their portal
+  useEffect(() => {
+    if (!authLoading && profile?.role === 'vendor') {
+      router.push('/vendor-portal');
+    }
+  }, [profile, authLoading, router]);
 
   useEffect(() => {
     async function loadDashboardData() {

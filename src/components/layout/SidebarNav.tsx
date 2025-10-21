@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Users, GitCompareArrows, Building, Star, UserCog, Settings, Store } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Users, GitCompareArrows, Building, Star, Settings } from 'lucide-react';
 import { UserHeader } from './UserHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
+// [C1] Sprint 4: Removed vendor role - vendors now have dedicated VendorSidebarNav
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'team', 'vendor'] },
-  { href: '/vendor-portal', label: 'Vendor Portal', icon: Store, roles: ['vendor'] },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'team'] },
   { href: '/vira-match', label: 'ViRA Match', icon: GitCompareArrows, roles: ['admin', 'team'] },
   { href: '/rate-project', label: 'Reviews', icon: Star, roles: ['admin', 'team'] },
   { href: '/vendors', label: 'Vendors', icon: Users, roles: ['admin', 'team'] },

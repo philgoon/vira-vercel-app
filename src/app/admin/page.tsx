@@ -7,6 +7,7 @@ import { Vendor, Project, VendorInvite, UserProfile, VendorApplication } from '@
 import VendorModal from '@/components/modals/VendorModal'
 import ProjectModal from '@/components/modals/ProjectModal'
 import SendInviteModal from '@/components/modals/SendInviteModal'
+import AddUserModal from '@/components/modals/AddUserModal'
 import CSVImport from '@/components/admin/CSVImport'
 import ReviewAssignment from '@/components/admin/ReviewAssignment'
 import ReviewMonitoringDashboard from '@/components/admin/ReviewMonitoringDashboard'
@@ -49,6 +50,7 @@ export default function AdminDashboard() {
   const [vendorModalOpen, setVendorModalOpen] = useState(false)
   const [projectModalOpen, setProjectModalOpen] = useState(false)
   const [sendInviteModalOpen, setSendInviteModalOpen] = useState(false)
+  const [addUserModalOpen, setAddUserModalOpen] = useState(false)
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [activeTab, setActiveTab] = useState('invites')
@@ -332,7 +334,7 @@ export default function AdminDashboard() {
   const handleCopyInviteLink = async (inviteToken: string) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
     const inviteUrl = `${appUrl}/vendor/apply/${inviteToken}`
-    
+
     try {
       await navigator.clipboard.writeText(inviteUrl)
       alert('Invite link copied to clipboard!')
@@ -377,7 +379,7 @@ export default function AdminDashboard() {
       const response = await fetch('/api/vendor-applications/reject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           application_id: applicationId,
           rejection_reason: reason || 'Application did not meet requirements'
         })
@@ -569,9 +571,9 @@ export default function AdminDashboard() {
                                   <span style={{
                                     padding: '0.125rem 0.5rem',
                                     backgroundColor: invite.status === 'pending' ? '#dbeafe' :
-                                                   invite.status === 'accepted' ? '#d1fae5' : '#f3f4f6',
+                                      invite.status === 'accepted' ? '#d1fae5' : '#f3f4f6',
                                     color: invite.status === 'pending' ? '#1e40af' :
-                                          invite.status === 'accepted' ? '#065f46' : '#6b7280',
+                                      invite.status === 'accepted' ? '#065f46' : '#6b7280',
                                     borderRadius: '0.25rem',
                                     fontSize: '0.75rem',
                                     fontWeight: '600'
@@ -721,9 +723,9 @@ export default function AdminDashboard() {
                                   <span style={{
                                     padding: '0.125rem 0.5rem',
                                     backgroundColor: app.status === 'pending' ? '#fef3c7' :
-                                                   app.status === 'approved' ? '#d1fae5' : '#fee2e2',
+                                      app.status === 'approved' ? '#d1fae5' : '#fee2e2',
                                     color: app.status === 'pending' ? '#92400e' :
-                                          app.status === 'approved' ? '#065f46' : '#991b1b',
+                                      app.status === 'approved' ? '#065f46' : '#991b1b',
                                     borderRadius: '0.25rem',
                                     fontSize: '0.75rem',
                                     fontWeight: '600',
@@ -732,7 +734,7 @@ export default function AdminDashboard() {
                                     {app.status}
                                   </span>
                                 </div>
-                                
+
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
                                   <div style={{ fontSize: '0.875rem' }}>
                                     <span style={{ color: '#6b7280' }}>Contact: </span>
@@ -953,11 +955,11 @@ export default function AdminDashboard() {
                     <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '1.5rem' }}>
                       Review Management
                     </h3>
-                    
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', 
-                      gap: '1.5rem' 
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))',
+                      gap: '1.5rem'
                     }}>
                       {/* Monitoring Dashboard */}
                       <div>
@@ -1179,12 +1181,12 @@ export default function AdminDashboard() {
                                       cursor: 'pointer',
                                       transition: 'all 150ms'
                                     }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#dbeafe';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.backgroundColor = 'white';
-                                    }}>
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#dbeafe';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = 'white';
+                                      }}>
                                       <Edit style={{ width: '1rem', height: '1rem', color: '#1A5276' }} />
                                     </button>
                                     <button style={{
@@ -1195,12 +1197,12 @@ export default function AdminDashboard() {
                                       cursor: 'pointer',
                                       transition: 'all 150ms'
                                     }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#fee2e2';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.backgroundColor = 'white';
-                                    }}>
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#fee2e2';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = 'white';
+                                      }}>
                                       <Trash2 style={{ width: '1rem', height: '1rem', color: '#dc2626' }} />
                                     </button>
                                   </div>
@@ -1267,6 +1269,15 @@ export default function AdminDashboard() {
         onSuccess={() => {
           loadInvites()
           setSendInviteModalOpen(false)
+        }}
+      />
+
+      <AddUserModal
+        isOpen={addUserModalOpen}
+        onClose={() => setAddUserModalOpen(false)}
+        onSuccess={() => {
+          loadUsers()
+          setAddUserModalOpen(false)
         }}
       />
     </ProtectedRoute>

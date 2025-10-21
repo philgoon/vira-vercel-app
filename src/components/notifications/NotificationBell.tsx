@@ -49,6 +49,9 @@ export default function NotificationBell() {
 
   const loadNotifications = async () => {
     if (!profile?.user_id) return
+    
+    // Skip notifications in development mode with skip-auth-user
+    if (profile.user_id === 'skip-auth-user') return
 
     try {
       const response = await fetch(`/api/notifications?user_id=${profile.user_id}`)

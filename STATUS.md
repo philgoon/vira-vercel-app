@@ -1,8 +1,8 @@
 # ViRA QA Feedback - Strategic Implementation Plan
-**Date**: 2025-10-14
-**Status**: SPRINT 3 IN PROGRESS 🔄
-**Current Sprint**: Sprint 3 (Client Profiles & Review UX)
-**Last Updated**: 2025-10-14 12:22 UTC
+**Date**: 2025-10-16
+**Status**: SPRINT 5 IN PROGRESS 🔄
+**Current Sprint**: Sprint 5 (Automated Review Workflow + ViRA Match Refinement)
+**Last Updated**: 2025-10-16 14:45 UTC
 
 ---
 
@@ -90,7 +90,7 @@
 
 - [ ] [C2] Automated Review Workflow (email + in-app notifications) - NEXT SPRINT
 
-### **Sprint 5: Automated Review Workflow** (Week 9-10) - 🔄 IN PROGRESS
+### **Sprint 5: Automated Review Workflow + ViRA Match Refinement** (Week 9-10) - 🔄 IN PROGRESS
 
 - [⚠️] [C2] Automated Review Workflow - 30% COMPLETE
   - [x] Database schema (review_assignments, review_reminders, notifications) ✅
@@ -108,6 +108,17 @@
   - [ ] Admin monitoring dashboard
   - [ ] In-app notification UI component
   - [ ] Mark assignment complete on project rating (trigger exists)
+
+- [✅] **ViRA Match Algorithm Restoration & Bug Fixes** - 100% COMPLETE (2025-10-16)
+  - [x] Restored original comprehensive algorithm from vira-match-enhanced ✅
+  - [x] Fixed 431 error (URL too large) - migrated to sessionStorage ✅
+  - [x] Fixed notifications 500 error in development mode ✅
+  - [x] Fixed sessionStorage timing with useEffect ✅
+  - [x] Updated to use supabaseAdmin for server-side queries ✅
+  - **Business Value**: Superior vendor recommendations with full context analysis
+  - **Performance**: 12 vendors analyzed in ~90 seconds (comprehensive single-pass LLM)
+  - **Algorithm**: Project Fit 40% + Performance 40% + Qualitative 20%
+  - **Data Sources**: vendors table + vendor_performance + projects_with_vendor view
 
 **Sprint 5 Plan**:
 - **Feature**: Automated review reminders and tracking
@@ -151,6 +162,103 @@
   - Current: `gpt-4o-mini`
 - **Documentation**: See `docs/ADR-001-GPT-Model-Strategy.md`
 - **Action Item**: Migrate when GPT-5 models available
+
+---
+
+## 🎯 ViRA MATCH ALGORITHM RESTORATION (2025-10-16)
+
+**Session Duration**: ~2 hours
+**Status**: COMPLETE ✅
+**Business Impact**: Restored superior vendor matching algorithm with comprehensive analysis
+
+### Problem Statement
+The ViRA Match algorithm had been inadvertently replaced with a semantic search implementation that:
+- Only returned top 3 vendors (instead of all qualified vendors ranked)
+- Used embeddings-based filtering (pre-filtered candidates, missing experienced vendors)
+- Lacked comprehensive performance analysis
+- Produced inconsistent ViRA scores
+
+### Solution Implemented
+**Restored Original Algorithm** from `vira-match-enhanced` endpoint:
+1. **Comprehensive 3-Source Data Enrichment**:
+   - `vendors` table (profile, skills, pricing)
+   - `vendor_performance` table (ratings, recommendation_pct, quality, communication)
+   - `projects_with_vendor` view (project history with feedback)
+
+2. **Single-Pass LLM Analysis**:
+   - Sends ALL vendor data to GPT-5-mini in one comprehensive prompt
+   - Analyzes entire context: profile + performance + history
+   - Returns ALL vendors ranked by ViRA Score (not just top 3)
+
+3. **Scoring Formula**: Project Fit 40% + Performance 40% + Qualitative 20%
+   - Experienced vendors with proven track records rank highest
+   - Unproven vendors (0 projects) rank appropriately lower
+   - Performance metrics prominently featured in analysis
+
+### Technical Fixes
+
+**1. Fixed 431 Error (Request Header Fields Too Large)**
+- **Problem**: Passing full recommendation data through URL exceeded header size limits
+- **Solution**: Migrated from URL parameters to sessionStorage
+  - Wizard stores results: `sessionStorage.setItem('vira-match-results', JSON.stringify(result))`
+  - Recommendations page reads: `sessionStorage.getItem('vira-match-results')`
+  - Clean URL: `/recommendations?semantic=true` (no massive JSON blob)
+
+**2. Fixed Notifications 500 Error**
+- **Problem**: `skip-auth-user` (dev mode) is not a valid UUID for notifications query
+- **Solution**: Added check in `NotificationBell.tsx`:
+  ```typescript
+  if (profile.user_id === 'skip-auth-user') return
+  ```
+- **Result**: Clean console in development mode
+
+**3. Fixed SessionStorage Timing Issue**
+- **Problem**: Reading sessionStorage during render caused hydration mismatch
+- **Solution**: Use `useEffect` to read sessionStorage after component mount
+  ```typescript
+  useEffect(() => {
+    const storedData = sessionStorage.getItem('vira-match-results')
+    if (storedData) setRecommendations(JSON.parse(storedData).matches)
+  }, [searchParams])
+  ```
+
+**4. Updated Server-Side Supabase Client**
+- **Problem**: Using client-side `supabase` in API routes
+- **Solution**: Changed all API calls to `supabaseAdmin` for proper server-side authentication
+
+### Files Modified
+- `src/app/api/vira-match-semantic/route.ts` (restored original algorithm)
+- `src/components/vira-match/ViRAMatchWizard.tsx` (sessionStorage implementation)
+- `src/app/recommendations/page.tsx` (useEffect sessionStorage read)
+- `src/components/notifications/NotificationBell.tsx` (skip dev mode check)
+
+### Results
+**ViRA Scores Now Working Correctly**:
+- Matthew Honold: **96** (10/10 rating, 4 projects, $225/piece)
+- Web Content Development: **92** (9.4/10, 13 projects, $0.20/word)
+- Alex Silady: **90** (9.7/10, 2 projects, $150-200)
+- Carolyn Wynnack: **88** (9.1/10, 8 projects, $250)
+- Brad Riddell: **86** (9.3/10, 2 projects, $250-500)
+- Get A Copywriter: **78** (0 projects - appropriately lower)
+- Jordan Mohney: **72** (0 projects)
+- Coral Dawn Drake: **50** (0 projects)
+
+**Performance**:
+- Response Time: ~90 seconds (comprehensive analysis of 12 vendors)
+- Data Quality: Full context from 3 database sources
+- User Experience: All vendors ranked, not just top 3
+
+### Business Value
+1. **Superior Recommendations**: Experienced vendors with proven track records surface first
+2. **Transparent Scoring**: Clear reasoning for each vendor's ViRA Score
+3. **Complete Visibility**: All qualified vendors shown (not pre-filtered)
+4. **Performance History**: Client names, project counts, ratings prominently displayed
+5. **Risk Assessment**: Unproven vendors clearly identified with lower scores
+
+### Next Steps
+- Monitor production performance with real user searches
+- Consider caching strategies if response time becomes issue
+- Potential future enhancement: Hybrid approach (semantic pre-filter + comprehensive analysis)
 
 **Sprint 4 Achievements:**
 - Duration: 1 session (2025-10-15)

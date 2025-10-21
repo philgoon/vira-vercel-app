@@ -4,7 +4,18 @@
       "Bash(npm run dev:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(echo $MCP_SERVERS)",
+      "Bash(git checkout:*)",
+      "Bash(cat:*)",
+      "Bash(tasklist)",
+      "Bash(git reset:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(supabase --version)",
+      "Bash(npm install -g supabase)"
     ],
     "deny": [],
     "ask": []
