@@ -55,9 +55,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate required fields
-    if (!applicationData.vendor_name) {
+    if (!applicationData.vendor_name || !applicationData.vendor_name.trim()) {
       return NextResponse.json({
         error: 'Company name is required'
+      }, { status: 400 })
+    }
+
+    if (!applicationData.primary_contact || !applicationData.primary_contact.trim()) {
+      return NextResponse.json({
+        error: 'Contact name is required'
       }, { status: 400 })
     }
 
