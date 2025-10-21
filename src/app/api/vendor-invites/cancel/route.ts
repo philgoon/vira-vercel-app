@@ -1,41 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    // Create service role client for bypassing RLS
-    const supabaseAdmin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-    
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    // Development bypass: Allow if no auth system is set up yet
-    const isDevelopment = process.env.NODE_ENV === 'development'
-    const skipAuth = isDevelopment && process.env.SKIP_AUTH === 'true'
-    
-    if (!skipAuth) {
-      if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-
-      // Check if user is admin
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single()
-
-      if (!profile || profile.role !== 'admin') {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-      }
-    }
-
     const { invite_id } = await request.json()
 
     if (!invite_id) {
@@ -72,7 +39,7 @@ export async function POST(request: NextRequest) {
       throw updateError
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Invite cancelled successfully'
     })
