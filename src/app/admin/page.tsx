@@ -1000,6 +1000,7 @@ export default function AdminDashboard() {
                         User Management
                       </h3>
                       <button
+                        onClick={() => setAddUserModalOpen(true)}
                         className="btn-primary"
                         style={{ fontSize: '0.875rem' }}
                       >
