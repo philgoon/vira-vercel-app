@@ -23,7 +23,6 @@ import {
   CheckCircle,
   XCircle,
   Send,
-  Edit,
   Trash2,
   UserCog,
   Plus,
@@ -154,10 +153,63 @@ export default function AdminDashboard() {
 
       // Refresh users list
       await loadUsers()
-      alert('User role updated successfully!')
+
+      // Show success notification
+      const notification = document.createElement('div')
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #10b981;
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        font-size: 0.875rem;
+        font-weight: 500;
+        z-index: 9999;
+        animation: slideIn 0.3s ease-out;
+      `
+      notification.textContent = `✓ Role updated to ${roleNames[newRole as keyof typeof roleNames]}`
+      document.body.appendChild(notification)
+
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-in'
+        setTimeout(() => notification.remove(), 300)
+      }, 3000)
     } catch (err: any) {
       console.error('Error updating user role:', err)
       alert(err.message || 'Failed to update user role')
+    }
+  }
+
+  // [R-ADMIN] Resend welcome email with new temporary password
+  const handleResendWelcomeEmail = async (userId: string, userEmail: string) => {
+    if (!confirm(`Resend welcome email to ${userEmail}?\n\nThis will generate a new temporary password and require the user to change it on next login.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resend email')
+      }
+
+      if (data.emailSent) {
+        alert('Welcome email sent successfully! User will receive new login credentials.')
+      } else {
+        alert('Password was reset, but email failed to send. Please contact the user directly.')
+      }
+    } catch (err: any) {
+      console.error('Error resending welcome email:', err)
+      alert(err.message || 'Failed to resend welcome email')
     }
   }
 
@@ -543,329 +595,395 @@ export default function AdminDashboard() {
               <div style={{ padding: '1.5rem' }}>
                 {/* Invites Tab */}
                 {activeTab === 'invites' && (
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                      <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>
-                        Vendor Invitations
-                      </h3>
-                      <button
-                        onClick={() => setSendInviteModalOpen(true)}
-                        className="btn-primary"
-                        style={{ fontSize: '0.875rem' }}
-                      >
-                        <Mail style={{ width: '1rem', height: '1rem' }} />
-                        Send Invite
-                      </button>
-                    </div>
-
-                    {loadingInvites ? (
-                      <div style={{ textAlign: 'center', padding: '3rem' }}>
-                        <div style={{
-                          width: '2rem',
-                          height: '2rem',
-                          border: '2px solid #1A5276',
-                          borderTopColor: 'transparent',
-                          borderRadius: '50%',
-                          margin: '0 auto 1rem',
-                          animation: 'spin 1s linear infinite'
-                        }}></div>
-                        <p style={{ color: '#6b7280' }}>Loading invites...</p>
-                      </div>
-                    ) : invites.length === 0 ? (
+                  <div style={{ position: 'relative' }}>
+                    {/* Coming Soon Overlay */}
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(249, 250, 251, 0.95)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 10,
+                      borderRadius: '0.5rem',
+                      backdropFilter: 'blur(4px)'
+                    }}>
                       <div style={{
-                        padding: '3rem',
                         textAlign: 'center',
-                        backgroundColor: '#f9fafb',
-                        borderRadius: '0.5rem',
-                        border: '1px solid #e5e7eb'
+                        padding: '2rem'
                       }}>
-                        <Mail style={{ width: '3rem', height: '3rem', color: '#9ca3af', margin: '0 auto 1rem' }} />
-                        <p style={{ color: '#6b7280', marginBottom: '1rem' }}>No pending invites</p>
-                        <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
-                          Click "Send Invite" to invite vendors to the platform
+                        <Mail style={{ width: '4rem', height: '4rem', color: '#93c5fd', margin: '0 auto 1.5rem' }} />
+                        <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1A5276', marginBottom: '0.75rem' }}>
+                          Coming Soon
+                        </h3>
+                        <p style={{ fontSize: '1rem', color: '#6b7280', maxWidth: '400px' }}>
+                          Vendor invite management will be available in the next release
                         </p>
                       </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        {invites.map((invite) => (
-                          <div
-                            key={invite.invite_id}
-                            style={{
-                              padding: '1rem',
-                              backgroundColor: '#f9fafb',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '0.5rem'
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                  <Mail style={{ width: '1rem', height: '1rem', color: '#1A5276' }} />
-                                  <span style={{ fontWeight: '500', color: '#111827' }}>{invite.email}</span>
-                                  <span style={{
-                                    padding: '0.125rem 0.5rem',
-                                    backgroundColor: invite.status === 'pending' ? '#dbeafe' :
-                                      invite.status === 'accepted' ? '#d1fae5' : '#f3f4f6',
-                                    color: invite.status === 'pending' ? '#1e40af' :
-                                      invite.status === 'accepted' ? '#065f46' : '#6b7280',
-                                    borderRadius: '0.25rem',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '600'
-                                  }}>
-                                    {invite.status}
-                                  </span>
+                    </div>
+
+                    <div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>
+                          Vendor Invitations
+                        </h3>
+                        <button
+                          onClick={() => setSendInviteModalOpen(true)}
+                          className="btn-primary"
+                          style={{ fontSize: '0.875rem' }}
+                        >
+                          <Mail style={{ width: '1rem', height: '1rem' }} />
+                          Send Invite
+                        </button>
+                      </div>
+
+                      {loadingInvites ? (
+                        <div style={{ textAlign: 'center', padding: '3rem' }}>
+                          <div style={{
+                            width: '2rem',
+                            height: '2rem',
+                            border: '2px solid #1A5276',
+                            borderTopColor: 'transparent',
+                            borderRadius: '50%',
+                            margin: '0 auto 1rem',
+                            animation: 'spin 1s linear infinite'
+                          }}></div>
+                          <p style={{ color: '#6b7280' }}>Loading invites...</p>
+                        </div>
+                      ) : invites.length === 0 ? (
+                        <div style={{
+                          padding: '3rem',
+                          textAlign: 'center',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #e5e7eb'
+                        }}>
+                          <Mail style={{ width: '3rem', height: '3rem', color: '#9ca3af', margin: '0 auto 1rem' }} />
+                          <p style={{ color: '#6b7280', marginBottom: '1rem' }}>No pending invites</p>
+                          <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
+                            Click "Send Invite" to invite vendors to the platform
+                          </p>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {invites.map((invite) => (
+                            <div
+                              key={invite.invite_id}
+                              style={{
+                                padding: '1rem',
+                                backgroundColor: '#f9fafb',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '0.5rem'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                    <Mail style={{ width: '1rem', height: '1rem', color: '#1A5276' }} />
+                                    <span style={{ fontWeight: '500', color: '#111827' }}>{invite.email}</span>
+                                    <span style={{
+                                      padding: '0.125rem 0.5rem',
+                                      backgroundColor: invite.status === 'pending' ? '#dbeafe' :
+                                        invite.status === 'accepted' ? '#d1fae5' : '#f3f4f6',
+                                      color: invite.status === 'pending' ? '#1e40af' :
+                                        invite.status === 'accepted' ? '#065f46' : '#6b7280',
+                                      borderRadius: '0.25rem',
+                                      fontSize: '0.75rem',
+                                      fontWeight: '600'
+                                    }}>
+                                      {invite.status}
+                                    </span>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                      <Clock style={{ width: '0.875rem', height: '0.875rem' }} />
+                                      Expires: {new Date(invite.expires_at).toLocaleDateString()}
+                                    </span>
+                                    <button
+                                      onClick={() => handleCopyInviteLink(invite.invite_token)}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.25rem',
+                                        padding: '0.25rem 0.5rem',
+                                        backgroundColor: '#E8F4F8',
+                                        border: '1px solid #93c5fd',
+                                        borderRadius: '0.25rem',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '500',
+                                        color: '#1A5276',
+                                        cursor: 'pointer',
+                                        transition: 'all 150ms'
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#dbeafe';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#E8F4F8';
+                                      }}
+                                    >
+                                      <Copy style={{ width: '0.75rem', height: '0.75rem' }} />
+                                      Copy Link
+                                    </button>
+                                  </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                    <Clock style={{ width: '0.875rem', height: '0.875rem' }} />
-                                    Expires: {new Date(invite.expires_at).toLocaleDateString()}
-                                  </span>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
                                   <button
-                                    onClick={() => handleCopyInviteLink(invite.invite_token)}
+                                    onClick={() => handleResendInvite(invite.invite_id)}
+                                    disabled={invite.status !== 'pending' && invite.status !== 'expired'}
                                     style={{
                                       display: 'flex',
                                       alignItems: 'center',
                                       gap: '0.25rem',
-                                      padding: '0.25rem 0.5rem',
-                                      backgroundColor: '#E8F4F8',
-                                      border: '1px solid #93c5fd',
-                                      borderRadius: '0.25rem',
-                                      fontSize: '0.75rem',
+                                      padding: '0.5rem 0.75rem',
+                                      backgroundColor: 'white',
+                                      border: '1px solid #e5e7eb',
+                                      borderRadius: '0.375rem',
+                                      fontSize: '0.875rem',
                                       fontWeight: '500',
-                                      color: '#1A5276',
-                                      cursor: 'pointer',
-                                      transition: 'all 150ms'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#dbeafe';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#E8F4F8';
+                                      color: invite.status === 'pending' || invite.status === 'expired' ? '#1A5276' : '#9ca3af',
+                                      cursor: invite.status === 'pending' || invite.status === 'expired' ? 'pointer' : 'not-allowed',
+                                      opacity: invite.status === 'pending' || invite.status === 'expired' ? '1' : '0.5'
                                     }}
                                   >
-                                    <Copy style={{ width: '0.75rem', height: '0.75rem' }} />
-                                    Copy Link
+                                    <Send style={{ width: '0.875rem', height: '0.875rem' }} />
+                                    Resend
+                                  </button>
+                                  <button
+                                    onClick={() => handleCancelInvite(invite.invite_id)}
+                                    disabled={invite.status === 'accepted' || invite.status === 'cancelled'}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.25rem',
+                                      padding: '0.5rem 0.75rem',
+                                      backgroundColor: 'white',
+                                      border: '1px solid #e5e7eb',
+                                      borderRadius: '0.375rem',
+                                      fontSize: '0.875rem',
+                                      fontWeight: '500',
+                                      color: invite.status !== 'accepted' && invite.status !== 'cancelled' ? '#dc2626' : '#9ca3af',
+                                      cursor: invite.status !== 'accepted' && invite.status !== 'cancelled' ? 'pointer' : 'not-allowed',
+                                      opacity: invite.status !== 'accepted' && invite.status !== 'cancelled' ? '1' : '0.5'
+                                    }}
+                                  >
+                                    <XCircle style={{ width: '0.875rem', height: '0.875rem' }} />
+                                    Cancel
                                   </button>
                                 </div>
                               </div>
-                              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button
-                                  onClick={() => handleResendInvite(invite.invite_id)}
-                                  disabled={invite.status !== 'pending' && invite.status !== 'expired'}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                    padding: '0.5rem 0.75rem',
-                                    backgroundColor: 'white',
-                                    border: '1px solid #e5e7eb',
-                                    borderRadius: '0.375rem',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '500',
-                                    color: invite.status === 'pending' || invite.status === 'expired' ? '#1A5276' : '#9ca3af',
-                                    cursor: invite.status === 'pending' || invite.status === 'expired' ? 'pointer' : 'not-allowed',
-                                    opacity: invite.status === 'pending' || invite.status === 'expired' ? '1' : '0.5'
-                                  }}
-                                >
-                                  <Send style={{ width: '0.875rem', height: '0.875rem' }} />
-                                  Resend
-                                </button>
-                                <button
-                                  onClick={() => handleCancelInvite(invite.invite_id)}
-                                  disabled={invite.status === 'accepted' || invite.status === 'cancelled'}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                    padding: '0.5rem 0.75rem',
-                                    backgroundColor: 'white',
-                                    border: '1px solid #e5e7eb',
-                                    borderRadius: '0.375rem',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '500',
-                                    color: invite.status !== 'accepted' && invite.status !== 'cancelled' ? '#dc2626' : '#9ca3af',
-                                    cursor: invite.status !== 'accepted' && invite.status !== 'cancelled' ? 'pointer' : 'not-allowed',
-                                    opacity: invite.status !== 'accepted' && invite.status !== 'cancelled' ? '1' : '0.5'
-                                  }}
-                                >
-                                  <XCircle style={{ width: '0.875rem', height: '0.875rem' }} />
-                                  Cancel
-                                </button>
-                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {/* Applications Tab */}
                 {activeTab === 'applications' && (
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                      <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>
-                        Vendor Applications
-                      </h3>
-                    </div>
-
-                    {loadingApplications ? (
-                      <div style={{ textAlign: 'center', padding: '3rem' }}>
-                        <div style={{
-                          width: '2rem',
-                          height: '2rem',
-                          border: '2px solid #1A5276',
-                          borderTopColor: 'transparent',
-                          borderRadius: '50%',
-                          margin: '0 auto 1rem',
-                          animation: 'spin 1s linear infinite'
-                        }}></div>
-                        <p style={{ color: '#6b7280' }}>Loading applications...</p>
-                      </div>
-                    ) : applications.length === 0 ? (
+                  <div style={{ position: 'relative' }}>
+                    {/* Coming Soon Overlay */}
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(249, 250, 251, 0.95)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 10,
+                      borderRadius: '0.5rem',
+                      backdropFilter: 'blur(4px)'
+                    }}>
                       <div style={{
-                        padding: '3rem',
                         textAlign: 'center',
-                        backgroundColor: '#f9fafb',
-                        borderRadius: '0.5rem',
-                        border: '1px solid #e5e7eb'
+                        padding: '2rem'
                       }}>
-                        <UserPlus style={{ width: '3rem', height: '3rem', color: '#9ca3af', margin: '0 auto 1rem' }} />
-                        <p style={{ color: '#6b7280', marginBottom: '1rem' }}>No vendor applications</p>
-                        <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
-                          Applications will appear here when vendors respond to invitations
+                        <UserPlus style={{ width: '4rem', height: '4rem', color: '#93c5fd', margin: '0 auto 1.5rem' }} />
+                        <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1A5276', marginBottom: '0.75rem' }}>
+                          Coming Soon
+                        </h3>
+                        <p style={{ fontSize: '1rem', color: '#6b7280', maxWidth: '400px' }}>
+                          Vendor application review will be available in the next release
                         </p>
                       </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        {applications.map((app) => (
-                          <div
-                            key={app.application_id}
-                            style={{
-                              padding: '1.5rem',
-                              backgroundColor: '#f9fafb',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '0.5rem'
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                                  <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>
-                                    {app.vendor_name}
-                                  </h4>
-                                  <span style={{
-                                    padding: '0.125rem 0.5rem',
-                                    backgroundColor: app.status === 'pending' ? '#fef3c7' :
-                                      app.status === 'approved' ? '#d1fae5' : '#fee2e2',
-                                    color: app.status === 'pending' ? '#92400e' :
-                                      app.status === 'approved' ? '#065f46' : '#991b1b',
-                                    borderRadius: '0.25rem',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '600',
-                                    textTransform: 'uppercase'
-                                  }}>
-                                    {app.status}
-                                  </span>
+                    </div>
+
+                    <div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>
+                          Vendor Applications
+                        </h3>
+                      </div>
+
+                      {loadingApplications ? (
+                        <div style={{ textAlign: 'center', padding: '3rem' }}>
+                          <div style={{
+                            width: '2rem',
+                            height: '2rem',
+                            border: '2px solid #1A5276',
+                            borderTopColor: 'transparent',
+                            borderRadius: '50%',
+                            margin: '0 auto 1rem',
+                            animation: 'spin 1s linear infinite'
+                          }}></div>
+                          <p style={{ color: '#6b7280' }}>Loading applications...</p>
+                        </div>
+                      ) : applications.length === 0 ? (
+                        <div style={{
+                          padding: '3rem',
+                          textAlign: 'center',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #e5e7eb'
+                        }}>
+                          <UserPlus style={{ width: '3rem', height: '3rem', color: '#9ca3af', margin: '0 auto 1rem' }} />
+                          <p style={{ color: '#6b7280', marginBottom: '1rem' }}>No vendor applications</p>
+                          <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
+                            Applications will appear here when vendors respond to invitations
+                          </p>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {applications.map((app) => (
+                            <div
+                              key={app.application_id}
+                              style={{
+                                padding: '1.5rem',
+                                backgroundColor: '#f9fafb',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '0.5rem'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                    <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>
+                                      {app.vendor_name}
+                                    </h4>
+                                    <span style={{
+                                      padding: '0.125rem 0.5rem',
+                                      backgroundColor: app.status === 'pending' ? '#fef3c7' :
+                                        app.status === 'approved' ? '#d1fae5' : '#fee2e2',
+                                      color: app.status === 'pending' ? '#92400e' :
+                                        app.status === 'approved' ? '#065f46' : '#991b1b',
+                                      borderRadius: '0.25rem',
+                                      fontSize: '0.75rem',
+                                      fontWeight: '600',
+                                      textTransform: 'uppercase'
+                                    }}>
+                                      {app.status}
+                                    </span>
+                                  </div>
+
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                    <div style={{ fontSize: '0.875rem' }}>
+                                      <span style={{ color: '#6b7280' }}>Contact: </span>
+                                      <span style={{ color: '#111827', fontWeight: '500' }}>{app.primary_contact || 'N/A'}</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.875rem' }}>
+                                      <span style={{ color: '#6b7280' }}>Email: </span>
+                                      <span style={{ color: '#111827', fontWeight: '500' }}>{app.email}</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.875rem' }}>
+                                      <span style={{ color: '#6b7280' }}>Service: </span>
+                                      <span style={{ color: '#111827', fontWeight: '500' }}>{app.service_category || 'N/A'}</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.875rem' }}>
+                                      <span style={{ color: '#6b7280' }}>Phone: </span>
+                                      <span style={{ color: '#111827', fontWeight: '500' }}>{app.phone || 'N/A'}</span>
+                                    </div>
+                                  </div>
+
+                                  {app.website && (
+                                    <div style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                                      <span style={{ color: '#6b7280' }}>Website: </span>
+                                      <a href={app.website} target="_blank" rel="noopener noreferrer" style={{ color: '#1A5276', textDecoration: 'underline' }}>
+                                        {app.website}
+                                      </a>
+                                    </div>
+                                  )}
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280', marginTop: '0.75rem' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                      <Clock style={{ width: '0.875rem', height: '0.875rem' }} />
+                                      Submitted: {new Date(app.submitted_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                  <div style={{ fontSize: '0.875rem' }}>
-                                    <span style={{ color: '#6b7280' }}>Contact: </span>
-                                    <span style={{ color: '#111827', fontWeight: '500' }}>{app.primary_contact || 'N/A'}</span>
-                                  </div>
-                                  <div style={{ fontSize: '0.875rem' }}>
-                                    <span style={{ color: '#6b7280' }}>Email: </span>
-                                    <span style={{ color: '#111827', fontWeight: '500' }}>{app.email}</span>
-                                  </div>
-                                  <div style={{ fontSize: '0.875rem' }}>
-                                    <span style={{ color: '#6b7280' }}>Service: </span>
-                                    <span style={{ color: '#111827', fontWeight: '500' }}>{app.service_category || 'N/A'}</span>
-                                  </div>
-                                  <div style={{ fontSize: '0.875rem' }}>
-                                    <span style={{ color: '#6b7280' }}>Phone: </span>
-                                    <span style={{ color: '#111827', fontWeight: '500' }}>{app.phone || 'N/A'}</span>
-                                  </div>
-                                </div>
-
-                                {app.website && (
-                                  <div style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                                    <span style={{ color: '#6b7280' }}>Website: </span>
-                                    <a href={app.website} target="_blank" rel="noopener noreferrer" style={{ color: '#1A5276', textDecoration: 'underline' }}>
-                                      {app.website}
-                                    </a>
+                                {app.status === 'pending' && (
+                                  <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1rem' }}>
+                                    <button
+                                      onClick={() => handleApproveApplication(app.application_id)}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.25rem',
+                                        padding: '0.625rem 1rem',
+                                        backgroundColor: '#10b981',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '0.375rem',
+                                        fontSize: '0.875rem',
+                                        fontWeight: '500',
+                                        cursor: 'pointer',
+                                        transition: 'background-color 150ms'
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#059669';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#10b981';
+                                      }}
+                                    >
+                                      <CheckCircle style={{ width: '1rem', height: '1rem' }} />
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={() => handleRejectApplication(app.application_id)}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.25rem',
+                                        padding: '0.625rem 1rem',
+                                        backgroundColor: 'white',
+                                        color: '#dc2626',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '0.375rem',
+                                        fontSize: '0.875rem',
+                                        fontWeight: '500',
+                                        cursor: 'pointer',
+                                        transition: 'all 150ms'
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#fee2e2';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = 'white';
+                                      }}
+                                    >
+                                      <XCircle style={{ width: '1rem', height: '1rem' }} />
+                                      Reject
+                                    </button>
                                   </div>
                                 )}
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280', marginTop: '0.75rem' }}>
-                                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                    <Clock style={{ width: '0.875rem', height: '0.875rem' }} />
-                                    Submitted: {new Date(app.submitted_at).toLocaleDateString()}
-                                  </span>
-                                </div>
                               </div>
-
-                              {app.status === 'pending' && (
-                                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1rem' }}>
-                                  <button
-                                    onClick={() => handleApproveApplication(app.application_id)}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '0.25rem',
-                                      padding: '0.625rem 1rem',
-                                      backgroundColor: '#10b981',
-                                      color: 'white',
-                                      border: 'none',
-                                      borderRadius: '0.375rem',
-                                      fontSize: '0.875rem',
-                                      fontWeight: '500',
-                                      cursor: 'pointer',
-                                      transition: 'background-color 150ms'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#059669';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#10b981';
-                                    }}
-                                  >
-                                    <CheckCircle style={{ width: '1rem', height: '1rem' }} />
-                                    Approve
-                                  </button>
-                                  <button
-                                    onClick={() => handleRejectApplication(app.application_id)}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '0.25rem',
-                                      padding: '0.625rem 1rem',
-                                      backgroundColor: 'white',
-                                      color: '#dc2626',
-                                      border: '1px solid #e5e7eb',
-                                      borderRadius: '0.375rem',
-                                      fontSize: '0.875rem',
-                                      fontWeight: '500',
-                                      cursor: 'pointer',
-                                      transition: 'all 150ms'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#fee2e2';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.backgroundColor = 'white';
-                                    }}
-                                  >
-                                    <XCircle style={{ width: '1rem', height: '1rem' }} />
-                                    Reject
-                                  </button>
-                                </div>
-                              )}
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1172,7 +1290,7 @@ export default function AdminDashboard() {
                                       backgroundColor: 'white',
                                       cursor: 'pointer',
                                       color: user.role === 'admin' ? '#7c3aed' :
-                                             user.role === 'team' ? '#0891b2' : '#10b981'
+                                        user.role === 'team' ? '#0891b2' : '#10b981'
                                     }}
                                   >
                                     <option value="admin">Admin</option>
@@ -1219,21 +1337,25 @@ export default function AdminDashboard() {
                                 </td>
                                 <td style={{ padding: '1rem' }}>
                                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                    <button style={{
-                                      padding: '0.5rem',
-                                      backgroundColor: 'white',
-                                      border: '1px solid #e5e7eb',
-                                      borderRadius: '0.375rem',
-                                      cursor: 'pointer',
-                                      transition: 'all 150ms'
-                                    }}
+                                    <button
+                                      onClick={() => handleResendWelcomeEmail(user.user_id, user.email)}
+                                      style={{
+                                        padding: '0.5rem',
+                                        backgroundColor: 'white',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '0.375rem',
+                                        cursor: 'pointer',
+                                        transition: 'all 150ms'
+                                      }}
                                       onMouseEnter={(e) => {
                                         e.currentTarget.style.backgroundColor = '#dbeafe';
                                       }}
                                       onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = 'white';
-                                      }}>
-                                      <Edit style={{ width: '1rem', height: '1rem', color: '#1A5276' }} />
+                                      }}
+                                      title="Resend Welcome Email"
+                                    >
+                                      <Mail style={{ width: '1rem', height: '1rem', color: '#1A5276' }} />
                                     </button>
                                     <button style={{
                                       padding: '0.5rem',
@@ -1248,7 +1370,8 @@ export default function AdminDashboard() {
                                       }}
                                       onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = 'white';
-                                      }}>
+                                      }}
+                                      title="Delete User">
                                       <Trash2 style={{ width: '1rem', height: '1rem', color: '#dc2626' }} />
                                     </button>
                                   </div>
@@ -1290,42 +1413,62 @@ export default function AdminDashboard() {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }
+          @keyframes slideIn {
+            from {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+          @keyframes slideOut {
+            from {
+              transform: translateX(0);
+              opacity: 1;
+            }
+            to {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+          }
         `}</style>
+
+        {/* Modals */}
+        <VendorModal
+          vendor={selectedVendor}
+          isOpen={vendorModalOpen}
+          onClose={() => setVendorModalOpen(false)}
+          onSave={handleVendorModalSave}
+        />
+
+        <ProjectModal
+          project={selectedProject}
+          isOpen={projectModalOpen}
+          onClose={() => setProjectModalOpen(false)}
+          onSave={handleProjectModalSave}
+          onDelete={handleProjectDelete}
+        />
+
+        <SendInviteModal
+          isOpen={sendInviteModalOpen}
+          onClose={() => setSendInviteModalOpen(false)}
+          onSuccess={() => {
+            loadInvites()
+            setSendInviteModalOpen(false)
+          }}
+        />
+
+        <AddUserModal
+          isOpen={addUserModalOpen}
+          onClose={() => setAddUserModalOpen(false)}
+          onSuccess={() => {
+            loadUsers()
+            setAddUserModalOpen(false)
+          }}
+        />
       </div>
-
-      {/* Modals */}
-      <VendorModal
-        vendor={selectedVendor}
-        isOpen={vendorModalOpen}
-        onClose={() => setVendorModalOpen(false)}
-        onSave={handleVendorModalSave}
-      />
-
-      <ProjectModal
-        project={selectedProject}
-        isOpen={projectModalOpen}
-        onClose={() => setProjectModalOpen(false)}
-        onSave={handleProjectModalSave}
-        onDelete={handleProjectDelete}
-      />
-
-      <SendInviteModal
-        isOpen={sendInviteModalOpen}
-        onClose={() => setSendInviteModalOpen(false)}
-        onSuccess={() => {
-          loadInvites()
-          setSendInviteModalOpen(false)
-        }}
-      />
-
-      <AddUserModal
-        isOpen={addUserModalOpen}
-        onClose={() => setAddUserModalOpen(false)}
-        onSuccess={() => {
-          loadUsers()
-          setAddUserModalOpen(false)
-        }}
-      />
     </ProtectedRoute>
   )
 }

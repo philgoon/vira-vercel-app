@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Project, UserProfile } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { UserPlus, X, CheckCircle, Clock } from 'lucide-react'
+import { UserPlus, X, CheckCircle } from 'lucide-react'
 
 interface ReviewAssignment {
   assignment_id: string
@@ -45,7 +45,6 @@ export default function ReviewAssignment() {
       })
 
       // Load reviewers (admin + team roles)
-      const { data: { user } } = await (await import('@/lib/supabase')).supabase.auth.getUser()
       const reviewersRes = await fetch('/api/admin/table-data?table=user_profiles')
       const reviewersData = await reviewersRes.json()
       const allReviewers = (reviewersData.data || []).filter(
@@ -55,13 +54,19 @@ export default function ReviewAssignment() {
       setProjects(allProjects)
       setReviewers(allReviewers)
 
-      // Load assignments for all projects
+      // Load assignments for all projects IN PARALLEL (was sequential)
       const assignmentsMap: Record<string, ReviewAssignment[]> = {}
-      for (const project of allProjects) {
+      const assignmentPromises = allProjects.map(async (project: Project) => {
         const assignRes = await fetch(`/api/admin/assign-reviewer?project_id=${project.project_id}`)
         const assignData = await assignRes.json()
-        assignmentsMap[project.project_id] = assignData.assignments || []
-      }
+        return { projectId: project.project_id, assignments: assignData.assignments || [] }
+      })
+
+      const assignmentResults = await Promise.all(assignmentPromises)
+      assignmentResults.forEach(({ projectId, assignments }) => {
+        assignmentsMap[projectId] = assignments
+      })
+
       setAssignments(assignmentsMap)
     } catch (error) {
       console.error('Failed to load data:', error)
@@ -75,7 +80,7 @@ export default function ReviewAssignment() {
 
     try {
       const { data: { user } } = await (await import('@/lib/supabase')).supabase.auth.getUser()
-      
+
       const response = await fetch('/api/admin/assign-reviewer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -147,38 +152,37 @@ export default function ReviewAssignment() {
 
           return (
             <Card key={project.project_id} className={!hasReviewer ? 'border' : ''} style={!hasReviewer ? { borderColor: '#F59E0B', backgroundColor: '#fffbeb' } : {}}>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-lg">{project.project_title}</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <CardTitle className="text-base">{project.project_title}</CardTitle>
+                    <p className="text-xs text-gray-600 mt-0.5">
                       {project.client_name} • {project.vendor_name}
                     </p>
                   </div>
                   {!hasReviewer && (
-                    <span className="text-xs font-semibold px-2 py-1 rounded" style={{ color: '#92400e', backgroundColor: '#fef3c7' }}>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ color: '#92400e', backgroundColor: '#fef3c7' }}>
                       No Reviewer
                     </span>
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2 pt-0">
                 {/* Current Assignments */}
                 {projectAssignments.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold text-gray-700">Assigned Reviewers:</h4>
+                  <div className="space-y-1.5">
+                    <h4 className="text-xs font-semibold text-gray-700">Assigned Reviewers:</h4>
                     {projectAssignments.map((assignment) => (
-                      <div key={assignment.assignment_id} className="flex items-center justify-between border rounded p-2" style={{ backgroundColor: '#f0fdf4', borderColor: '#86efac' }}>
+                      <div key={assignment.assignment_id} className="flex items-center justify-between border rounded p-1.5" style={{ backgroundColor: '#f0fdf4', borderColor: '#86efac' }}>
                         <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4" style={{ color: '#6B8F71' }} />
-                          <span className="text-sm font-medium">
+                          <CheckCircle className="w-3.5 h-3.5" style={{ color: '#6B8F71' }} />
+                          <span className="text-xs font-medium">
                             {assignment.user_profiles.full_name || assignment.user_profiles.email}
                           </span>
-                          <span className={`text-xs px-2 py-0.5 rounded ${
-                            assignment.status === 'completed' ? 'bg-green-200 text-green-800' :
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${assignment.status === 'completed' ? 'bg-green-200 text-green-800' :
                             assignment.status === 'overdue' ? 'bg-red-200 text-red-800' :
-                            'bg-blue-200 text-blue-800'
-                          }`}>
+                              'bg-blue-200 text-blue-800'
+                            }`}>
                             {assignment.status}
                           </span>
                         </div>
@@ -186,8 +190,9 @@ export default function ReviewAssignment() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveAssignment(assignment.assignment_id)}
+                          className="h-7 w-7 p-0"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3.5 h-3.5" />
                         </Button>
                       </div>
                     ))}
@@ -196,11 +201,11 @@ export default function ReviewAssignment() {
 
                 {/* Assign Reviewer Form */}
                 {isAssigning ? (
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <select
                       value={selectedReviewer}
                       onChange={(e) => setSelectedReviewer(e.target.value)}
-                      className="flex-1 border rounded px-3 py-2 text-sm"
+                      className="flex-1 border rounded px-2 py-1.5 text-xs"
                     >
                       <option value="">Select a reviewer...</option>
                       {reviewers.map((reviewer) => (
@@ -213,6 +218,7 @@ export default function ReviewAssignment() {
                       onClick={() => handleAssignReviewer(project.project_id)}
                       disabled={!selectedReviewer}
                       size="sm"
+                      className="h-7 text-xs px-2"
                     >
                       Assign
                     </Button>
@@ -223,6 +229,7 @@ export default function ReviewAssignment() {
                       }}
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs px-2"
                     >
                       Cancel
                     </Button>
@@ -232,9 +239,9 @@ export default function ReviewAssignment() {
                     onClick={() => setSelectedProject(project.project_id)}
                     variant="outline"
                     size="sm"
-                    className="w-full"
+                    className="w-full h-7 text-xs"
                   >
-                    <UserPlus className="w-4 h-4 mr-2" />
+                    <UserPlus className="w-3.5 h-3.5 mr-1.5" />
                     {hasReviewer ? 'Add Another Reviewer' : 'Assign Reviewer'}
                   </Button>
                 )}

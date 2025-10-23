@@ -182,3 +182,79 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+// [R-ADMIN] Resend welcome email with new temporary password
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json()
+    const { user_id } = body
+
+    // Validation
+    if (!user_id || !user_id.trim()) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
+    }
+
+    // Get user details
+    const { data: userProfile, error: fetchError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('email, full_name, role')
+      .eq('user_id', user_id)
+      .single()
+
+    if (fetchError || !userProfile) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Generate new temporary password
+    const tempPassword = Math.random().toString(36).slice(-12) + 'Aa1!'
+
+    // Update auth user with new password and reset flag
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+      user_id,
+      {
+        password: tempPassword,
+        user_metadata: {
+          full_name: userProfile.full_name,
+          password_change_required: true
+        }
+      }
+    )
+
+    if (authError) {
+      console.error('Failed to update user password:', authError)
+      return NextResponse.json({ error: 'Failed to reset password' }, { status: 500 })
+    }
+
+    // Send welcome email with new credentials
+    const emailTemplate = generateWelcomeEmail({
+      email: userProfile.email,
+      fullName: userProfile.full_name || userProfile.email,
+      tempPassword,
+      role: userProfile.role
+    })
+
+    const emailResult = await sendEmail({
+      to: userProfile.email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+      tags: ['user-password-reset', `role-${userProfile.role}`]
+    })
+
+    if (!emailResult.success) {
+      console.warn('Failed to send welcome email:', emailResult.error)
+      // Don't fail the request if email fails - password was still reset
+    } else {
+      console.log('Welcome email resent successfully:', emailResult.messageId)
+    }
+
+    return NextResponse.json({
+      success: true,
+      emailSent: emailResult.success,
+      message: 'Password reset and welcome email sent'
+    })
+
+  } catch (error) {
+    console.error('Error resending welcome email:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

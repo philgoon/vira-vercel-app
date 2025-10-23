@@ -34,14 +34,21 @@ export default function ReviewMonitoringDashboard() {
   const loadDashboardData = async () => {
     try {
       const response = await fetch('/api/admin/review-stats');
-      const data = await response.json();
-      
-      if (response.ok) {
-        setStats(data.stats);
-        setOverdueAssignments(data.overdue_assignments || []);
+
+      if (!response.ok) {
+        console.error('API error:', response.status, response.statusText);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error details:', errorData);
+        setStats(null);
+        return;
       }
+
+      const data = await response.json();
+      setStats(data.stats);
+      setOverdueAssignments(data.overdue_assignments || []);
     } catch (error) {
       console.error('Error loading review stats:', error);
+      setStats(null);
     } finally {
       setLoading(false);
     }
@@ -65,8 +72,8 @@ export default function ReviewMonitoringDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Grid - Max 3 cards per row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Total Assignments */}
         <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
           <div className="flex items-center justify-between">

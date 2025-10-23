@@ -15,12 +15,23 @@ export async function GET() {
         completed_at,
         status,
         projects(project_title),
-        user_profiles(full_name, email)
+        reviewer:user_profiles!reviewer_id(full_name, email)
       `);
 
     if (assignmentsError) {
       console.error('Error fetching assignments:', assignmentsError);
-      return NextResponse.json({ error: assignmentsError.message }, { status: 500 });
+      console.error('Error details:', JSON.stringify(assignmentsError, null, 2));
+      return NextResponse.json({
+        error: assignmentsError.message,
+        details: assignmentsError
+      }, { status: 500 });
+    }
+
+    // DEBUG: Log the raw assignments data to see what we're getting
+    console.log('=== RAW ASSIGNMENTS DATA ===');
+    console.log('Total assignments:', assignments?.length);
+    if (assignments && assignments.length > 0) {
+      console.log('First assignment structure:', JSON.stringify(assignments[0], null, 2));
     }
 
     if (!assignments || assignments.length === 0) {
@@ -63,7 +74,7 @@ export async function GET() {
     const completedAssignments = assignments.filter(
       a => a.status === 'completed' && a.assigned_at && a.completed_at
     );
-    
+
     let avgCompletionDays = 0;
     if (completedAssignments.length > 0) {
       const totalDays = completedAssignments.reduce((sum, a) => {
@@ -79,8 +90,12 @@ export async function GET() {
     const overdueAssignments = overdue.map(a => {
       const dueDate = new Date(a.due_date!);
       const daysOverdue = Math.ceil((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-      const project = a.projects as any;
-      const reviewer = a.user_profiles as any;
+
+      // Handle both object and array returns from Supabase joins
+      // For one-to-one/many-to-one relationships, Supabase returns objects
+      // For one-to-many relationships, it returns arrays
+      const project = Array.isArray(a.projects) ? a.projects[0] : a.projects;
+      const reviewer = Array.isArray(a.reviewer) ? a.reviewer[0] : a.reviewer;
 
       return {
         assignment_id: a.assignment_id,

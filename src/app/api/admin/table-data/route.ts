@@ -31,6 +31,12 @@ export async function GET(request: NextRequest) {
           .select('*');
         break;
 
+      case 'user_profiles':
+        query = supabase
+          .from('user_profiles')
+          .select('*');
+        break;
+
       case 'ratings':
         // NOTE: The 'ratings' table is now part of 'projects_consolidated'.
         // We will fetch this data when the 'projects' table is requested.
