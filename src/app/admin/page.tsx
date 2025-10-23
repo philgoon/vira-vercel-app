@@ -12,7 +12,6 @@ import CSVImport from '@/components/admin/CSVImport'
 import ReviewAssignment from '@/components/admin/ReviewAssignment'
 import ReviewMonitoringDashboard from '@/components/admin/ReviewMonitoringDashboard'
 import { supabase } from '@/lib/supabase'
-import { getRoleDisplayName, getRoleBadgeColor } from '@/lib/auth'
 import {
   Mail,
   Users,
@@ -24,7 +23,6 @@ import {
   CheckCircle,
   XCircle,
   Send,
-  Shield,
   Edit,
   Trash2,
   UserCog,
@@ -124,6 +122,42 @@ export default function AdminDashboard() {
       console.error('Error fetching users:', error)
     } finally {
       setLoadingUsers(false)
+    }
+  }
+
+  // [R-ADMIN] Handle user role changes with confirmation
+  const handleRoleChange = async (userId: string, currentRole: string, newRole: string) => {
+    if (currentRole === newRole) return
+
+    const roleNames = {
+      admin: 'Admin',
+      team: 'Team Member',
+      vendor: 'Vendor'
+    }
+
+    if (!confirm(`Change user role from ${roleNames[currentRole as keyof typeof roleNames]} to ${roleNames[newRole as keyof typeof roleNames]}?`)) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, role: newRole })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update role')
+      }
+
+      // Refresh users list
+      await loadUsers()
+      alert('User role updated successfully!')
+    } catch (err: any) {
+      console.error('Error updating user role:', err)
+      alert(err.message || 'Failed to update user role')
     }
   }
 
@@ -1126,14 +1160,25 @@ export default function AdminDashboard() {
                                   </div>
                                 </td>
                                 <td style={{ padding: '1rem' }}>
-                                  <span className={getRoleBadgeColor(user.role)} style={{
-                                    padding: '0.25rem 0.75rem',
-                                    borderRadius: '9999px',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '600'
-                                  }}>
-                                    {getRoleDisplayName(user.role)}
-                                  </span>
+                                  <select
+                                    value={user.role}
+                                    onChange={(e) => handleRoleChange(user.user_id, user.role, e.target.value)}
+                                    style={{
+                                      padding: '0.25rem 0.75rem',
+                                      borderRadius: '9999px',
+                                      fontSize: '0.75rem',
+                                      fontWeight: '600',
+                                      border: '1px solid #e5e7eb',
+                                      backgroundColor: 'white',
+                                      cursor: 'pointer',
+                                      color: user.role === 'admin' ? '#7c3aed' :
+                                             user.role === 'team' ? '#0891b2' : '#10b981'
+                                    }}
+                                  >
+                                    <option value="admin">Admin</option>
+                                    <option value="team">Team Member</option>
+                                    <option value="vendor">Vendor</option>
+                                  </select>
                                 </td>
                                 <td style={{ padding: '1rem' }}>
                                   <button

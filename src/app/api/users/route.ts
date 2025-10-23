@@ -116,3 +116,69 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+// [R-ADMIN] Update user role
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json()
+    const { user_id, role } = body
+
+    // Validation
+    if (!user_id || !user_id.trim()) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
+    }
+
+    if (!role || !['admin', 'team', 'vendor'].includes(role)) {
+      return NextResponse.json({ error: 'Valid role is required (admin, team, vendor)' }, { status: 400 })
+    }
+
+    // Check if this is the last admin user
+    const { data: currentUser, error: fetchError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('role')
+      .eq('user_id', user_id)
+      .single()
+
+    if (fetchError) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // If changing FROM admin role, verify there's at least one other admin
+    if (currentUser.role === 'admin' && role !== 'admin') {
+      const { data: adminUsers, error: adminCheckError } = await supabaseAdmin
+        .from('user_profiles')
+        .select('user_id')
+        .eq('role', 'admin')
+        .eq('is_active', true)
+
+      if (adminCheckError) {
+        return NextResponse.json({ error: 'Failed to verify admin users' }, { status: 500 })
+      }
+
+      if (adminUsers.length <= 1) {
+        return NextResponse.json({
+          error: 'Cannot change role: at least one admin user must remain'
+        }, { status: 400 })
+      }
+    }
+
+    // Update the role
+    const { data: updatedUser, error: updateError } = await supabaseAdmin
+      .from('user_profiles')
+      .update({ role })
+      .eq('user_id', user_id)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error('Role update failed:', updateError)
+      return NextResponse.json({ error: 'Failed to update user role' }, { status: 500 })
+    }
+
+    return NextResponse.json({ user: updatedUser })
+
+  } catch (error) {
+    console.error('Error updating user role:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
