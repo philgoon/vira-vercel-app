@@ -32,8 +32,8 @@ export async function sendEmail(options: EmailOptions) {
       text: options.text || stripHtml(options.html),
       'o:tag': options.tags || [],
       'o:tracking': true,
-      'o:tracking-clicks': true,
-      'o:tracking-opens': true,
+      'o:tracking-clicks': false,
+      'o:tracking-opens': false,
     }
 
     const response = await mg.messages.create(MAILGUN_DOMAIN, messageData)
