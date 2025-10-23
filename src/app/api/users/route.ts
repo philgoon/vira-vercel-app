@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server'
 // [RLS-FIX] Use shared supabaseAdmin from lib, matching /api/projects pattern
 import { supabaseAdmin } from '@/lib/supabase'
+// [R10] Import Mailgun utilities for automated onboarding
+import { sendEmail, generateWelcomeEmail } from '@/lib/mailgun'
 
 export async function GET() {
   try {
@@ -41,13 +43,15 @@ export async function POST(request: Request) {
     // Generate temporary password
     const tempPassword = Math.random().toString(36).slice(-12) + 'Aa1!'
 
-    // Create auth user
+    // Create auth user with password_change_required flag
+    // [R10] Set user_metadata flag to force password change on first login
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email.trim(),
       password: tempPassword,
       email_confirm: true,
       user_metadata: {
-        full_name: full_name?.trim() || null
+        full_name: full_name?.trim() || null,
+        password_change_required: true // Force password change on first login
       }
     })
 
@@ -76,9 +80,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
     }
 
+    // [R10] Send welcome email with credentials via Mailgun
+    // → needs: user-creation, mailgun-config
+    // → provides: automated-onboarding
+    const emailTemplate = generateWelcomeEmail({
+      email: email.trim(),
+      fullName: full_name?.trim() || email.trim(),
+      tempPassword,
+      role
+    })
+
+    const emailResult = await sendEmail({
+      to: email.trim(),
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+      tags: ['user-onboarding', `role-${role}`]
+    })
+
+    if (!emailResult.success) {
+      console.warn('Failed to send welcome email:', emailResult.error)
+      // Don't fail the request if email fails - user is still created
+      // Admin modal will still show password as backup
+    } else {
+      console.log('Welcome email sent successfully:', emailResult.messageId)
+    }
+
     return NextResponse.json({
       user: profileData,
-      tempPassword // Return for admin to share with user
+      tempPassword, // Keep returning for admin modal backup display
+      emailSent: emailResult.success
     })
 
   } catch (error) {

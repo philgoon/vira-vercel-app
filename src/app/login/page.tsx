@@ -7,6 +7,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogIn, AlertCircle } from 'lucide-react';
+// [R10] Import supabase client to check user metadata after login
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -19,7 +21,22 @@ export default function LoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      router.push('/');
+      // [R10] Check if password change is required on first login
+      // → needs: user-auth, password-change-required-flag
+      // → provides: forced-password-change-redirect
+      const checkPasswordChangeRequired = async () => {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        
+        if (authUser?.user_metadata?.password_change_required) {
+          // Redirect to password change page
+          router.push('/change-password?required=true');
+        } else {
+          // Normal redirect to dashboard
+          router.push('/');
+        }
+      };
+      
+      checkPasswordChangeRequired();
     }
   }, [user, router]);
 
