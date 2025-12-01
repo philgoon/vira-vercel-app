@@ -1,6 +1,7 @@
 // src/app/api/rate-project/route.ts
 
-import { supabase } from '@/lib/supabase';
+// [R-FIX] Use supabaseAdmin to bypass RLS for rating submissions
+import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 // Define the expected shape of the request body for type safety
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
       // The database has a status enum constraint, and 'rated' is not a valid value
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('projects')
       .update(updateData)
       .eq('project_id', body.project_id)
@@ -89,7 +90,7 @@ export async function PUT(request: Request) {
 
     const updateData = prepareProjectUpdateData(body);
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('projects')
       .update(updateData)
       .eq('project_id', body.project_id)
