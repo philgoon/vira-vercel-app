@@ -310,10 +310,12 @@ export default function ViRAMatchWizard({ serviceCategories, categoriesLoading }
             <div className="max-w-2xl mx-auto">
               <div className="relative">
                 <textarea
-                  {...register('projectScope')}
+                  {...register('projectScope', {
+                    // [R-FIX] Use react-hook-form's onChange option to avoid overwriting
+                    onChange: (e) => setCharCount(e.target.value.length)
+                  })}
                   className="w-full h-40 p-4 border border-gray-300 rounded-lg transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                   placeholder="Describe your project in detail... Include goals, requirements, timeline, special considerations, and any specific expertise needed."
-                  onChange={(e) => setCharCount(e.target.value.length)}
                 />
                 <div className="absolute bottom-3 right-3 text-xs text-gray-500">
                   {charCount} characters
