@@ -24,18 +24,30 @@ export default function LoginPage() {
       // [R10] Check if password change is required on first login
       // → needs: user-auth, password-change-required-flag
       // → provides: forced-password-change-redirect
+      // [R-FIX] Added timeout to prevent indefinite hang
       const checkPasswordChangeRequired = async () => {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        
-        if (authUser?.user_metadata?.password_change_required) {
-          // Redirect to password change page
-          router.push('/change-password?required=true');
-        } else {
-          // Normal redirect to dashboard
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+        try {
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          clearTimeout(timeoutId);
+
+          if (authUser?.user_metadata?.password_change_required) {
+            // Redirect to password change page
+            router.push('/change-password?required=true');
+          } else {
+            // Normal redirect to dashboard
+            router.push('/');
+          }
+        } catch (error: any) {
+          clearTimeout(timeoutId);
+          console.error('Failed to check password change status:', error);
+          // On timeout/error, still redirect to dashboard (safe fallback)
           router.push('/');
         }
       };
-      
+
       checkPasswordChangeRequired();
     }
   }, [user, router]);

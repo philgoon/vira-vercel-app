@@ -16,14 +16,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch user profile from user_profiles table
-  const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
+  // [R-FIX] Fetch user profile with timeout to prevent indefinite hang
+  const fetchProfile = async (userId: string, timeoutMs = 10000): Promise<UserProfile | null> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', userId)
+        .abortSignal(controller.signal)
         .single();
+
+      clearTimeout(timeoutId);
 
       if (error) {
         console.error('Error fetching user profile:', error);
@@ -31,8 +37,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       return data as UserProfile;
-    } catch (error) {
-      console.error('Error in fetchProfile:', error);
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error?.name === 'AbortError') {
+        console.error('Profile fetch timed out after', timeoutMs, 'ms');
+      } else {
+        console.error('Error in fetchProfile:', error);
+      }
       return null;
     }
   };
@@ -79,19 +90,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Normal auth flow
+    // [R-FIX] Safety timeout - ensure isLoading is set to false after max 15s
+    const safetyTimeout = setTimeout(() => {
+      console.warn('Auth initialization timed out - forcing isLoading to false');
+      setIsLoading(false);
+    }, 15000);
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        fetchProfile(session.user.id).then((profileData) => {
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            profile: profileData,
-          });
-          setProfile(profileData);
-          updateLastLogin(session.user.id);
+        const profileData = await fetchProfile(session.user.id);
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          profile: profileData,
         });
+        setProfile(profileData);
+        updateLastLogin(session.user.id);
       }
+      clearTimeout(safetyTimeout);
+      setIsLoading(false);
+    }).catch((error) => {
+      console.error('Failed to get session:', error);
+      clearTimeout(safetyTimeout);
       setIsLoading(false);
     });
 
@@ -119,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, []);
