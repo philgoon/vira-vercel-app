@@ -18,6 +18,18 @@ export default function LoginPage() {
   const { signIn, user } = useAuth();
   const router = useRouter();
 
+  // [R-FIX] Clear any stale session IMMEDIATELY when login page loads
+  // Don't wait for AuthContext - that could hang for 10+ seconds with stale session
+  // If user reaches login page, they need a fresh start
+  useEffect(() => {
+    // Fire immediately on mount - don't wait for auth state
+    supabase.auth.signOut().then(() => {
+      console.log('Cleared session on login page load');
+    }).catch(() => {
+      // Ignore errors - just trying to clear stale data
+    });
+  }, []); // Empty deps = run once on mount
+
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
