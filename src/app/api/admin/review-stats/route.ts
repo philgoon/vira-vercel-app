@@ -32,12 +32,6 @@ export async function GET() {
     }
 
     // DEBUG: Log the raw assignments data to see what we're getting
-    console.log('=== RAW ASSIGNMENTS DATA ===');
-    console.log('Total assignments:', assignments?.length);
-    if (assignments && assignments.length > 0) {
-      console.log('First assignment structure:', JSON.stringify(assignments[0], null, 2));
-    }
-
     if (!assignments || assignments.length === 0) {
       // Return empty stats if no assignments
       return NextResponse.json({

@@ -1,8 +1,11 @@
 // [R4.4] Ratings API - Projects needing rating review using new schema
 import { supabaseAdmin } from '@/lib/supabase';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth';
 
 export async function GET() {
+  const authResult = await requireAuth();
+  if (isNextResponse(authResult)) return authResult;
   try {
     // Fetch projects from view that already includes rating_status
     const { data: projects, error: projectsError } = await supabaseAdmin
@@ -24,7 +27,9 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const authResult = await requireAuth(['admin', 'team']);
+  if (isNextResponse(authResult)) return authResult;
   try {
     const body = await request.json();
     const { project_id, ...ratingData } = body;

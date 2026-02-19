@@ -11,8 +11,11 @@ if (!supabaseUrl || !supabaseKey) {
 // Create Supabase client
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
-// Server-side client with service role (for admin operations)  
+// Server-side client with service role (for admin operations)
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-export const supabaseAdmin = supabaseServiceKey 
+if (!supabaseServiceKey) {
+  console.error('SUPABASE_SERVICE_ROLE_KEY is not set. Admin operations will fail.')
+}
+export const supabaseAdmin = supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey)
   : supabase

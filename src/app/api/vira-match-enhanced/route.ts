@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { openai } from '@/lib/ai';
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth';
 
 // Define comprehensive interfaces for our data structures
 interface VendorProfile {
@@ -37,6 +38,10 @@ interface EnrichedVendor {
 }
 
 export async function POST(request: Request) {
+  // [an8.7] Require authenticated user for AI matching
+  const authResult = await requireAuth();
+  if (isNextResponse(authResult)) return authResult;
+
   try {
     console.log('=== ViRA Final Refactored Match API Called ===');
 

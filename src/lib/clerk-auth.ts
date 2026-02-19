@@ -11,19 +11,30 @@ interface AuthResult {
   profileId: string
 }
 
-/**
- * Verify Clerk session and look up user_profiles role.
- * Returns 401/403 NextResponse on failure, or AuthResult on success.
- */
+// [an8.11] Read role from Clerk publicMetadata (JWT), DB fallback if missing
 export async function requireAuth(
   requiredRole?: UserRole | UserRole[]
 ): Promise<AuthResult | NextResponse> {
-  const { userId } = await auth()
+  const { userId, sessionClaims } = await auth()
 
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Fast path: role cached in Clerk session claims
+  const meta = sessionClaims?.publicMetadata as { role?: string; profileId?: string } | undefined
+  if (meta?.role && meta?.profileId) {
+    const role = meta.role as UserRole
+    if (requiredRole) {
+      const allowed = Array.isArray(requiredRole) ? requiredRole : [requiredRole]
+      if (!allowed.includes(role)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
+    return { userId, role, profileId: meta.profileId }
+  }
+
+  // Slow path: DB lookup (users without metadata synced yet)
   const { data: profile, error } = await supabaseAdmin
     .from('user_profiles')
     .select('user_id, role')

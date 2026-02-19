@@ -1,8 +1,11 @@
 // [R4.1] Updated vendors API route using vendor_performance view for new schema
 import { supabaseAdmin } from '@/lib/supabase';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (isNextResponse(authResult)) return authResult;
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
@@ -73,7 +76,9 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
   try {
     const body = await request.json();
 
@@ -96,7 +101,9 @@ export async function POST(request: Request) {
 }
 
 // [R5.3] PUT endpoint for updating vendors
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
   try {
     const body = await request.json();
     const { vendor_id, ...updateData } = body;

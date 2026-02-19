@@ -1,11 +1,15 @@
 // [R3] Vendor rating aggregation API endpoint
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (isNextResponse(authResult)) return authResult;
+
   try {
     const { id } = await params;
     const vendorId = id;

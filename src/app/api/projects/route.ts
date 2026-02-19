@@ -1,8 +1,11 @@
 // [R5.2] Enhanced projects API route with workflow status transitions
 import { supabaseAdmin } from '@/lib/supabase';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (isNextResponse(authResult)) return authResult;
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -31,15 +34,6 @@ export async function GET(request: Request) {
 
     const { data: projects, error } = await query;
 
-    // [DEBUG] Log the actual response to debug data structure issues
-    console.log('=== PROJECTS API DEBUG ===');
-    console.log('Supabase query error:', error);
-    console.log('Projects data returned:', projects);
-    console.log('Projects count:', projects?.length || 0);
-    if (projects && projects.length > 0) {
-      console.log('Sample project structure:', JSON.stringify(projects[0], null, 2));
-    }
-
     if (error) {
       console.error('Supabase error:', error);
       return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
@@ -62,7 +56,9 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const authResult = await requireAuth(['admin', 'team']);
+  if (isNextResponse(authResult)) return authResult;
   try {
     const body = await request.json();
 
@@ -85,7 +81,9 @@ export async function POST(request: Request) {
 }
 
 // [R5.2] Enhanced PUT method for both status transitions and full project updates
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
+  const authResult = await requireAuth(['admin', 'team']);
+  if (isNextResponse(authResult)) return authResult;
   try {
     const body = await request.json();
     const { project_id, ...updateData } = body;

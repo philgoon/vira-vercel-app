@@ -55,20 +55,15 @@ export default function ReviewAssignment() {
       setProjects(allProjects)
       setReviewers(allReviewers)
 
-      // Load assignments for all projects IN PARALLEL (was sequential)
-      const assignmentsMap: Record<string, ReviewAssignment[]> = {}
-      const assignmentPromises = allProjects.map(async (project: Project) => {
-        const assignRes = await fetch(`/api/admin/assign-reviewer?project_id=${project.project_id}`)
+      // [an8.13] Batch fetch all assignments in one request
+      if (allProjects.length > 0) {
+        const ids = allProjects.map((p: Project) => p.project_id).join(',')
+        const assignRes = await fetch(`/api/admin/assign-reviewer?project_ids=${ids}`)
         const assignData = await assignRes.json()
-        return { projectId: project.project_id, assignments: assignData.assignments || [] }
-      })
-
-      const assignmentResults = await Promise.all(assignmentPromises)
-      assignmentResults.forEach(({ projectId, assignments }) => {
-        assignmentsMap[projectId] = assignments
-      })
-
-      setAssignments(assignmentsMap)
+        setAssignments(assignData.assignments_by_project || {})
+      } else {
+        setAssignments({})
+      }
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {

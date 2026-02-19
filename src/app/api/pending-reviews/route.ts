@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth'
 
 export async function GET() {
+  const authResult = await requireAuth();
+  if (isNextResponse(authResult)) return authResult;
+
   try {
     // [R1]: Get projects without ratings using reliable approach
     // Fetch all projects first

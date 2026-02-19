@@ -8,15 +8,32 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// [an8.5] Field allowlists prevent arbitrary column writes
+const ALLOWED_FIELDS: Record<string, Set<string>> = {
+  vendors: new Set([
+    'vendor_name', 'vendor_type', 'service_categories', 'skills',
+    'pricing_structure', 'rate_cost', 'status', 'website', 'email',
+    'phone', 'primary_contact', 'industry', 'availability',
+    'availability_status', 'available_from', 'availability_notes',
+    'portfolio_url', 'sample_work_urls', 'notes',
+  ]),
+  projects: new Set([
+    'project_title', 'project_description', 'project_type', 'status',
+    'client_name', 'client_id', 'vendor_id', 'vendor_name',
+    'contact_date', 'expected_deadline', 'project_success_rating',
+    'quality_rating', 'communication_rating', 'what_went_well',
+    'areas_for_improvement', 'recommend_again', 'timeline_status',
+    'project_overall_rating_input', 'project_overall_rating_calc',
+    'rating_status', 'submitted_by', 'rating_date',
+  ]),
+};
+
 export async function POST(request: NextRequest) {
   const authResult = await requireAuth('admin');
   if (isNextResponse(authResult)) return authResult;
 
   try {
     const body = await request.json();
-    console.log('=== UPDATE RECORD DEBUG ===');
-    console.log('Request body:', JSON.stringify(body, null, 2));
-
     // [R1]: Support both single-field updates (inline editing) and full-object updates (modal editing)
     const { table, id, field, value, data } = body;
 
@@ -35,26 +52,20 @@ export async function POST(request: NextRequest) {
     }
 
     let query;
-    const updateData = { ...data };
 
-    // Remove read-only fields that shouldn't be updated
-    delete updateData.created_at;
-    delete updateData.updated_at;
-    delete updateData.created_date; // Handle both timestamp formats
-    delete updateData.updated_date;
-
-    // Add updated timestamp based on table schema
-    // All tables use created_at/updated_at format per schema
+    // [an8.5] Strip to allowed fields only
+    const allowedSet = ALLOWED_FIELDS[table];
+    if (!allowedSet) {
+      return NextResponse.json({ error: 'Invalid table name' }, { status: 400 });
+    }
+    const updateData: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(data)) {
+      if (allowedSet.has(key)) updateData[key] = val;
+    }
     updateData.updated_at = new Date().toISOString();
 
     switch (table) {
       case 'vendors':
-        // [R2]: Use base tables to match table-data API alignment
-        delete updateData.total_projects; // Remove calculated fields
-        delete updateData.avg_overall_rating; // Remove calculated fields
-        delete updateData.vendor_id; // Don't update primary key
-
-        console.log('Updating vendor with data:', updateData);
         query = supabase
           .from('vendors')
           .update(updateData)
@@ -63,9 +74,6 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'projects':
-        delete updateData.project_id; // Don't update primary key
-
-        console.log('Updating project with data:', updateData);
         query = supabase
           .from('projects')
           .update(updateData)
@@ -81,17 +89,11 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Database update error:', error);
-      console.error('Update data that failed:', updateData);
       return NextResponse.json({
         error: 'Database update failed',
         details: error.message,
-        table,
-        id,
-        updateData
       }, { status: 500 });
     }
-
-    console.log('Successfully updated:', table, id);
 
     return NextResponse.json({
       success: true,
@@ -108,6 +110,12 @@ export async function POST(request: NextRequest) {
 // [R3]: Handle single field updates for inline editing
 async function handleSingleFieldUpdate(table: string, id: string, field: string, value: string) {
   try {
+    // [an8.5] Validate field against allowlist
+    const allowedSet = ALLOWED_FIELDS[table];
+    if (!allowedSet?.has(field)) {
+      return NextResponse.json({ error: `Field '${field}' not allowed for ${table}` }, { status: 400 });
+    }
+
     const updateData = {
       [field]: value,
       updated_at: new Date().toISOString()

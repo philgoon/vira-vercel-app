@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET: Fetch reviewers for a project
+// [an8.13] GET: Fetch assignments for one or many projects (batch support)
 export async function GET(req: NextRequest) {
   const authResult = await requireAuth('admin');
   if (isNextResponse(authResult)) return authResult;
@@ -101,15 +101,13 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const project_id = searchParams.get('project_id')
+    const project_ids = searchParams.get('project_ids') // comma-separated
 
-    if (!project_id) {
-      return NextResponse.json({ error: 'Missing project_id' }, { status: 400 })
-    }
-
-    const { data: assignments, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('review_assignments')
       .select(`
         assignment_id,
+        project_id,
         reviewer_id,
         assigned_at,
         status,
@@ -121,10 +119,36 @@ export async function GET(req: NextRequest) {
           full_name
         )
       `)
-      .eq('project_id', project_id)
+
+    if (project_ids) {
+      // Batch mode: return assignments grouped by project_id
+      const ids = project_ids.split(',').filter(Boolean)
+      query = query.in('project_id', ids)
+
+      const { data: assignments, error } = await query
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Group by project_id for easy client-side consumption
+      const grouped: Record<string, typeof assignments> = {}
+      for (const a of assignments || []) {
+        if (!grouped[a.project_id]) grouped[a.project_id] = []
+        grouped[a.project_id].push(a)
+      }
+
+      return NextResponse.json({ assignments_by_project: grouped })
+    }
+
+    if (!project_id) {
+      return NextResponse.json({ error: 'Missing project_id or project_ids' }, { status: 400 })
+    }
+
+    query = query.eq('project_id', project_id)
+    const { data: assignments, error } = await query
 
     if (error) {
-      console.error('Error fetching assignments:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 

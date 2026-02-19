@@ -46,6 +46,16 @@ export async function GET(request: NextRequest) {
           .eq('user_id', emailProfile.user_id)
 
         console.log('[profile] Auto-link result:', updateError ? updateError.message : 'success')
+
+        // [an8.11] Cache role in Clerk publicMetadata on auto-link
+        try {
+          await client.users.updateUserMetadata(clerkUserId, {
+            publicMetadata: { role: emailProfile.role, profileId: emailProfile.user_id }
+          })
+        } catch (metaErr) {
+          console.error('[profile] Failed to sync metadata:', metaErr)
+        }
+
         return NextResponse.json({ profile: { ...emailProfile, clerk_user_id: clerkUserId } })
       }
     }
@@ -98,6 +108,11 @@ export async function POST() {
   if (insertError) {
     return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 })
   }
+
+  // [an8.11] Cache role in Clerk publicMetadata on bootstrap
+  await client.users.updateUserMetadata(userId, {
+    publicMetadata: { role: 'admin', profileId: profile.user_id }
+  })
 
   return NextResponse.json({ profile })
 }

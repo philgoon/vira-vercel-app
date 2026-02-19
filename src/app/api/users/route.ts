@@ -82,6 +82,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
     }
 
+    // [an8.11] Cache role in Clerk publicMetadata for fast JWT-based auth
+    await client.users.updateUserMetadata(clerkUser.id, {
+      publicMetadata: { role, profileId: profileData.user_id }
+    })
+
     // [R10] Send welcome email with credentials via Mailgun
     // → needs: user-creation, mailgun-config
     // → provides: automated-onboarding
@@ -186,12 +191,20 @@ export async function PATCH(request: NextRequest) {
       .from('user_profiles')
       .update({ role })
       .eq('user_id', user_id)
-      .select()
+      .select('*, clerk_user_id')
       .single()
 
     if (updateError) {
       console.error('Role update failed:', updateError)
       return NextResponse.json({ error: 'Failed to update user role' }, { status: 500 })
+    }
+
+    // [an8.11] Sync role to Clerk publicMetadata so JWT stays current
+    if (updatedUser.clerk_user_id) {
+      const client = await clerkClient()
+      await client.users.updateUserMetadata(updatedUser.clerk_user_id, {
+        publicMetadata: { role, profileId: updatedUser.user_id }
+      })
     }
 
     return NextResponse.json({ user: updatedUser })

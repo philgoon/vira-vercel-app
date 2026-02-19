@@ -1,4 +1,5 @@
 // [R-CLERK-4]: ViRA auth hook - Clerk identity + user_profiles role
+// [an8.12] Reads role from Clerk publicMetadata first (no API roundtrip to unblock UI)
 'use client';
 
 import { useUser, useClerk } from '@clerk/nextjs';
@@ -11,6 +12,9 @@ export function useViRAAuth() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
+  // [an8.12] Role available from Clerk JWT metadata instantly
+  const metaRole = user?.publicMetadata?.role as string | undefined;
+
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn || !user) {
@@ -19,14 +23,18 @@ export function useViRAAuth() {
       return;
     }
 
-    setProfileLoading(true);
+    // If metadata has role, stop blocking the UI immediately.
+    // Full profile still loads in background for other fields.
+    if (metaRole) {
+      setProfileLoading(false);
+    }
+
     fetch(`/api/users/profile?clerk_user_id=${user.id}`)
       .then((r) => r.json())
       .then(async (data) => {
         if (data.profile) {
           setProfile(data.profile);
         } else {
-          // Attempt bootstrap (succeeds only if no profiles exist yet)
           const bootstrap = await fetch('/api/users/profile', { method: 'POST' });
           if (bootstrap.ok) {
             const bootstrapped = await bootstrap.json();
@@ -45,13 +53,16 @@ export function useViRAAuth() {
     setProfile(null);
   };
 
+  // Role from full profile (ground truth) or metadata (fast path)
+  const role = profile?.role || metaRole;
+
   return {
     user,
     profile,
-    isLoading: !isLoaded || profileLoading,
-    isAdmin: profile?.role === 'admin',
-    isTeam: profile?.role === 'team',
-    isVendor: profile?.role === 'vendor',
+    isLoading: !isLoaded || (!metaRole && profileLoading),
+    isAdmin: role === 'admin',
+    isTeam: role === 'team',
+    isVendor: role === 'vendor',
     signOut,
   };
 }
