@@ -20,38 +20,41 @@ export function ProtectedRoute({
   allowedRoles,
   redirectTo = '/login',
 }: ProtectedRouteProps) {
-  const { user, profile, isLoading } = useViRAAuth();
+  const { user, profile, profileLoading, isLoading, isAdmin, isTeam, isVendor } = useViRAAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        router.push(redirectTo);
-        return;
-      }
+    if (isLoading) return;
 
-      if (!profile) {
-        console.error('User authenticated but no profile found');
-        router.push('/login');
-        return;
-      }
-
-      if (allowedRoles && !allowedRoles.includes(profile.role)) {
-        console.warn(`Access denied: User role ${profile.role} not in allowed roles`);
-        router.push('/unauthorized');
-        return;
-      }
-
-      if (!profile.is_active) {
-        console.warn('User account is inactive');
-        router.push('/account-inactive');
-        return;
-      }
+    // Not signed in at all
+    if (!user) {
+      router.push(redirectTo);
+      return;
     }
-  }, [user, profile, isLoading, allowedRoles, redirectTo, router]);
 
-  // Show loading state while checking auth
-  if (isLoading) {
+    // Profile still loading in background, don't redirect yet
+    if (!profile && profileLoading) return;
+
+    // Profile loaded but null (no DB record for this user)
+    if (!profile) {
+      console.error('User authenticated but no profile found');
+      router.push('/login');
+      return;
+    }
+
+    if (allowedRoles && !allowedRoles.includes(profile.role)) {
+      router.push('/unauthorized');
+      return;
+    }
+
+    if (!profile.is_active) {
+      router.push('/account-inactive');
+      return;
+    }
+  }, [user, profile, profileLoading, isLoading, allowedRoles, redirectTo, router]);
+
+  // Show loading state while checking auth or waiting for profile
+  if (isLoading || (!profile && profileLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

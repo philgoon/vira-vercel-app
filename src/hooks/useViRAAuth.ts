@@ -59,6 +59,7 @@ export function useViRAAuth() {
   return {
     user,
     profile,
+    profileLoading,
     isLoading: !isLoaded || (!metaRole && profileLoading),
     isAdmin: role === 'admin',
     isTeam: role === 'team',
