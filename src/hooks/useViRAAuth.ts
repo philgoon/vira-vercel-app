@@ -23,12 +23,6 @@ export function useViRAAuth() {
       return;
     }
 
-    // If metadata has role, stop blocking the UI immediately.
-    // Full profile still loads in background for other fields.
-    if (metaRole) {
-      setProfileLoading(false);
-    }
-
     fetch(`/api/users/profile?clerk_user_id=${user.id}`)
       .then((r) => r.json())
       .then(async (data) => {
