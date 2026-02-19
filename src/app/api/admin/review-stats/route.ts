@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth';
 
 export async function GET() {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
+
   try {
     // Get all review assignments with related data
     const { data: assignments, error: assignmentsError } = await supabaseAdmin

@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth';
 
 export async function GET() {
+  const authResult = await requireAuth(['admin', 'team']);
+  if (isNextResponse(authResult)) return authResult;
+
   try {
+    // Get counts for dashboard stats
+    const [vendorCount, projectCount, clientCount, ratingCount] = await Promise.all([
+      supabaseAdmin.from('vendors').select('vendor_id', { count: 'exact', head: true }),
+      supabaseAdmin.from('projects').select('project_id', { count: 'exact', head: true }),
+      supabaseAdmin.from('clients_summary').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('projects_with_vendor').select('*', { count: 'exact', head: true }).eq('rating_status', 'Complete'),
+    ]);
+
     // Get top performing vendors
     const { data: topVendors, error: vendorsError } = await supabaseAdmin
       .from('vendor_performance')
@@ -36,6 +48,12 @@ export async function GET() {
     if (projectsError) throw projectsError;
 
     return NextResponse.json({
+      stats: {
+        vendors: vendorCount.count || 0,
+        projects: projectCount.count || 0,
+        clients: clientCount.count || 0,
+        ratings: ratingCount.count || 0,
+      },
       topVendors: topVendors || [],
       reviewStats: {
         total: totalAssignments,

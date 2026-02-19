@@ -3,6 +3,7 @@
 // [R6]: Preview/confirmation workflow for safe merges
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth';
 
 // [R6]: Type definitions for merge operations
 interface VendorRecord {
@@ -124,6 +125,9 @@ async function performSecureMerge(csvVendorId: string, projectVendorId: string, 
 }
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
+
   try {
     const { csvVendorId, projectVendorId, keepName, preview = false } = await request.json();
 

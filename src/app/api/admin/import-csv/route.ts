@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import Papa from 'papaparse'
 import OpenAI from 'openai'
 import { generateProjectEmbedding } from '@/lib/embeddings'
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth'
 
 interface CSVRecord {
   'Ticket Title': string;
@@ -55,6 +56,9 @@ async function generateProjectSummary(description: string): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
+
   const formData = await req.formData()
   const file = formData.get('file') as File
   const confirmImport = formData.get('confirm') === 'true' // Two-step: preview then confirm

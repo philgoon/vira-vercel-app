@@ -1,12 +1,12 @@
 // [R1] Admin API endpoint to verify vendor categories
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET() {
   try {
     console.log('🔍 Verifying vendor categories for Kelvin, Praveen, Matt...');
 
-    const { data: vendors, error } = await supabase
+    const { data: vendors, error } = await supabaseAdmin
       .from('vendors')
       .select('vendor_name, service_categories')
       .in('vendor_name', ['Kelvin', 'Praveen', 'Matt']);
@@ -19,7 +19,7 @@ export async function GET() {
     console.log('📊 Current vendor categories:', vendors);
 
     // Also check all vendors with data_analytics category
-    const { data: dataAnalyticsVendors, error: daError } = await supabase
+    const { data: dataAnalyticsVendors, error: daError } = await supabaseAdmin
       .from('vendors')
       .select('vendor_name, service_categories')
       .contains('service_categories', ['data_analytics']);

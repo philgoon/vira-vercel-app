@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseAdmin = createClient(
@@ -8,6 +9,9 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
+
   try {
     const { project_id, reviewer_id, assigned_by } = await req.json()
 
@@ -91,6 +95,9 @@ export async function POST(req: NextRequest) {
 
 // GET: Fetch reviewers for a project
 export async function GET(req: NextRequest) {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
+
   try {
     const { searchParams } = new URL(req.url)
     const project_id = searchParams.get('project_id')
@@ -133,6 +140,9 @@ export async function GET(req: NextRequest) {
 
 // DELETE: Remove reviewer assignment
 export async function DELETE(req: NextRequest) {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
+
   try {
     const { searchParams } = new URL(req.url)
     const assignment_id = searchParams.get('assignment_id')

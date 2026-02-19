@@ -4,6 +4,7 @@
 
 import { createCSVImportPipeline, ImportResult } from '@/lib/csv-import-pipeline';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth';
 
 // Maximum file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -30,6 +31,9 @@ interface CSVPreviewResponse {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<CSVPreviewResponse>> {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult as NextResponse<CSVPreviewResponse>;
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;

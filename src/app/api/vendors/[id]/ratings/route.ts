@@ -1,6 +1,6 @@
 // [R3] Vendor rating aggregation API endpoint
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
@@ -11,7 +11,7 @@ export async function GET(
     const vendorId = id;
 
     // [R3.1] Fetch all ratings for this vendor
-    const { data: ratings, error } = await supabase
+    const { data: ratings, error } = await supabaseAdmin
       .from('vendor_ratings')
       .select(`
         vendor_overall_rating,

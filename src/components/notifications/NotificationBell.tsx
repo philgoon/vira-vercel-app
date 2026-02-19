@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useViRAAuth } from '@/hooks/useViRAAuth'
 import { Bell } from 'lucide-react'
 import Link from 'next/link'
 
@@ -17,7 +17,7 @@ interface Notification {
 }
 
 export default function NotificationBell() {
-  const { profile } = useAuth()
+  const { profile } = useViRAAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)

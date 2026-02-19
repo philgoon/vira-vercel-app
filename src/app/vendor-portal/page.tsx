@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
-import { useAuth } from '@/contexts/AuthContext'
+import { useViRAAuth } from '@/hooks/useViRAAuth'
 import { Building2, Mail, Phone, Globe, Edit2, Save, X, BarChart3, Star, CheckCircle } from 'lucide-react'
 
 interface VendorProfile {
@@ -39,7 +39,7 @@ interface VendorRatings {
 }
 
 export default function VendorPortal() {
-  const { user } = useAuth()
+  const { user } = useViRAAuth()
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)

@@ -1,11 +1,14 @@
 // [R-ADMIN] API Route: Fetch Users with Admin Access
-import { NextResponse } from 'next/server'
-// [RLS-FIX] Use shared supabaseAdmin from lib, matching /api/projects pattern
+// [R-CLERK-8]: User management via Clerk Backend API
+import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-// [R10] Import Mailgun utilities for automated onboarding
 import { sendEmail, generateWelcomeEmail } from '@/lib/mailgun'
+import { clerkClient } from '@clerk/nextjs/server'
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth'
 
 export async function GET() {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
   try {
     // Fetch all users using admin client to bypass RLS
     const { data: users, error } = await supabaseAdmin
@@ -25,13 +28,15 @@ export async function GET() {
   }
 }
 
-// [R-ADMIN] Create new user with auth account and profile
-export async function POST(request: Request) {
+// [R-CLERK-8] Create new user via Clerk Backend API
+export async function POST(request: NextRequest) {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
+
   try {
     const body = await request.json()
     const { email, full_name, role } = body
 
-    // Validation
     if (!email || !email.trim()) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 })
     }
@@ -40,31 +45,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Valid role is required (admin, team, vendor)' }, { status: 400 })
     }
 
-    // Generate temporary password
     const tempPassword = Math.random().toString(36).slice(-12) + 'Aa1!'
 
-    // Create auth user with password_change_required flag
-    // [R10] Set user_metadata flag to force password change on first login
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email.trim(),
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: {
-        full_name: full_name?.trim() || null,
-        password_change_required: true // Force password change on first login
-      }
-    })
-
-    if (authError) {
-      console.error('Auth user creation failed:', authError)
-      return NextResponse.json({ error: authError.message }, { status: 400 })
+    // Create user in Clerk
+    const client = await clerkClient()
+    let clerkUser
+    try {
+      clerkUser = await client.users.createUser({
+        emailAddress: [email.trim()],
+        password: tempPassword,
+        firstName: full_name?.trim()?.split(' ')[0] || undefined,
+        lastName: full_name?.trim()?.split(' ').slice(1).join(' ') || undefined,
+        skipPasswordChecks: true,
+      })
+    } catch (err: any) {
+      console.error('Clerk user creation failed:', err)
+      return NextResponse.json({ error: err.errors?.[0]?.message || err.message }, { status: 400 })
     }
 
-    // Create user profile
+    // Create user profile linked to Clerk ID
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .insert({
-        user_id: authData.user.id,
+        clerk_user_id: clerkUser.id,
         email: email.trim(),
         full_name: full_name?.trim() || null,
         role,
@@ -75,8 +78,7 @@ export async function POST(request: Request) {
 
     if (profileError) {
       console.error('Profile creation failed:', profileError)
-      // Rollback: delete auth user if profile creation fails
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+      await client.users.deleteUser(clerkUser.id)
       return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
     }
 
@@ -117,15 +119,32 @@ export async function POST(request: Request) {
   }
 }
 
-// [R-ADMIN] Update user role
-export async function PATCH(request: Request) {
+// [R-CLERK-8] Update user role
+export async function PATCH(request: NextRequest) {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
   try {
     const body = await request.json()
-    const { user_id, role } = body
+    const { user_id, role, is_active } = body
 
     // Validation
     if (!user_id || !user_id.trim()) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
+    }
+
+    // [R-CLERK-POST] Handle is_active toggle
+    if (typeof is_active === 'boolean') {
+      const { data: updated, error: toggleError } = await supabaseAdmin
+        .from('user_profiles')
+        .update({ is_active })
+        .eq('user_id', user_id)
+        .select()
+        .single()
+
+      if (toggleError) {
+        return NextResponse.json({ error: 'Failed to update user status' }, { status: 500 })
+      }
+      return NextResponse.json({ user: updated })
     }
 
     if (!role || !['admin', 'team', 'vendor'].includes(role)) {
@@ -183,21 +202,23 @@ export async function PATCH(request: Request) {
   }
 }
 
-// [R-ADMIN] Resend welcome email with new temporary password
-export async function PUT(request: Request) {
+// [R-CLERK-8] Resend welcome email with new temporary password
+export async function PUT(request: NextRequest) {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
+
   try {
     const body = await request.json()
     const { user_id } = body
 
-    // Validation
     if (!user_id || !user_id.trim()) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    // Get user details
+    // Get user profile (user_id here is the profile's user_id or clerk_user_id)
     const { data: userProfile, error: fetchError } = await supabaseAdmin
       .from('user_profiles')
-      .select('email, full_name, role')
+      .select('email, full_name, role, clerk_user_id')
       .eq('user_id', user_id)
       .single()
 
@@ -205,23 +226,21 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Generate new temporary password
+    if (!userProfile.clerk_user_id) {
+      return NextResponse.json({ error: 'User not yet migrated to Clerk' }, { status: 400 })
+    }
+
     const tempPassword = Math.random().toString(36).slice(-12) + 'Aa1!'
 
-    // Update auth user with new password and reset flag
-    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
-      user_id,
-      {
+    // Reset password via Clerk Backend API
+    const client = await clerkClient()
+    try {
+      await client.users.updateUser(userProfile.clerk_user_id, {
         password: tempPassword,
-        user_metadata: {
-          full_name: userProfile.full_name,
-          password_change_required: true
-        }
-      }
-    )
-
-    if (authError) {
-      console.error('Failed to update user password:', authError)
+        skipPasswordChecks: true,
+      })
+    } catch (err: any) {
+      console.error('Failed to reset password via Clerk:', err)
       return NextResponse.json({ error: 'Failed to reset password' }, { status: 500 })
     }
 

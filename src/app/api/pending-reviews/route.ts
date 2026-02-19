@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET() {
   try {
     // [R1]: Get projects without ratings using reliable approach
     // Fetch all projects first
-    const { data: allProjects, error: projectsError } = await supabase
+    const { data: allProjects, error: projectsError } = await supabaseAdmin
       .from('projects')
       .select(`
         project_id,
@@ -32,7 +32,7 @@ export async function GET() {
     }
 
     // [R1.1]: Get all existing ratings to filter out rated projects
-    const { data: existingRatings, error: ratingsError } = await supabase
+    const { data: existingRatings, error: ratingsError } = await supabaseAdmin
       .from('ratings')
       .select('project_id')
 

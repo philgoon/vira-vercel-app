@@ -1,40 +1,21 @@
 // [C1] API Route: Approve Vendor Application
+// [R-CLERK-7]: Auth via Clerk
+// [R-CLERK-8]: User creation via Clerk Backend API
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase'
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth'
+import { clerkClient } from '@clerk/nextjs/server'
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth('admin')
+  if (isNextResponse(authResult)) return authResult
+
   try {
-    const supabase = await createClient()
     const body = await request.json()
     const { application_id } = body
 
     if (!application_id) {
       return NextResponse.json({ error: 'Application ID required' }, { status: 400 })
-    }
-
-    // Create service role client
-    const supabaseAdmin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is admin
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!profile || profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Fetch the application
@@ -89,32 +70,32 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Create user account with vendor role
+    // Create user account in Clerk
     const tempPassword = Math.random().toString(36).slice(-12) + 'A1!'
-    const { data: authUser, error: authUserError } = await supabaseAdmin.auth.admin.createUser({
-      email: application.email,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: {
-        full_name: application.primary_contact || application.vendor_name
-      }
-    })
-
-    if (authUserError) {
-      console.error('Error creating auth user:', authUserError)
-      // Rollback vendor creation
+    const client = await clerkClient()
+    let clerkUser
+    try {
+      clerkUser = await client.users.createUser({
+        emailAddress: [application.email],
+        password: tempPassword,
+        firstName: (application.primary_contact || application.vendor_name)?.split(' ')[0],
+        lastName: (application.primary_contact || application.vendor_name)?.split(' ').slice(1).join(' ') || undefined,
+        skipPasswordChecks: true,
+      })
+    } catch (err: any) {
+      console.error('Error creating Clerk user:', err)
       await supabaseAdmin.from('vendors').delete().eq('vendor_id', newVendor.vendor_id)
-      return NextResponse.json({ 
-        error: 'Failed to create user account', 
-        details: authUserError.message 
+      return NextResponse.json({
+        error: 'Failed to create user account',
+        details: err.errors?.[0]?.message || err.message
       }, { status: 500 })
     }
 
-    // Create user profile
+    // Create user profile linked to Clerk ID
     const { error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .insert({
-        user_id: authUser.user.id,
+        clerk_user_id: clerkUser.id,
         email: application.email,
         full_name: application.primary_contact || application.vendor_name,
         role: 'vendor',
@@ -123,9 +104,8 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       console.error('Error creating user profile:', profileError)
-      // Rollback vendor and auth user
       await supabaseAdmin.from('vendors').delete().eq('vendor_id', newVendor.vendor_id)
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id)
+      await client.users.deleteUser(clerkUser.id)
       return NextResponse.json({ 
         error: 'Failed to create user profile', 
         details: profileError.message 
@@ -137,7 +117,7 @@ export async function POST(request: NextRequest) {
       .from('vendor_users')
       .insert({
         vendor_id: newVendor.vendor_id,
-        user_id: authUser.user.id,
+        user_id: clerkUser.id,
         status: 'active'
       })
 
@@ -151,7 +131,7 @@ export async function POST(request: NextRequest) {
       .from('vendor_applications')
       .update({
         status: 'approved',
-        reviewed_by: user.id,
+        reviewed_by: authResult.userId,
         reviewed_at: new Date().toISOString(),
         created_vendor_id: newVendor.vendor_id
       })
@@ -164,7 +144,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       vendor_id: newVendor.vendor_id,
-      user_id: authUser.user.id,
+      user_id: clerkUser.id,
       message: 'Application approved successfully'
     })
 

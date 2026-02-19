@@ -1,11 +1,11 @@
 // [R4.4] Ratings API - Projects needing rating review using new schema
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
     // Fetch projects from view that already includes rating_status
-    const { data: projects, error: projectsError } = await supabase
+    const { data: projects, error: projectsError } = await supabaseAdmin
       .from('projects_with_vendor')
       .select('*')
       .or('rating_status.eq.Needs Review,rating_status.eq.Incomplete,rating_status.eq.Complete');
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     }
 
     // Update the projects table directly (view will auto-update)
-    const { data: updatedProject, error } = await supabase
+    const { data: updatedProject, error } = await supabaseAdmin
       .from('projects')
       .update(ratingData)
       .eq('project_id', project_id)

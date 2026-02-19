@@ -5,7 +5,6 @@ import { Vendor } from '@/types'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { supabase } from '@/lib/supabase'
 import { Filter, Star, Info, Briefcase, TrendingUp, FolderOpen } from 'lucide-react'
 
 interface VendorModalProps {
@@ -45,26 +44,29 @@ export default function VendorModal({ vendor, isOpen, onClose }: VendorModalProp
 
   const fetchProjectRatings = async () => {
     if (!vendor) return;
-    
+
     setLoadingRatings(true);
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('project_id, project_title, client_name, project_overall_rating_calc, what_went_well, areas_for_improvement')
-        .eq('vendor_id', vendor.vendor_id)
-        .not('project_overall_rating_calc', 'is', null)
-        .order('created_at', { ascending: false });
+      const res = await fetch('/api/projects');
+      if (!res.ok) throw new Error('Failed to fetch projects');
+      const result = await res.json();
 
-      if (error) {
-        console.error('Supabase error fetching project ratings:', error);
-        throw error;
-      }
+      // Filter for this vendor's rated projects
+      const vendorProjects = (result.projects || [])
+        .filter((p: any) => p.vendor_id === vendor.vendor_id && p.project_overall_rating_calc != null)
+        .map((p: any) => ({
+          project_id: p.project_id,
+          project_title: p.project_title,
+          client_name: p.client_name,
+          project_overall_rating_calc: p.project_overall_rating_calc,
+          what_went_well: p.what_went_well,
+          areas_for_improvement: p.areas_for_improvement,
+        }));
 
-      console.log('Fetched project ratings:', data);
-      setProjectRatings(data || []);
-      
+      setProjectRatings(vendorProjects);
+
       // Extract unique clients
-      const clients = Array.from(new Set((data || []).map(p => p.client_name)));
+      const clients: string[] = Array.from(new Set(vendorProjects.map((p: ProjectRating) => p.client_name)));
       setUniqueClients(clients);
     } catch (err) {
       console.error('Error fetching project ratings:', err);

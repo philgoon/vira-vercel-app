@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Briefcase, Users, GitCompareArrows, Building, Star, Settings } from 'lucide-react';
 import { UserHeader } from './UserHeader';
-import { useAuth } from '@/contexts/AuthContext';
+import { useViRAAuth } from '@/hooks/useViRAAuth';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
 // [C1] Sprint 4: Removed vendor role - vendors now have dedicated VendorSidebarNav
@@ -20,7 +20,7 @@ const navItems = [
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const { profile } = useAuth();
+  const { profile } = useViRAAuth();
 
   // Filter nav items based on user role
   const visibleNavItems = navItems.filter(item => 

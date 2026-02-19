@@ -1,6 +1,6 @@
 // [R7.0] [R-QW2+C3] Final Refactored ViRA Match API - Uses GPT-5 and 3-source data enrichment
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { openai } from '@/lib/ai';
 
 // Define comprehensive interfaces for our data structures
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     console.log(`Step 1: Fetching candidate profiles for category: ${serviceCategory}`);
 
     // Fetch all active vendors and filter in JavaScript (simpler and more reliable than PostgREST array operators)
-    const { data: allVendors, error: profilesError } = await supabase
+    const { data: allVendors, error: profilesError } = await supabaseAdmin
       .from('vendors')
       .select('vendor_id, vendor_name, vendor_type, service_categories, skills, pricing_structure, rate_cost')
       .eq('status', 'active');
@@ -79,8 +79,8 @@ export async function POST(request: Request) {
     // Step 2: Concurrently fetch performance summaries and project histories
     console.log('Step 2: Fetching performance summaries and project histories...');
     const [performanceResult, historyResult] = await Promise.all([
-      supabase.from('vendor_performance').select('*').in('vendor_id', vendorIds),
-      supabase.from('projects_with_vendor').select('vendor_id, project_title, what_went_well, areas_for_improvement, project_overall_rating_calc').in('vendor_id', vendorIds)
+      supabaseAdmin.from('vendor_performance').select('*').in('vendor_id', vendorIds),
+      supabaseAdmin.from('projects_with_vendor').select('vendor_id, project_title, what_went_well, areas_for_improvement, project_overall_rating_calc').in('vendor_id', vendorIds)
     ]);
 
     if (performanceResult.error) throw new Error(`Failed to fetch vendor performance: ${performanceResult.error.message}`);

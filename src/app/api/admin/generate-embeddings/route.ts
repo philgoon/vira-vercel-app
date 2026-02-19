@@ -1,8 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateProjectEmbedding, generateVendorEmbedding } from '@/lib/embeddings';
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth';
 
 export async function POST(request: Request) {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
+
   try {
     const { target } = await request.json(); // 'projects' | 'vendors' | 'all'
 
@@ -137,6 +141,9 @@ export async function POST(request: Request) {
 
 // GET endpoint to check status
 export async function GET() {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
+
   try {
     // Count projects with/without embeddings
     const { count: projectsTotal } = await supabaseAdmin

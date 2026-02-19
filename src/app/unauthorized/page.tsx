@@ -5,11 +5,11 @@
 
 import { useRouter } from 'next/navigation';
 import { ShieldAlert, Home, ArrowLeft } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useViRAAuth } from '@/hooks/useViRAAuth';
 
 export default function UnauthorizedPage() {
   const router = useRouter();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut } = useViRAAuth();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-100 px-4">

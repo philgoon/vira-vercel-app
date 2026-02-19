@@ -6,7 +6,7 @@ import { Building, Briefcase, Calendar, Users, Edit } from 'lucide-react';
 import { Client } from '@/types';
 import ClientModal from '@/components/modals/ClientModal';
 import ClientProfileModal from '@/components/modals/ClientProfileModal';
-import { useAuth } from '@/contexts/AuthContext';
+import { useViRAAuth } from '@/hooks/useViRAAuth';
 
 interface Project {
   project_id: string;
@@ -34,7 +34,7 @@ export default function ClientsPage() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { isAdmin } = useAuth();
+  const { isAdmin } = useViRAAuth();
 
   // [R4] [client-page-enhancement] Group vendors and projects by client
   const groupVendorsByClient = (projects: Project[]) => {

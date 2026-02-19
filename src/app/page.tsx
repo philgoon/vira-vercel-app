@@ -4,7 +4,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import {
   Users,
@@ -15,7 +14,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { useAuth } from '@/contexts/AuthContext';
+import { useViRAAuth } from '@/hooks/useViRAAuth';
 
 interface DatabaseStats {
   vendors: number;
@@ -53,7 +52,7 @@ interface AnalyticsData {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { profile, isLoading: authLoading } = useAuth();
+  const { profile, isLoading: authLoading } = useViRAAuth();
   const [stats, setStats] = useState<DatabaseStats | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,42 +68,12 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        // Fetch both stats and analytics
-        const [vendorsResult, projectsResult, clientsResult, ratingsResult, analyticsResult] = await Promise.all([
-          supabase.from('vendors').select('vendor_id', { count: 'exact', head: true }),
-          supabase.from('projects').select('project_id', { count: 'exact', head: true }),
-          supabase.from('clients_summary').select('*', { count: 'exact', head: true }),
-          supabase.from('projects_with_vendor').select('*', { count: 'exact', head: true }).eq('rating_status', 'Complete'),
-          fetch('/api/dashboard'),
-        ]);
+        const res = await fetch('/api/dashboard');
+        if (!res.ok) throw new Error('Failed to load dashboard data');
+        const data = await res.json();
 
-        // Debug logging
-        console.log('Dashboard data results:', {
-          vendors: { count: vendorsResult.count, error: vendorsResult.error },
-          projects: { count: projectsResult.count, error: projectsResult.error },
-          clients: { count: clientsResult.count, error: clientsResult.error },
-          ratings: { count: ratingsResult.count, error: ratingsResult.error }
-        });
-
-        // Check for errors
-        if (vendorsResult.error) throw new Error(`Vendors table: ${vendorsResult.error.message}`);
-        if (projectsResult.error) throw new Error(`Projects table: ${projectsResult.error.message}`);
-        if (clientsResult.error) throw new Error(`Clients summary table: ${clientsResult.error.message}`);
-        if (ratingsResult.error) throw new Error(`Completed ratings query: ${ratingsResult.error.message}`);
-
-        setStats({
-          vendors: vendorsResult.count || 0,
-          projects: projectsResult.count || 0,
-          clients: clientsResult.count || 0,
-          ratings: ratingsResult.count || 0,
-        });
-
-        // Load analytics data
-        if (analyticsResult.ok) {
-          const analyticsData = await analyticsResult.json();
-          setAnalytics(analyticsData);
-        }
-
+        setStats(data.stats);
+        setAnalytics(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
       } finally {

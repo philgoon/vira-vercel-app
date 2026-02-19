@@ -1,7 +1,11 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth'
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
+
   const vendor = await req.json()
 
   const { data, error } = await supabaseAdmin

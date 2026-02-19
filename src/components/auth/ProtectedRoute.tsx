@@ -6,7 +6,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useViRAAuth } from '@/hooks/useViRAAuth';
 import { UserRole } from '@/types';
 
 interface ProtectedRouteProps {
@@ -20,40 +20,28 @@ export function ProtectedRoute({
   allowedRoles,
   redirectTo = '/login',
 }: ProtectedRouteProps) {
-  const { user, profile, isLoading } = useAuth();
+  const { user, profile, isLoading } = useViRAAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // Check if we're in skip auth mode
-    const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true';
-
     if (!isLoading) {
-      // In skip auth mode, allow all access
-      if (skipAuth) {
-        return;
-      }
-
-      // Not authenticated - redirect to login
       if (!user) {
         router.push(redirectTo);
         return;
       }
 
-      // Authenticated but no profile - shouldn't happen, but handle gracefully
       if (!profile) {
         console.error('User authenticated but no profile found');
-        router.push('/error');
+        router.push('/login');
         return;
       }
 
-      // Check role-based access if allowedRoles specified
       if (allowedRoles && !allowedRoles.includes(profile.role)) {
         console.warn(`Access denied: User role ${profile.role} not in allowed roles`);
         router.push('/unauthorized');
         return;
       }
 
-      // Check if user is active
       if (!profile.is_active) {
         console.warn('User account is inactive');
         router.push('/account-inactive');
@@ -74,15 +62,6 @@ export function ProtectedRoute({
     );
   }
 
-  // Check if we're in skip auth mode
-  const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true';
-
-  // In skip auth mode, render children immediately
-  if (skipAuth) {
-    return <>{children}</>;
-  }
-
-  // Don't render children until auth check complete
   if (!user || !profile) {
     return null;
   }

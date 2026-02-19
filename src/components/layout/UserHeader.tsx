@@ -4,12 +4,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useViRAAuth } from '@/hooks/useViRAAuth';
 import { getUserDisplayName, getRoleDisplayName, getRoleBadgeColor } from '@/lib/auth';
 import { LogOut, User, ChevronDown } from 'lucide-react';
 
 export function UserHeader() {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut } = useViRAAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   if (!profile) return null;

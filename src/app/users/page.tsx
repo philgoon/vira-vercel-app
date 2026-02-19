@@ -5,7 +5,6 @@
 
 import { useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { supabase } from '@/lib/supabase';
 import { UserProfile } from '@/types';
 import { getRoleDisplayName, getRoleBadgeColor } from '@/lib/auth';
 import { Users, Plus, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
@@ -22,13 +21,10 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setUsers(data || []);
+      const res = await fetch('/api/users');
+      if (!res.ok) throw new Error('Failed to fetch users');
+      const data = await res.json();
+      setUsers(data.users || []);
     } catch (err: any) {
       console.error('Error fetching users:', err);
       setError(err.message);
@@ -39,14 +35,12 @@ export default function UsersPage() {
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ is_active: !currentStatus })
-        .eq('user_id', userId);
-
-      if (error) throw error;
-      
-      // Refresh users list
+      const res = await fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, is_active: !currentStatus })
+      });
+      if (!res.ok) throw new Error('Failed to update user status');
       fetchUsers();
     } catch (err: any) {
       console.error('Error updating user status:', err);

@@ -1,6 +1,6 @@
 // [R1] Admin API endpoint to update vendor categories
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     for (const vendorName of dataAnalyticsVendors) {
       console.log(`Updating ${vendorName}...`);
 
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('vendors')
         .update({
           service_categories: ['data_analytics']

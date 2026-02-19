@@ -1,6 +1,6 @@
 // [R3] Simple API to insert sample rating data (manual approach)
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function POST() {
   try {
@@ -89,7 +89,7 @@ export async function POST() {
     ];
 
     // Insert the ratings
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('vendor_ratings')
       .insert(sampleRatings);
 

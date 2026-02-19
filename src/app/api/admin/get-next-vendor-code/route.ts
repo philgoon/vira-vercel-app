@@ -1,7 +1,11 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
+import { requireAuth, isNextResponse } from '@/lib/clerk-auth'
 
 export async function GET() {
+  const authResult = await requireAuth('admin');
+  if (isNextResponse(authResult)) return authResult;
+
   const { data, error } = await supabaseAdmin
     .from('vendors')
     .select('vendor_code')

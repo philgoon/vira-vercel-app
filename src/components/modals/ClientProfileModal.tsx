@@ -7,7 +7,6 @@
 import { useState, useEffect } from 'react';
 import { X, Save, Building2, Users, MessageSquare, FileText, DollarSign, StickyNote } from 'lucide-react';
 import { Client } from '@/types';
-import { supabase } from '@/lib/supabase';
 
 interface ClientProfileModalProps {
   client: Client;
@@ -48,10 +47,10 @@ export default function ClientProfileModal({ client, isOpen, onClose, onSave }: 
     setError(null);
 
     try {
-      // Use UPSERT to insert or update client profile
-      const { error: upsertError } = await supabase
-        .from('client_profiles')
-        .upsert({
+      const res = await fetch('/api/clients', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           client_id: client.client_key,
           client_name: client.client_name,
           industry: formData.industry || null,
@@ -60,11 +59,13 @@ export default function ClientProfileModal({ client, isOpen, onClose, onSave }: 
           marketing_brief: formData.marketing_brief || null,
           budget_range: formData.budget_range || null,
           notes: formData.notes || null,
-        }, {
-          onConflict: 'client_id'
-        });
+        }),
+      });
 
-      if (upsertError) throw upsertError;
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to update client profile');
+      }
 
       // Call onSave with updated client data
       onSave({

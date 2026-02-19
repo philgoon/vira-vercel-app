@@ -1,11 +1,11 @@
 // [R3] API endpoint to create the vendor_ratings table
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function POST() {
   try {
     // Create the vendor_ratings table
-    const { data, error } = await supabase.rpc('exec_sql', {
+    const { data, error } = await supabaseAdmin.rpc('exec_sql', {
       sql: `
         CREATE TABLE IF NOT EXISTS vendor_ratings (
           rating_id TEXT PRIMARY KEY,

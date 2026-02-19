@@ -11,7 +11,6 @@ import AddUserModal from '@/components/modals/AddUserModal'
 import CSVImport from '@/components/admin/CSVImport'
 import ReviewAssignment from '@/components/admin/ReviewAssignment'
 import ReviewMonitoringDashboard from '@/components/admin/ReviewMonitoringDashboard'
-import { supabase } from '@/lib/supabase'
 import {
   Mail,
   Users,
@@ -215,14 +214,12 @@ export default function AdminDashboard() {
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ is_active: !currentStatus })
-        .eq('user_id', userId)
-
-      if (error) throw error
-
-      // Refresh users list
+      const res = await fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, is_active: !currentStatus })
+      })
+      if (!res.ok) throw new Error('Failed to update user status')
       loadUsers()
     } catch (err: any) {
       console.error('Error updating user status:', err)

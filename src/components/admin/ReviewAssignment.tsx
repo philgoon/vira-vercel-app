@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useUser } from '@clerk/nextjs'
 import { Project, UserProfile } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -75,19 +76,19 @@ export default function ReviewAssignment() {
     }
   }
 
+  const { user: clerkUser } = useUser()
+
   const handleAssignReviewer = async (projectId: string) => {
     if (!selectedReviewer) return
 
     try {
-      const { data: { user } } = await (await import('@/lib/supabase')).supabase.auth.getUser()
-
       const response = await fetch('/api/admin/assign-reviewer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project_id: projectId,
           reviewer_id: selectedReviewer,
-          assigned_by: user?.id || null
+          assigned_by: clerkUser?.id || null
         })
       })
 

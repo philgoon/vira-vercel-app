@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { ClerkProvider } from '@clerk/nextjs';
 import { LayoutContent } from '@/components/layout/LayoutContent';
 
 const inter = Inter({
@@ -28,9 +28,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${poppins.variable}`} style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', backgroundColor: '#f9fafb' }}>
-        <AuthProvider>
+        <ClerkProvider signInUrl="/login" signUpUrl="/login" signInFallbackRedirectUrl="/" signUpFallbackRedirectUrl="/">
           <LayoutContent>{children}</LayoutContent>
-        </AuthProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

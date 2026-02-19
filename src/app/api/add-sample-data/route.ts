@@ -1,5 +1,5 @@
 // [R8.1] Add sample vendor data with service categories for testing
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 export async function POST(_request: Request) {
@@ -121,7 +121,7 @@ export async function POST(_request: Request) {
     ];
 
     // [R8.1] Insert sample vendors
-    const { data: insertedVendors, error } = await supabase
+    const { data: insertedVendors, error } = await supabaseAdmin
       .from('vendors')
       .insert(sampleVendors)
       .select();

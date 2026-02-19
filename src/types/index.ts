@@ -164,24 +164,6 @@ export interface UserProfile {
   updated_at: string;
 }
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  profile: UserProfile | null;
-}
-
-export interface AuthContextType {
-  user: AuthUser | null;
-  profile: UserProfile | null;
-  isLoading: boolean;
-  isAdmin: boolean;
-  isTeam: boolean;
-  isVendor: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
-}
-
 // ============================================================================
 // [C1] Sprint 4: Vendor Portal Types
 // ============================================================================
