@@ -12,10 +12,9 @@ if (!supabaseUrl || !supabaseKey) {
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Server-side client with service role (for admin operations)
+// [an8.10] Throw at startup if missing; falling back to anon client silently bypasses RLS
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 if (!supabaseServiceKey) {
-  console.error('SUPABASE_SERVICE_ROLE_KEY is not set. Admin operations will fail.')
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set. Admin operations require this key.')
 }
-export const supabaseAdmin = supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : supabase
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)

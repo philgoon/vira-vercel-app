@@ -15,6 +15,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const table = searchParams.get('table');
+    // [an8.15] Pagination: default 100 rows, supports ?page= and ?limit=
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.min(500, Math.max(1, parseInt(searchParams.get('limit') || '100', 10)));
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
     if (!table) {
       return NextResponse.json({ error: 'Table parameter required' }, { status: 400 });
@@ -26,51 +31,46 @@ export async function GET(request: NextRequest) {
       case 'vendors':
         query = supabase
           .from('vendors')
-          .select('*');
+          .select('*', { count: 'exact' });
         break;
 
       case 'projects':
         query = supabase
           .from('projects')
-          .select('*');
+          .select('*', { count: 'exact' });
         break;
 
       case 'user_profiles':
         query = supabase
           .from('user_profiles')
-          .select('*');
+          .select('*', { count: 'exact' });
         break;
 
       case 'ratings':
-        // NOTE: The 'ratings' table is now part of 'projects_consolidated'.
-        // We will fetch this data when the 'projects' table is requested.
-        // This case can be removed or adjusted later if a separate ratings view is needed.
         query = supabase
           .from('projects_consolidated')
-          .select('*')
-          .not('project_success', 'is', null); // Only fetch projects that have ratings
+          .select('*', { count: 'exact' })
+          .not('project_success', 'is', null);
         break;
 
       default:
         return NextResponse.json({ error: 'Invalid table name' }, { status: 400 });
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query.range(from, to);
 
     if (error) {
       console.error('Database error:', error);
       return NextResponse.json({ error: 'Database query failed' }, { status: 500 });
     }
 
-    // Transform data for easier frontend consumption
-    const transformedData = data;
-
-    // No transformation needed for simple queries
-
     return NextResponse.json({
       success: true,
-      data: transformedData || [],
-      count: transformedData?.length || 0
+      data: data || [],
+      count: data?.length || 0,
+      total: count ?? data?.length ?? 0,
+      page,
+      limit,
     });
 
   } catch (error) {

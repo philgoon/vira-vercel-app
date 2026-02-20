@@ -10,12 +10,23 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const id = searchParams.get('id');
+    const vendorId = searchParams.get('vendor_id');
     const vendorCategory = searchParams.get('vendor_category');
+    // [an8.15] Pagination: default 100 rows
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.min(500, Math.max(1, parseInt(searchParams.get('limit') || '100', 10)));
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
     // [R4.2] Query projects table directly - vendor_name now in projects table
     let query = supabaseAdmin
       .from('projects')
-      .select('*');
+      .select('*', { count: 'exact' });
+
+    // [an8.14] Filter by vendor_id server-side
+    if (vendorId) {
+      query = query.eq('vendor_id', vendorId);
+    }
 
     // Apply filters if provided
     if (id) {
@@ -32,7 +43,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const { data: projects, error } = await query;
+    const { data: projects, error, count } = await query.range(from, to);
 
     if (error) {
       console.error('Supabase error:', error);
@@ -49,7 +60,7 @@ export async function GET(request: NextRequest) {
       }) || [];
     }
 
-    return NextResponse.json({ projects: filteredProjects });
+    return NextResponse.json({ projects: filteredProjects, total: count ?? filteredProjects.length, page, limit });
   } catch (error) {
     console.error('Failed to fetch projects:', error);
     return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
@@ -149,8 +160,6 @@ export async function PUT(request: NextRequest) {
       ...updateData,
       updated_at: new Date().toISOString()
     }
-
-    console.log('Updating project with payload:', updatePayload)
 
     const { data: updatedProject, error: updateError } = await supabaseAdmin
       .from('projects')

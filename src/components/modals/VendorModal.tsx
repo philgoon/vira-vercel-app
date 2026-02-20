@@ -47,13 +47,13 @@ export default function VendorModal({ vendor, isOpen, onClose }: VendorModalProp
 
     setLoadingRatings(true);
     try {
-      const res = await fetch('/api/projects');
+      // [an8.14] Filter server-side by vendor_id
+      const res = await fetch(`/api/projects?vendor_id=${vendor.vendor_id}`);
       if (!res.ok) throw new Error('Failed to fetch projects');
       const result = await res.json();
 
-      // Filter for this vendor's rated projects
       const vendorProjects = (result.projects || [])
-        .filter((p: any) => p.vendor_id === vendor.vendor_id && p.project_overall_rating_calc != null)
+        .filter((p: any) => p.project_overall_rating_calc != null)
         .map((p: any) => ({
           project_id: p.project_id,
           project_title: p.project_title,
