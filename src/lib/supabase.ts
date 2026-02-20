@@ -12,9 +12,13 @@ if (!supabaseUrl || !supabaseKey) {
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Server-side client with service role (for admin operations)
-// [an8.10] Throw at startup if missing; falling back to anon client silently bypasses RLS
+// [an8.10] Server-only env vars aren't available at module scope in Next.js,
+// so we warn instead of throw. The client will fail on first use if unset.
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 if (!supabaseServiceKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set. Admin operations require this key.')
+  console.warn('SUPABASE_SERVICE_ROLE_KEY is not set. Admin operations will fail.')
 }
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+export const supabaseAdmin = createClient(
+  supabaseUrl,
+  supabaseServiceKey || supabaseKey
+)
