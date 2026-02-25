@@ -27,7 +27,7 @@ export function ProtectedRoute({
     if (isLoading) return;
     if (!user) { router.push(redirectTo); return; }
     if (!profile && profileLoading) return;
-    if (!profile) { console.error('User authenticated but no profile found'); router.push('/login'); return; }
+    if (!profile) { router.push('/unauthorized'); return; }
     if (allowedRoles && !allowedRoles.includes(profile.role)) { router.push('/unauthorized'); return; }
     if (!profile.is_active) { router.push('/account-inactive'); return; }
   }, [user, profile, profileLoading, isLoading, allowedRoles, redirectTo, router]);
