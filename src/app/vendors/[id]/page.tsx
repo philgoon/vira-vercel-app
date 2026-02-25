@@ -129,31 +129,22 @@ export default function VendorDetailsPage({ params }: VendorPageProps) {
 
         {/* Details */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--stm-space-4)' }}>
-          {vendor.contact_name && (
+          {vendor.primary_contact && (
             <div style={{ backgroundColor: 'var(--stm-card)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-md)', padding: 'var(--stm-space-5)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--stm-space-2)', marginBottom: 'var(--stm-space-1)' }}>
                 <Building2 style={{ width: '14px', height: '14px', color: 'var(--stm-muted-foreground)' }} />
                 <div style={{ fontSize: 'var(--stm-text-xs)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--stm-font-body)' }}>Contact</div>
               </div>
-              <div style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-foreground)', fontFamily: 'var(--stm-font-body)' }}>{vendor.contact_name}</div>
+              <div style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-foreground)', fontFamily: 'var(--stm-font-body)' }}>{vendor.primary_contact}</div>
             </div>
           )}
-          {vendor.contact_email && (
+          {vendor.email && (
             <div style={{ backgroundColor: 'var(--stm-card)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-md)', padding: 'var(--stm-space-5)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--stm-space-2)', marginBottom: 'var(--stm-space-1)' }}>
                 <Mail style={{ width: '14px', height: '14px', color: 'var(--stm-muted-foreground)' }} />
                 <div style={{ fontSize: 'var(--stm-text-xs)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--stm-font-body)' }}>Email</div>
               </div>
-              <div style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-foreground)', fontFamily: 'var(--stm-font-body)' }}>{vendor.contact_email}</div>
-            </div>
-          )}
-          {vendor.location && (
-            <div style={{ backgroundColor: 'var(--stm-card)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-md)', padding: 'var(--stm-space-5)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--stm-space-2)', marginBottom: 'var(--stm-space-1)' }}>
-                <MapPin style={{ width: '14px', height: '14px', color: 'var(--stm-muted-foreground)' }} />
-                <div style={{ fontSize: 'var(--stm-text-xs)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--stm-font-body)' }}>Location</div>
-              </div>
-              <div style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-foreground)', fontFamily: 'var(--stm-font-body)' }}>{vendor.location}</div>
+              <div style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-foreground)', fontFamily: 'var(--stm-font-body)' }}>{vendor.email}</div>
             </div>
           )}
         </div>
