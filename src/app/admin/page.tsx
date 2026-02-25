@@ -517,12 +517,11 @@ export default function AdminDashboard() {
 
       </div>
 
-      {sendInviteModalOpen && (
-        <SendInviteModal
-          onClose={() => setSendInviteModalOpen(false)}
-          onSuccess={() => { setSendInviteModalOpen(false); loadInvites(); }}
-        />
-      )}
+      <SendInviteModal
+        isOpen={sendInviteModalOpen}
+        onClose={() => setSendInviteModalOpen(false)}
+        onSuccess={() => { setSendInviteModalOpen(false); loadInvites(); }}
+      />
     </ProtectedRoute>
   )
 }
