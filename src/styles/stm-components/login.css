@@ -184,6 +184,15 @@
   animation: stm-login-logoReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* ── Brand Logo (left panel) ───────────── */
+
+.stm-login-brand-logo {
+  display: block;
+  height: 80px;
+  width: auto;
+  margin: 0 auto var(--stm-space-8, 2rem);
+}
+
 /* ── Product Logo (right panel) ────────── */
 
 .stm-login-product-logo {

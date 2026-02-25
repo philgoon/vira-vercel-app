@@ -2,7 +2,6 @@
 // [R-CLERK-5]: Login page - STM split-screen layout with Clerk embedded SignIn
 
 import { SignIn } from '@clerk/nextjs';
-import { MorseAnimation } from '@/components/brand/MorseAnimation';
 
 export default function LoginPage() {
   return (
@@ -11,7 +10,12 @@ export default function LoginPage() {
       <div className="stm-login-brand stm-surface-morse stm-surface-morse-light">
         <div className="stm-login-brand-dot-grid" />
         <div className="stm-login-brand-content">
-          <MorseAnimation />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/assets/icons/stm-icon-white.svg"
+            alt="Single Throw Marketing"
+            className="stm-login-brand-logo"
+          />
 
           <div className="stm-login-tagline">
             <h1>Vendor Intelligence<br />Recommendation Agent</h1>
