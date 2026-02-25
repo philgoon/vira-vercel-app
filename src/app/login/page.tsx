@@ -14,7 +14,7 @@ export default function LoginPage() {
           <MorseAnimation />
 
           <div className="stm-login-tagline">
-            <h1>Vendor Intelligence,<br />Recommendation Agent</h1>
+            <h1>Vendor Intelligence<br />Recommendation Agent</h1>
             <p>
               Data-driven vendor matching and performance analytics
               for strategic partnership decisions.
@@ -51,8 +51,7 @@ export default function LoginPage() {
                 elements: {
                   rootBox: 'w-full',
                   card: 'shadow-none border-0 w-full',
-                  headerTitle: 'font-sans',
-                  headerSubtitle: 'font-sans',
+                  header: 'hidden',
                   formButtonPrimary: 'bg-[var(--stm-primary)] hover:opacity-90',
                   footerActionLink: 'text-[var(--stm-primary)]',
                 }
