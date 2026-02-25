@@ -140,11 +140,11 @@ function EditProjectContent() {
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b">
           <div className="px-6 py-4">
-            <h1 className="text-2xl font-bold text-[#1A5276]">Edit Project</h1>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--stm-primary)' }}>Edit Project</h1>
           </div>
         </div>
         <div className="p-8 text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-[#1A5276] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <div className="animate-spin w-8 h-8 border-2 border-t-transparent rounded-full mx-auto mb-4" style={{ borderColor: 'var(--stm-primary)', borderTopColor: 'transparent' }}></div>
           <p className="text-gray-600">Loading project...</p>
         </div>
       </div>
@@ -156,7 +156,7 @@ function EditProjectContent() {
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b">
           <div className="px-6 py-4">
-            <h1 className="text-2xl font-bold text-[#1A5276]">Edit Project</h1>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--stm-primary)' }}>Edit Project</h1>
           </div>
         </div>
         <div className="p-8 text-center">
@@ -164,7 +164,10 @@ function EditProjectContent() {
           <p className="text-red-600">{error}</p>
           <Link
             href="/projects"
-            className="inline-block mt-4 px-4 py-2 bg-[#1A5276] text-white rounded hover:bg-[#154360]"
+            className="inline-block mt-4 px-4 py-2 text-white rounded transition-colors"
+            style={{ backgroundColor: 'var(--stm-primary)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--stm-primary-dark)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--stm-primary)'}
           >
             Back to Projects
           </Link>
@@ -185,7 +188,7 @@ function EditProjectContent() {
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-[#1A5276]">Edit Project</h1>
+              <h1 className="text-2xl font-bold" style={{ color: 'var(--stm-primary)' }}>Edit Project</h1>
               <p className="text-sm text-gray-600 mt-1">
                 Update project details and assignments
               </p>
@@ -216,7 +219,8 @@ function EditProjectContent() {
                     <input
                       type="text"
                       {...register('project_title', { required: 'Project title is required' })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#1A5276] focus:border-transparent"
+                      className="w-full px-4 py-2 border rounded-lg focus:border-transparent"
+                      style={{ '--tw-ring-color': 'var(--stm-primary)' } as React.CSSProperties}
                     />
                     {errors.project_title && (
                       <p className="mt-1 text-sm text-red-600">{errors.project_title.message}</p>
@@ -231,7 +235,8 @@ function EditProjectContent() {
                     <textarea
                       {...register('project_description')}
                       rows={4}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#1A5276] focus:border-transparent"
+                      className="w-full px-4 py-2 border rounded-lg focus:border-transparent"
+                      style={{ '--tw-ring-color': 'var(--stm-primary)' } as React.CSSProperties}
                       placeholder="Describe the project scope and requirements..."
                     />
                   </div>
@@ -244,7 +249,8 @@ function EditProjectContent() {
                       </label>
                       <select
                         {...register('client_key', { required: 'Client is required' })}
-                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#1A5276] focus:border-transparent"
+                        className="w-full px-4 py-2 border rounded-lg focus:border-transparent"
+                      style={{ '--tw-ring-color': 'var(--stm-primary)' } as React.CSSProperties}
                       >
                         <option value="">Select a client</option>
                         {clients.map((client) => (
@@ -264,7 +270,8 @@ function EditProjectContent() {
                       </label>
                       <select
                         {...register('assigned_vendor_id')}
-                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#1A5276] focus:border-transparent"
+                        className="w-full px-4 py-2 border rounded-lg focus:border-transparent"
+                      style={{ '--tw-ring-color': 'var(--stm-primary)' } as React.CSSProperties}
                       >
                         <option value="">No vendor assigned</option>
                         {vendors.map((vendor) => (
@@ -285,7 +292,8 @@ function EditProjectContent() {
                       <input
                         type="date"
                         {...register('expected_deadline')}
-                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#1A5276] focus:border-transparent"
+                        className="w-full px-4 py-2 border rounded-lg focus:border-transparent"
+                      style={{ '--tw-ring-color': 'var(--stm-primary)' } as React.CSSProperties}
                       />
                     </div>
 
@@ -295,7 +303,8 @@ function EditProjectContent() {
                       </label>
                       <select
                         {...register('status')}
-                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#1A5276] focus:border-transparent"
+                        className="w-full px-4 py-2 border rounded-lg focus:border-transparent"
+                      style={{ '--tw-ring-color': 'var(--stm-primary)' } as React.CSSProperties}
                       >
                         <option value="active">Active</option>
                         <option value="completed">Completed</option>
@@ -315,7 +324,8 @@ function EditProjectContent() {
                       <input
                         type="text"
                         {...register('project_type')}
-                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#1A5276] focus:border-transparent"
+                        className="w-full px-4 py-2 border rounded-lg focus:border-transparent"
+                      style={{ '--tw-ring-color': 'var(--stm-primary)' } as React.CSSProperties}
                         placeholder="e.g., Web Development, Content Writing"
                       />
                     </div>
@@ -327,7 +337,8 @@ function EditProjectContent() {
                       <input
                         type="text"
                         {...register('key_skills_required')}
-                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#1A5276] focus:border-transparent"
+                        className="w-full px-4 py-2 border rounded-lg focus:border-transparent"
+                      style={{ '--tw-ring-color': 'var(--stm-primary)' } as React.CSSProperties}
                         placeholder="e.g., React, SEO, Copywriting"
                       />
                     </div>
@@ -345,10 +356,10 @@ function EditProjectContent() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${submitting
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-[#1A5276] hover:bg-[#154360] text-white'
-                        }`}
+                      className="flex-1 py-3 px-6 rounded-lg font-medium transition-colors text-white"
+                      style={submitting ? { backgroundColor: '#9CA3AF', cursor: 'not-allowed' } : { backgroundColor: 'var(--stm-primary)' }}
+                      onMouseEnter={(e) => !submitting && (e.currentTarget.style.backgroundColor = 'var(--stm-primary-dark)')}
+                      onMouseLeave={(e) => !submitting && (e.currentTarget.style.backgroundColor = 'var(--stm-primary)')}
                     >
                       {submitting ? 'Saving...' : 'Save Changes'}
                     </button>
@@ -375,11 +386,11 @@ export default function EditProjectPage() {
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b">
           <div className="px-6 py-4">
-            <h1 className="text-2xl font-bold text-[#1A5276]">Edit Project</h1>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--stm-primary)' }}>Edit Project</h1>
           </div>
         </div>
         <div className="p-8 text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-[#1A5276] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <div className="animate-spin w-8 h-8 border-2 border-t-transparent rounded-full mx-auto mb-4" style={{ borderColor: 'var(--stm-primary)', borderTopColor: 'transparent' }}></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>

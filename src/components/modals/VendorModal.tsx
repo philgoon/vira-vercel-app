@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Vendor } from '@/types'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { Filter, Star, Info, Briefcase, TrendingUp, FolderOpen } from 'lucide-react'
+import { SidePanel, SidePanelTabs, SidePanelSection, SidePanelField, SidePanelFooterAction } from '@/components/layout/SidePanel'
+import { Star, Filter } from 'lucide-react'
 
 interface VendorModalProps {
   vendor: Vendor | null
@@ -26,9 +25,10 @@ interface ProjectRating {
 
 // [R2] [vendor-detail-readonly] Converted to read-only information display for security
 export default function VendorModal({ vendor, isOpen, onClose }: VendorModalProps) {
+  const router = useRouter()
   // [M3] Tab state
   const [activeTab, setActiveTab] = useState<'overview' | 'services' | 'performance' | 'projects'>('overview');
-  
+
   // [M3] State for project ratings and filters
   const [projectRatings, setProjectRatings] = useState<ProjectRating[]>([]);
   const [selectedClient, setSelectedClient] = useState<string>('all');
@@ -104,310 +104,340 @@ export default function VendorModal({ vendor, isOpen, onClose }: VendorModalProp
     return rating ? `${Number(rating).toFixed(1)}/10` : 'No rating';
   }
 
+  // Tab definitions for SidePanelTabs
+  const tabs = [
+    {
+      id: 'overview',
+      label: 'Overview',
+      content: renderOverviewTab(),
+    },
+    {
+      id: 'services',
+      label: 'Services',
+      content: renderServicesTab(),
+    },
+    {
+      id: 'performance',
+      label: 'Performance',
+      content: renderPerformanceTab(),
+    },
+    {
+      id: 'projects',
+      label: `Projects (${projectRatings.length})`,
+      content: renderProjectsTab(),
+    },
+  ];
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-gray-900">
-            {vendor.vendor_name}
-          </DialogTitle>
-        </DialogHeader>
+    <SidePanel
+      isOpen={isOpen}
+      onClose={onClose}
+      title={vendor?.vendor_name || 'Vendor Details'}
+      footer={
+        <>
+          <SidePanelFooterAction
+            onClick={() => { onClose(); router.push(`/vendors/${vendor.vendor_id}/edit`); }}
+            label="Edit Vendor"
+            variant="primary"
+          />
+          <SidePanelFooterAction
+            onClick={onClose}
+            label="Close"
+          />
+        </>
+      }
+    >
+      <SidePanelTabs
+        tabs={tabs}
+        activeTabId={activeTab}
+        onTabChange={(tabId) => setActiveTab(tabId as 'overview' | 'services' | 'performance' | 'projects')}
+      />
+    </SidePanel>
+  );
 
-        {/* [M3] Tab Navigation */}
-        <div className="flex border-b border-gray-200 px-6">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'overview'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Info className="w-4 h-4" />
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('services')}
-            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'services'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Briefcase className="w-4 h-4" />
-            Services
-          </button>
-          <button
-            onClick={() => setActiveTab('performance')}
-            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'performance'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <TrendingUp className="w-4 h-4" />
-            Performance
-          </button>
-          <button
-            onClick={() => setActiveTab('projects')}
-            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'projects'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <FolderOpen className="w-4 h-4" />
-            Projects ({projectRatings.length})
-          </button>
-        </div>
+  function renderOverviewTab() {
+    if (!vendor) return null;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-6)' }}>
+        <SidePanelSection title="Contact Details">
+          <SidePanelField label="Vendor Type" value={displayValue(vendor.vendor_type)} />
+          <SidePanelField label="Status" value={displayValue(vendor.status)} />
+          <SidePanelField label="Primary Contact" value={displayValue(vendor.primary_contact)} />
+          <SidePanelField label="Email" value={displayValue(vendor.email)} />
+          <SidePanelField label="Availability" value={displayValue(vendor.availability)} />
+        </SidePanelSection>
 
-        {/* [M3] Tab Content */}
-        <div className="p-6">
-        {activeTab === 'overview' && (
-        <div className="grid grid-cols-2 gap-6">
-          {/* Left Column - Contact Details */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg border-b pb-2 text-gray-800">Contact Details</h3>
+        <SidePanelSection title="Additional Information">
+          <SidePanelField label="Portfolio URL" value={displayValue(vendor.portfolio_url)} muted={!vendor.portfolio_url} />
+          <SidePanelField label="Work Samples" value={displayValue(vendor.sample_work_urls)} muted={!vendor.sample_work_urls} />
+          <SidePanelField label="Industry" value={displayValue(vendor.industry)} />
+          <SidePanelField label="Service Category" value={displayValue(vendor.service_category)} />
+        </SidePanelSection>
+      </div>
+    );
+  }
 
-            <div className="space-y-3">
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <Label className="text-sm font-medium text-gray-600">Vendor Type</Label>
-                <p className="text-gray-900 font-medium">{displayValue(vendor.vendor_type)}</p>
-              </div>
-
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <Label className="text-sm font-medium text-gray-600">Status</Label>
-                <p className="text-gray-900">{displayValue(vendor.status)}</p>
-              </div>
-
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <Label className="text-sm font-medium text-gray-600">Primary Contact</Label>
-                <p className="text-gray-900">{displayValue(vendor.primary_contact)}</p>
-              </div>
-
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <Label className="text-sm font-medium text-gray-600">Email</Label>
-                <p className="text-gray-900">{displayValue(vendor.email)}</p>
-              </div>
-
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <Label className="text-sm font-medium text-gray-600">Availability</Label>
-                <p className="text-gray-900">{displayValue(vendor.availability)}</p>
-              </div>
-            </div>
+  function renderServicesTab() {
+    if (!vendor) return null;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-4)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--stm-space-4)' }}>
+          <div style={{
+            backgroundColor: 'var(--stm-muted)',
+            padding: 'var(--stm-space-4)',
+            borderLeft: '4px solid var(--stm-primary)',
+            borderRadius: 'var(--stm-radius-md)',
+          }}>
+            <SidePanelField label="Industry" value={displayValue(vendor.industry)} />
           </div>
 
-          {/* Right Column - More Details */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg border-b pb-2 text-gray-800">Additional Information</h3>
-            
-            <div className="space-y-3">
-
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <Label className="text-sm font-medium text-gray-600">Portfolio URL</Label>
-                <p className="text-gray-900 text-sm">{displayValue(vendor.portfolio_url)}</p>
-              </div>
-
-              {/* [R3] [vendor-work-samples] Work samples field - always show */}
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <Label className="text-sm font-medium text-gray-600">Work Samples</Label>
-                <p className="text-gray-900 text-sm">{displayValue(vendor.sample_work_urls)}</p>
-              </div>
-
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <Label className="text-sm font-medium text-gray-600">Industry</Label>
-                <p className="text-gray-900 font-medium">{displayValue(vendor.industry)}</p>
-              </div>
-
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <Label className="text-sm font-medium text-gray-600">Service Category</Label>
-                <p className="text-gray-900 font-medium">{displayValue(vendor.service_category)}</p>
-              </div>
-            </div>
+          <div style={{
+            backgroundColor: 'var(--stm-muted)',
+            padding: 'var(--stm-space-4)',
+            borderLeft: '4px solid var(--stm-primary)',
+            borderRadius: 'var(--stm-radius-md)',
+          }}>
+            <SidePanelField label="Service Category" value={displayValue(vendor.service_category)} />
           </div>
         </div>
+
+        {vendor.skills && (
+          <div style={{
+            backgroundColor: 'var(--stm-muted)',
+            padding: 'var(--stm-space-4)',
+            borderLeft: '4px solid var(--stm-primary)',
+            borderRadius: 'var(--stm-radius-md)',
+          }}>
+            <SidePanelField label="Skills" value={
+              <div style={{ whiteSpace: 'pre-wrap', color: 'var(--stm-foreground)' }}>
+                {vendor.skills}
+              </div>
+            } />
+          </div>
         )}
 
-        {/* [M3] Services Tab */}
-        {activeTab === 'services' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
-                <Label className="text-sm font-medium text-gray-600">Industry</Label>
-                <p className="text-gray-900 font-medium text-lg">{displayValue(vendor.industry)}</p>
-              </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--stm-space-4)' }}>
+          <div style={{
+            backgroundColor: 'var(--stm-muted)',
+            padding: 'var(--stm-space-4)',
+            borderLeft: '4px solid var(--stm-warning)',
+            borderRadius: 'var(--stm-radius-md)',
+          }}>
+            <SidePanelField label="Pricing Structure" value={displayValue(vendor.pricing_structure)} />
+          </div>
 
-              <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
-                <Label className="text-sm font-medium text-gray-600">Service Category</Label>
-                <p className="text-gray-900 font-medium text-lg">{displayValue(vendor.service_category)}</p>
+          <div style={{
+            backgroundColor: 'var(--stm-muted)',
+            padding: 'var(--stm-space-4)',
+            borderLeft: '4px solid var(--stm-warning)',
+            borderRadius: 'var(--stm-radius-md)',
+          }}>
+            <SidePanelField label="Rate/Cost" value={
+              <div style={{ fontSize: 'var(--stm-text-lg)', fontWeight: 'var(--stm-font-bold)', color: 'var(--stm-success)' }}>
+                {displayValue(vendor.rate_cost)}
               </div>
+            } />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderPerformanceTab() {
+    if (!vendor) return null;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-6)' }}>
+        <div style={{
+          backgroundColor: 'var(--stm-muted)',
+          padding: 'var(--stm-space-6)',
+          borderLeft: '4px solid var(--stm-primary)',
+          borderRadius: 'var(--stm-radius-md)',
+        }}>
+          <h3 style={{ fontSize: 'var(--stm-text-lg)', fontWeight: 'var(--stm-font-semibold)', marginBottom: 'var(--stm-space-4)', color: 'var(--stm-foreground)' }}>
+            Performance Metrics
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--stm-space-6)' }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', marginBottom: 'var(--stm-space-2)' }}>
+                Overall Rating
+              </p>
+              <p style={{ fontSize: 'var(--stm-text-4xl)', fontWeight: 'var(--stm-font-bold)', color: 'var(--stm-primary)' }}>
+                {displayRating(vendor.avg_overall_rating)}
+              </p>
             </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', marginBottom: 'var(--stm-space-2)' }}>
+                Total Projects
+              </p>
+              <p style={{ fontSize: 'var(--stm-text-4xl)', fontWeight: 'var(--stm-font-bold)', color: 'var(--stm-primary)' }}>
+                {vendor.total_projects || 0}
+              </p>
+            </div>
+          </div>
+        </div>
 
-            {vendor.skills && (
-              <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
-                <Label className="text-sm font-medium text-gray-600 mb-2 block">Skills</Label>
-                <p className="text-gray-900 whitespace-pre-wrap">{vendor.skills}</p>
+        <div style={{
+          backgroundColor: 'var(--stm-muted)',
+          padding: 'var(--stm-space-6)',
+          borderLeft: '4px solid var(--stm-primary)',
+          borderRadius: 'var(--stm-radius-md)',
+        }}>
+          <h3 style={{ fontSize: 'var(--stm-text-lg)', fontWeight: 'var(--stm-font-semibold)', marginBottom: 'var(--stm-space-4)', color: 'var(--stm-foreground)' }}>
+            Capacity Status
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-4)' }}>
+            <div>
+              <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', marginBottom: 'var(--stm-space-1)' }}>
+                Current Status
+              </p>
+              <p style={{
+                fontSize: 'var(--stm-text-lg)',
+                fontWeight: 'var(--stm-font-bold)',
+                color:
+                  vendor.availability_status === 'Available' ? 'var(--stm-success)' :
+                  vendor.availability_status === 'Limited' ? 'var(--stm-warning)' :
+                  vendor.availability_status === 'On Leave' ? 'var(--stm-info)' :
+                  vendor.availability_status === 'Unavailable' ? 'var(--stm-error)' :
+                  'var(--stm-muted-foreground)'
+              }}>
+                {vendor.availability_status || 'Not Set'}
+              </p>
+            </div>
+            {vendor.availability_notes && (
+              <div>
+                <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', marginBottom: 'var(--stm-space-1)' }}>
+                  Notes
+                </p>
+                <p style={{ color: 'var(--stm-foreground)' }}>{vendor.availability_notes}</p>
               </div>
             )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400">
-                <Label className="text-sm font-medium text-gray-600">Pricing Structure</Label>
-                <p className="text-gray-900 font-semibold text-lg">{displayValue(vendor.pricing_structure)}</p>
-              </div>
-
-              <div className="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400">
-                <Label className="text-sm font-medium text-gray-600">Rate/Cost</Label>
-                <p className="text-gray-900 font-semibold text-2xl text-green-600">
-                  {displayValue(vendor.rate_cost)}
+            {vendor.available_from && (
+              <div>
+                <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', marginBottom: 'var(--stm-space-1)' }}>
+                  Available From
+                </p>
+                <p style={{ fontSize: 'var(--stm-text-base)', fontWeight: 'var(--stm-font-medium)', color: 'var(--stm-foreground)' }}>
+                  {formatDate(vendor.available_from)}
                 </p>
               </div>
+            )}
+            <div>
+              <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', marginBottom: 'var(--stm-space-1)' }}>
+                General Availability
+              </p>
+              <p style={{ color: 'var(--stm-foreground)' }}>{displayValue(vendor.availability)}</p>
             </div>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {/* [M3] Performance Tab */}
-        {activeTab === 'performance' && (
-          <div className="space-y-6">
-            {/* Performance Metrics */}
-            <div className="bg-purple-50 p-6 rounded-lg border-l-4 border-purple-400">
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">Performance Metrics</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-2">Overall Rating</p>
-                  <p className="text-4xl font-bold text-purple-600">
-                    {displayRating(vendor.avg_overall_rating)}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-2">Total Projects</p>
-                  <p className="text-4xl font-bold text-purple-600">
-                    {vendor.total_projects || 0}
-                  </p>
-                </div>
-              </div>
+  function renderProjectsTab() {
+    if (!vendor) return null;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-4)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h3 style={{ fontWeight: 'var(--stm-font-semibold)', fontSize: 'var(--stm-text-lg)', color: 'var(--stm-foreground)' }}>
+            Project Ratings
+          </h3>
+          {uniqueClients.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--stm-space-2)' }}>
+              <Filter style={{ width: '16px', height: '16px', color: 'var(--stm-muted-foreground)' }} />
+              <select
+                value={selectedClient}
+                onChange={(e) => setSelectedClient(e.target.value)}
+                style={{
+                  padding: 'var(--stm-space-2) var(--stm-space-3)',
+                  border: '1px solid var(--stm-border)',
+                  borderRadius: 'var(--stm-radius-md)',
+                  fontSize: 'var(--stm-text-sm)',
+                  backgroundColor: 'var(--stm-background)',
+                  color: 'var(--stm-foreground)',
+                }}
+              >
+                <option value="all">All Clients ({projectRatings.length})</option>
+                {uniqueClients.map(client => (
+                  <option key={client} value={client}>
+                    {client} ({projectRatings.filter(p => p.client_name === client).length})
+                  </option>
+                ))}
+              </select>
             </div>
+          )}
+        </div>
 
-            {/* Capacity Status */}
-            <div className="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-400">
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">Capacity Status</h3>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Current Status</p>
-                  <p className="text-2xl font-bold" style={{
-                    color:
-                      vendor.availability_status === 'Available' ? '#166534' :
-                      vendor.availability_status === 'Limited' ? '#92400e' :
-                      vendor.availability_status === 'On Leave' ? '#1e40af' :
-                      vendor.availability_status === 'Unavailable' ? '#991b1b' :
-                      '#6b7280'
+        {loadingRatings ? (
+          <div style={{ textAlign: 'center', padding: 'var(--stm-space-8)', color: 'var(--stm-muted-foreground)' }}>
+            Loading project ratings...
+          </div>
+        ) : filteredProjects.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 'var(--stm-space-8)', color: 'var(--stm-muted-foreground)' }}>
+            No rated projects found for this vendor
+            {selectedClient !== 'all' && ' with the selected client'}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-3)' }}>
+            {filteredProjects.map(project => (
+              <div
+                key={project.project_id}
+                style={{
+                  backgroundColor: 'var(--stm-background)',
+                  border: '1px solid var(--stm-border)',
+                  borderRadius: 'var(--stm-radius-md)',
+                  padding: 'var(--stm-space-4)',
+                  transition: 'box-shadow var(--stm-duration-fast) var(--stm-ease-out)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 'var(--stm-space-2)' }}>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ fontWeight: 'var(--stm-font-medium)', color: 'var(--stm-foreground)' }}>
+                      {project.project_title}
+                    </h4>
+                    <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)' }}>
+                      {project.client_name}
+                    </p>
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--stm-space-1)',
+                    backgroundColor: 'var(--stm-muted)',
+                    padding: `var(--stm-space-1) var(--stm-space-3)`,
+                    borderRadius: 'var(--stm-radius-full)',
                   }}>
-                    {vendor.availability_status || 'Not Set'}
-                  </p>
-                </div>
-                {vendor.availability_notes && (
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Notes</p>
-                    <p className="text-gray-700">{vendor.availability_notes}</p>
+                    <Star style={{ width: '16px', height: '16px', color: 'var(--stm-warning)', fill: 'var(--stm-warning)' }} />
+                    <span style={{ fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)' }}>
+                      {project.project_overall_rating_calc?.toFixed(1) || 'N/A'}
+                    </span>
+                    <span style={{ fontSize: 'var(--stm-text-xs)', color: 'var(--stm-muted-foreground)' }}>/10</span>
                   </div>
-                )}
-                {vendor.available_from && (
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Available From</p>
-                    <p className="text-lg font-medium text-gray-900">{formatDate(vendor.available_from)}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">General Availability</p>
-                  <p className="text-gray-900">{displayValue(vendor.availability)}</p>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* [M3] Projects Tab */}
-        {activeTab === 'projects' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-lg text-gray-800">Project Ratings</h3>
-              {uniqueClients.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-gray-500" />
-                  <select
-                    value={selectedClient}
-                    onChange={(e) => setSelectedClient(e.target.value)}
-                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">All Clients ({projectRatings.length})</option>
-                    {uniqueClients.map(client => (
-                      <option key={client} value={client}>
-                        {client} ({projectRatings.filter(p => p.client_name === client).length})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-
-            {loadingRatings ? (
-              <div className="text-center py-8 text-gray-500">Loading project ratings...</div>
-            ) : filteredProjects.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No rated projects found for this vendor
-                {selectedClient !== 'all' && ' with the selected client'}
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {filteredProjects.map(project => (
-                  <div key={project.project_id} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{project.project_title}</h4>
-                        <p className="text-sm text-gray-500">{project.client_name}</p>
+                {(project.what_went_well || project.areas_for_improvement) && (
+                  <div style={{ marginTop: 'var(--stm-space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-2)', fontSize: 'var(--stm-text-sm)' }}>
+                    {project.what_went_well && (
+                      <div>
+                        <p style={{ fontWeight: 'var(--stm-font-medium)', color: 'var(--stm-success)' }}>✓ What went well:</p>
+                        <p style={{ color: 'var(--stm-foreground)', marginLeft: 'var(--stm-space-4)' }}>
+                          {project.what_went_well}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full">
-                        <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                        <span className="font-semibold text-gray-900">
-                          {project.project_overall_rating_calc?.toFixed(1) || 'N/A'}
-                        </span>
-                        <span className="text-xs text-gray-500">/10</span>
-                      </div>
-                    </div>
-                    {(project.what_went_well || project.areas_for_improvement) && (
-                      <div className="mt-3 space-y-2 text-sm">
-                        {project.what_went_well && (
-                          <div>
-                            <p className="font-medium text-green-700">✓ What went well:</p>
-                            <p className="text-gray-600 ml-4">{project.what_went_well}</p>
-                          </div>
-                        )}
-                        {project.areas_for_improvement && (
-                          <div>
-                            <p className="font-medium text-orange-700">⚠ Areas for improvement:</p>
-                            <p className="text-gray-600 ml-4">{project.areas_for_improvement}</p>
-                          </div>
-                        )}
+                    )}
+                    {project.areas_for_improvement && (
+                      <div>
+                        <p style={{ fontWeight: 'var(--stm-font-medium)', color: 'var(--stm-warning)' }}>⚠ Areas for improvement:</p>
+                        <p style={{ color: 'var(--stm-foreground)', marginLeft: 'var(--stm-space-4)' }}>
+                          {project.areas_for_improvement}
+                        </p>
                       </div>
                     )}
                   </div>
-                ))}
+                )}
               </div>
-            )}
+            ))}
           </div>
         )}
-        </div>
-
-        {/* Action Buttons - Outside all tabs */}
-        <div className="flex gap-3 px-6 py-4 border-t bg-gray-50">
-          <Button onClick={onClose} className="flex-1 bg-blue-600 hover:bg-blue-700">
-            Close
-          </Button>
-          <div className="flex-1 flex items-center justify-center text-sm text-gray-500 bg-gray-100 rounded-md">
-            💡 To edit vendor information, use the admin dashboard
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
+      </div>
+    );
+  }
 }

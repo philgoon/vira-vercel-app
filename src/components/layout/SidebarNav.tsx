@@ -2,116 +2,104 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Users, GitCompareArrows, Building, Star, Settings } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Users, GitCompareArrows, Building, Star, Settings, UserCog, SlidersHorizontal } from 'lucide-react';
 import { UserHeader } from './UserHeader';
 import { useViRAAuth } from '@/hooks/useViRAAuth';
-import NotificationBell from '@/components/notifications/NotificationBell';
+
 
 // [C1] Sprint 4: Removed vendor role - vendors now have dedicated VendorSidebarNav
-const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'team'] },
-  { href: '/vira-match', label: 'ViRA Match', icon: GitCompareArrows, roles: ['admin', 'team'] },
-  { href: '/rate-project', label: 'Reviews', icon: Star, roles: ['admin', 'team'] },
-  { href: '/vendors', label: 'Vendors', icon: Users, roles: ['admin', 'team'] },
-  { href: '/clients', label: 'Clients', icon: Building, roles: ['admin', 'team'] },
-  { href: '/projects', label: 'Projects', icon: Briefcase, roles: ['admin', 'team'] },
-  { href: '/admin', label: 'Admin', icon: Settings, roles: ['admin'] },
+// [EPIC-002 M1] Grouped nav sections: Intel / Directory / Platform
+const navSections = [
+  {
+    label: 'Intel',
+    items: [
+      { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'team'] },
+      { href: '/vira-match', label: 'ViRA Match', icon: GitCompareArrows, roles: ['admin', 'team'] },
+    ],
+  },
+  {
+    label: 'Directory',
+    items: [
+      { href: '/vendors', label: 'Vendor Roster', icon: Users, roles: ['admin', 'team'] },
+      { href: '/clients', label: 'Clients', icon: Building, roles: ['admin', 'team'] },
+      { href: '/projects', label: 'Projects', icon: Briefcase, roles: ['admin', 'team'] },
+      { href: '/ratings', label: 'Ratings', icon: Star, roles: ['admin', 'team'] },
+    ],
+  },
+  {
+    label: 'Platform',
+    items: [
+      { href: '/users', label: 'Users', icon: UserCog, roles: ['admin'] },
+      { href: '/admin', label: 'Admin', icon: Settings, roles: ['admin'] },
+      { href: '/settings', label: 'Settings', icon: SlidersHorizontal, roles: ['admin'] },
+    ],
+  },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
   const { profile } = useViRAAuth();
 
-  // Filter nav items based on user role
-  const visibleNavItems = navItems.filter(item => 
-    !profile || item.roles.includes(profile.role)
-  );
-
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      backgroundColor: '#2C3E50',
-      color: '#ECF0F1'
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: '1.5rem',
-        borderBottom: '1px solid #34495E',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }}>
-          <div style={{
-            width: '2rem',
-            height: '2rem',
-            backgroundColor: '#6B8F71',
-            borderRadius: '0.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '1.25rem', height: '1.25rem', color: 'white' }}>
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-            </svg>
-          </div>
-          <h1 style={{
-            fontSize: '1.5rem',
-            fontFamily: 'var(--font-headline)',
-            fontWeight: '600',
-            color: '#ECF0F1'
-          }}>ViRA</h1>
+    <div className="stm-sidebar" style={{ position: 'relative', width: '280px' }}>
+      {/* Header with VIRA Wordmark */}
+      <div className="stm-sidebar-header">
+        <Link href="/" className="stm-sidebar-logo" style={{ textDecoration: 'none' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/assets/icons/stm-morse-code-white.svg"
+            alt="STM"
+            style={{ width: '56px', height: '56px', flexShrink: 0 }}
+          />
+          <span className="stm-sidebar-logo-text" style={{ fontFamily: 'var(--stm-font-wordmark)', letterSpacing: '0.15em', fontSize: 'var(--stm-text-3xl)', color: 'white' }}>
+            VIRA
+          </span>
         </Link>
-        
-        {/* Notification Bell */}
-        <NotificationBell />
       </div>
 
       {/* Navigation */}
-      <nav style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {visibleNavItems.map((item) => {
-          const isActive = pathname === item.href;
+      <nav className="stm-sidebar-nav">
+        {navSections.map((section) => {
+          const visibleItems = section.items.filter(item =>
+            !profile || item.roles.includes(profile.role)
+          );
+          if (visibleItems.length === 0) return null;
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.75rem 1rem',
-                borderRadius: '0.5rem',
-                textDecoration: 'none',
-                color: isActive ? '#FFFFFF' : '#ECF0F1',
-                backgroundColor: isActive ? '#6B8F71' : 'transparent',
-                fontWeight: '500',
-                transition: 'background-color 150ms'
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = '#34495E';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }
-              }}
-            >
-              <item.icon style={{ width: '1.25rem', height: '1.25rem' }} />
-              <span>{item.label}</span>
-            </Link>
+            <div key={section.label}>
+              <p style={{
+                padding: 'var(--stm-space-3) var(--stm-space-4) var(--stm-space-1)',
+                fontSize: 'var(--stm-text-xs)',
+                fontWeight: 'var(--stm-font-semibold)',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.4)',
+                margin: 0,
+              }}>
+                {section.label}
+              </p>
+              <ul className="stm-nav-items">
+                {visibleItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <li key={item.href} className="stm-nav-item">
+                      <Link
+                        href={item.href}
+                        className={`stm-nav-link ${isActive ? 'stm-nav-link-active' : ''}`}
+                      >
+                        <item.icon className="stm-nav-icon" />
+                        <span className="stm-nav-item-label">{item.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           );
         })}
       </nav>
 
       {/* Footer - User Info */}
-      <div style={{
-        padding: '1rem',
-        borderTop: '1px solid #34495E'
-      }}>
+      <div className="stm-sidebar-footer">
         <UserHeader />
       </div>
     </div>

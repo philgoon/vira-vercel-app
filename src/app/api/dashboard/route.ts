@@ -18,23 +18,37 @@ export async function GET() {
     // Get top performing vendors
     const { data: topVendors, error: vendorsError } = await supabaseAdmin
       .from('vendor_performance')
-      .select('vendor_id, vendor_name, avg_overall_rating, total_projects, rated_projects')
+      .select('vendor_id, vendor_name, avg_overall_rating, total_projects, rated_projects, recommendation_pct')
       .not('avg_overall_rating', 'is', null)
       .order('avg_overall_rating', { ascending: false })
-      .limit(5);
+      .limit(8);
 
     if (vendorsError) throw vendorsError;
 
-    // Get review completion stats
-    const { data: assignments, error: assignmentsError } = await supabaseAdmin
-      .from('review_assignments')
-      .select('status');
+    // Get category + availability for those vendors
+    const vendorIds = topVendors?.map(v => v.vendor_id) || [];
+    const { data: vendorDetails } = vendorIds.length
+      ? await supabaseAdmin
+          .from('vendors')
+          .select('vendor_id, service_categories, availability_status')
+          .in('vendor_id', vendorIds)
+      : { data: [] };
 
-    if (assignmentsError) throw assignmentsError;
+    // Get review completion stats from projects_with_vendor (source of truth for rating status)
+    const [pendingResult, completedResult] = await Promise.all([
+      supabaseAdmin
+        .from('projects_with_vendor')
+        .select('project_id', { count: 'exact', head: true })
+        .or('rating_status.eq.Needs Review,rating_status.eq.Incomplete'),
+      supabaseAdmin
+        .from('projects_with_vendor')
+        .select('project_id', { count: 'exact', head: true })
+        .eq('rating_status', 'Complete'),
+    ]);
 
-    const totalAssignments = assignments?.length || 0;
-    const completedAssignments = assignments?.filter(a => a.status === 'completed').length || 0;
-    const pendingAssignments = totalAssignments - completedAssignments;
+    const pendingAssignments = pendingResult.count || 0;
+    const completedAssignments = completedResult.count || 0;
+    const totalAssignments = pendingAssignments + completedAssignments;
     const completionRate = totalAssignments > 0 ? (completedAssignments / totalAssignments) * 100 : 0;
 
     // Get recent activity (last 5 rated projects)
@@ -54,7 +68,10 @@ export async function GET() {
         clients: clientCount.count || 0,
         ratings: ratingCount.count || 0,
       },
-      topVendors: topVendors || [],
+      topVendors: (topVendors || []).map(v => ({
+        ...v,
+        ...((vendorDetails || []).find(d => d.vendor_id === v.vendor_id) || {}),
+      })),
       reviewStats: {
         total: totalAssignments,
         completed: completedAssignments,

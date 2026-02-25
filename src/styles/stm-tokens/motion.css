@@ -1,0 +1,92 @@
+/**
+ * STM Design System - Motion Tokens
+ * Animation timing, easing functions, and duration standards
+ */
+
+:root {
+  /* ==========================================
+     DURATION
+     Standard timing for animations
+     ========================================== */
+  
+  --stm-duration-instant: 0ms;
+  --stm-duration-fast: 150ms;
+  --stm-duration-normal: 300ms;
+  --stm-duration-slow: 500ms;
+  --stm-duration-slower: 700ms;
+  
+  /* ==========================================
+     EASING FUNCTIONS
+     Cubic bezier curves for natural motion
+     ========================================== */
+  
+  --stm-ease-linear: linear;
+  --stm-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --stm-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --stm-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Special easings for specific use cases */
+  --stm-ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --stm-ease-elastic: cubic-bezier(0.5, 1.5, 0.5, 1);
+  
+  /* ==========================================
+     COMMON TRANSITIONS
+     Pre-configured transitions for common use cases
+     ========================================== */
+  
+  /* Fast interactions (hover, focus) */
+  --stm-transition-fast: all var(--stm-duration-fast) var(--stm-ease-out);
+  
+  /* Normal interactions (dropdowns, slides) */
+  --stm-transition-normal: all var(--stm-duration-normal) var(--stm-ease-out);
+  
+  /* Slow interactions (page transitions, modals) */
+  --stm-transition-slow: all var(--stm-duration-slow) var(--stm-ease-in-out);
+  
+  /* Specific property transitions */
+  --stm-transition-colors: 
+    background-color var(--stm-duration-fast) var(--stm-ease-out),
+    border-color var(--stm-duration-fast) var(--stm-ease-out),
+    color var(--stm-duration-fast) var(--stm-ease-out);
+  
+  --stm-transition-transform: 
+    transform var(--stm-duration-fast) var(--stm-ease-out);
+  
+  --stm-transition-opacity: 
+    opacity var(--stm-duration-fast) var(--stm-ease-out);
+}
+
+/**
+ * Usage Guidelines:
+ * 
+ * Fast (150ms) - Use for:
+ * - Hover states
+ * - Focus states  
+ * - Button presses
+ * - Color changes
+ * 
+ * Normal (300ms) - Use for:
+ * - Dropdowns
+ * - Tooltips
+ * - Slide animations
+ * - Error messages
+ * 
+ * Slow (500ms) - Use for:
+ * - Page transitions
+ * - Modal open/close
+ * - Complex animations
+ * 
+ * Usage Examples:
+ * 
+ * .button {
+ *   transition: var(--stm-transition-fast);
+ * }
+ * 
+ * .modal {
+ *   transition: var(--stm-transition-slow);
+ * }
+ * 
+ * .dropdown {
+ *   transition: var(--stm-transition-normal);
+ * }
+ */

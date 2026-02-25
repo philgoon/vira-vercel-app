@@ -1,0 +1,64 @@
+/**
+ * STM Design System - Typography Tokens
+ * Montserrat-driven type system from Figma specs
+ */
+
+@font-face {
+  font-family: 'Bank Gothic';
+  src: url('/assets/fonts/BankGothicMdBT.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Bank Gothic';
+  src: url('/assets/fonts/BankGothicBold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Font Families - uses Next.js optimized font loading */
+  --stm-font-sans: var(--font-montserrat), 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --stm-font-headline: var(--font-montserrat), 'Montserrat', var(--stm-font-sans);
+  --stm-font-body: var(--font-montserrat), 'Montserrat', var(--stm-font-sans);
+  --stm-font-wordmark: 'Bank Gothic', 'Montserrat', sans-serif;
+  --stm-font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
+
+  /* Font Sizes */
+  --stm-text-xs: 0.75rem;       /* 12px */
+  --stm-text-sm: 0.875rem;      /* 14px */
+  --stm-text-base: 1rem;        /* 16px */
+  --stm-text-lg: 1.125rem;      /* 18px - Figma body */
+  --stm-text-xl: 1.25rem;       /* 20px */
+  --stm-text-2xl: 1.5rem;       /* 24px */
+  --stm-text-3xl: 1.875rem;     /* 30px - Figma section heads */
+  --stm-text-4xl: 2.125rem;     /* 34px - Figma CTA */
+  --stm-text-5xl: 3.375rem;     /* 54px - Figma page title */
+  --stm-text-6xl: 4.5rem;       /* 72px - Figma stat values */
+  --stm-text-7xl: 7.5rem;       /* 120px - Figma hero number */
+
+  /* Font Weights */
+  --stm-font-normal: 400;
+  --stm-font-medium: 500;
+  --stm-font-semibold: 600;
+  --stm-font-bold: 700;
+  --stm-font-extrabold: 800;
+  --stm-font-black: 900;
+
+  /* Line Heights */
+  --stm-leading-none: 1;
+  --stm-leading-tight: 1.12;    /* Figma CTA 38/34 */
+  --stm-leading-snug: 1.25;
+  --stm-leading-normal: 1.44;   /* Figma body 26/18 */
+  --stm-leading-relaxed: 1.6;
+  --stm-leading-loose: 2.44;    /* Figma nav 44/18 */
+
+  /* Letter Spacing */
+  --stm-tracking-tight: -0.025em;
+  --stm-tracking-normal: 0;
+  --stm-tracking-wide: 0.02em;  /* Figma standard */
+  --stm-tracking-wider: 0.05em;
+}

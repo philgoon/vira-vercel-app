@@ -129,11 +129,12 @@ export default function ImportPage() {
                   className="sr-only"
                 />
                 <div
-                  className={`p-4 rounded-lg border-2 transition-colors ${
+                  className={`p-4 border-2 transition-colors ${
                     importType === 'vendors'
                       ? 'border-primary bg-primary/5'
                       : 'border-gray-200'
                   }`}
+                  style={{ borderRadius: 'var(--stm-radius-lg)' }}
                 >
                   <h3 className="font-semibold">Vendors</h3>
                   <p className="text-sm text-gray-600">Import vendor profiles</p>
@@ -149,11 +150,12 @@ export default function ImportPage() {
                   className="sr-only"
                 />
                 <div
-                  className={`p-4 rounded-lg border-2 transition-colors ${
+                  className={`p-4 border-2 transition-colors ${
                     importType === 'projects'
                       ? 'border-primary bg-primary/5'
                       : 'border-gray-200'
                   }`}
+                  style={{ borderRadius: 'var(--stm-radius-lg)' }}
                 >
                   <h3 className="font-semibold">Projects</h3>
                   <p className="text-sm text-gray-600">Import project data</p>
@@ -169,11 +171,12 @@ export default function ImportPage() {
                   className="sr-only"
                 />
                 <div
-                  className={`p-4 rounded-lg border-2 transition-colors ${
+                  className={`p-4 border-2 transition-colors ${
                     importType === 'ratings'
                       ? 'border-primary bg-primary/5'
                       : 'border-gray-200'
                   }`}
+                  style={{ borderRadius: 'var(--stm-radius-lg)' }}
                 >
                   <h3 className="font-semibold">Ratings</h3>
                   <p className="text-sm text-gray-600">Import vendor ratings</p>
@@ -193,7 +196,7 @@ export default function ImportPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
+              <div className="border-2 border-dashed border-gray-200 p-8 text-center" style={{ borderRadius: 'var(--stm-radius-lg)' }}>
                 <input
                   type="file"
                   accept=".csv"

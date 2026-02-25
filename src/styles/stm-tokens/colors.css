@@ -1,0 +1,117 @@
+/**
+ * STM Design System - Color Tokens
+ * Derived from Figma MINI-MOE design specs
+ */
+
+:root {
+  /* Brand Colors - Single (Blue) */
+  --stm-single: #1A5276;
+  --stm-single-50: #E8F4F8;
+  --stm-single-100: #D1E9F1;
+  --stm-single-500: #1A5276;
+  --stm-single-600: #154466;
+  --stm-single-700: #0C4468;
+
+  /* Brand Colors - Throw (Sage Green) */
+  --stm-throw: #6B8E71;
+  --stm-throw-50: #F0F4F1;
+  --stm-throw-100: #E1E9E3;
+  --stm-throw-500: #6B8E71;
+  --stm-throw-600: #567259;
+  --stm-throw-700: #415641;
+
+  /* Brand Colors - Marketing (Gray) */
+  --stm-marketing: #6D6F70;
+  --stm-marketing-50: #F1F1F1;
+  --stm-marketing-100: #E3E3E4;
+  --stm-marketing-500: #6D6F70;
+  --stm-marketing-600: #58595A;
+  --stm-marketing-700: #424243;
+
+  /* Gradient Palette (Figma hero) */
+  --stm-gradient-start: #0C4468;
+  --stm-gradient-mid: #186697;
+  --stm-gradient-end: #2688C6;
+  --stm-gradient-blue: linear-gradient(0deg, var(--stm-gradient-end) 0%, var(--stm-gradient-mid) 74.52%, var(--stm-gradient-start) 100%);
+  --stm-gradient-blue-reverse: linear-gradient(180deg, var(--stm-gradient-end) 0%, var(--stm-gradient-mid) 74.52%, var(--stm-gradient-start) 100%);
+
+  /* Semantic Colors */
+  --stm-primary: var(--stm-single);
+  --stm-primary-foreground: #ffffff;
+
+  --stm-secondary: var(--stm-throw);
+  --stm-secondary-foreground: #ffffff;
+
+  --stm-accent: #2688C6;
+  --stm-accent-foreground: #ffffff;
+
+  /* Status Colors */
+  --stm-success: #059669;
+  --stm-success-light: #dcfce7;
+  --stm-success-dark: #166534;
+
+  --stm-warning: #F59E0B;
+  --stm-warning-light: #fef3c7;
+  --stm-warning-dark: #92400e;
+
+  --stm-error: #F40000;
+  --stm-error-light: #fee2e2;
+  --stm-error-dark: #991b1b;
+
+  /* Destructive (semantic alias for error in action contexts) */
+  --stm-destructive: var(--stm-error);
+  --stm-destructive-light: var(--stm-error-light);
+  --stm-destructive-dark: var(--stm-error-dark);
+  --stm-destructive-foreground: #ffffff;
+
+  --stm-info: var(--stm-accent);
+  --stm-info-light: #dbeafe;
+  --stm-info-dark: #1e40af;
+
+  /* Neutral Palette */
+  --stm-gray-50: #f9fafb;
+  --stm-gray-100: #f3f4f6;
+  --stm-gray-200: #e5e7eb;
+  --stm-gray-300: #D1D3D4;
+  --stm-gray-400: #9ca3af;
+  --stm-gray-500: #6b7280;
+  --stm-gray-600: #4b5563;
+  --stm-gray-700: #374151;
+  --stm-gray-800: #282828;
+  --stm-gray-900: #111827;
+
+  /* Contextual Colors */
+  --stm-background: #ffffff;
+  --stm-foreground: var(--stm-gray-900);
+
+  --stm-card: #ffffff;
+  --stm-card-foreground: var(--stm-gray-900);
+
+  --stm-border: var(--stm-gray-200);
+  --stm-input-border: var(--stm-gray-300);
+
+  --stm-muted: var(--stm-gray-100);
+  --stm-muted-foreground: var(--stm-gray-500);
+
+  --stm-page-background: #f9fafb;
+
+  /* Sidebar Colors (dark) */
+  --stm-sidebar: var(--stm-gradient-start);
+  --stm-sidebar-foreground: #ECF0F1;
+  --stm-sidebar-primary: var(--stm-throw);
+  --stm-sidebar-primary-foreground: #FFFFFF;
+  --stm-sidebar-accent: var(--stm-gradient-mid);
+  --stm-sidebar-accent-foreground: #ECF0F1;
+  --stm-sidebar-border: var(--stm-gradient-mid);
+
+  /* Footer Colors */
+  --stm-footer: #282828;
+  --stm-footer-dark: #000000;
+
+  /* Chart Colors */
+  --stm-chart-1: #1DA1F2;
+  --stm-chart-2: #0C5489;
+  --stm-chart-3: var(--stm-throw);
+  --stm-chart-4: #F40000;
+  --stm-chart-5: var(--stm-gradient-end);
+}

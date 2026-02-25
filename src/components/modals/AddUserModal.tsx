@@ -1,18 +1,8 @@
 "use client"
 
 import React, { useState } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from '../ui/dialog'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
-import { UserPlus, Loader2, CheckCircle, AlertCircle, Copy } from 'lucide-react'
+import { SidePanel, SidePanelSection, SidePanelFooterAction } from '@/components/layout/SidePanel'
+import { UserPlus, CheckCircle, AlertCircle, Copy } from 'lucide-react'
 
 interface AddUserModalProps {
   isOpen: boolean
@@ -38,7 +28,6 @@ export default function AddUserModal({
     setSuccess(false)
     setTempPassword('')
 
-    // Validation
     if (!email || !email.includes('@')) {
       setError('Please enter a valid email address')
       return
@@ -70,8 +59,6 @@ export default function AddUserModal({
 
       setSuccess(true)
       setTempPassword(data.tempPassword)
-
-      // Don't auto-close - let admin copy password first
     } catch (err: any) {
       setError(err.message || 'Failed to create user')
     } finally {
@@ -84,7 +71,6 @@ export default function AddUserModal({
       await navigator.clipboard.writeText(tempPassword)
       alert('Temporary password copied to clipboard!')
     } catch (error) {
-      console.error('Failed to copy password:', error)
       alert('Failed to copy password. Password: ' + tempPassword)
     }
   }
@@ -104,170 +90,206 @@ export default function AddUserModal({
     handleClose()
   }
 
-  return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-            <UserPlus className="w-6 h-6 text-blue-600" />
-            Add New User
-          </DialogTitle>
-          <DialogDescription>
-            Create a new user account for the ViRA platform
-          </DialogDescription>
-        </DialogHeader>
+  const fieldStyle = {
+    width: '100%',
+    padding: 'var(--stm-space-3)',
+    fontSize: 'var(--stm-text-sm)',
+    border: '1px solid var(--stm-border)',
+    borderRadius: 'var(--stm-radius-md)',
+    backgroundColor: 'var(--stm-background)',
+    color: 'var(--stm-foreground)',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box' as const,
+    outline: 'none',
+  }
 
-        <div className="space-y-4 py-4">
-          {/* Email Input */}
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-medium">
-              Email Address *
-            </Label>
-            <Input
-              id="email"
+  const labelStyle = {
+    display: 'block',
+    fontSize: 'var(--stm-text-sm)',
+    fontWeight: 'var(--stm-font-medium)',
+    color: 'var(--stm-foreground)',
+    marginBottom: 'var(--stm-space-2)',
+  }
+
+  const roleDescriptions = {
+    admin: 'Full access to all features and user management',
+    team: 'Can rate projects and view vendor ratings',
+    vendor: 'Can view their own ratings only',
+  }
+
+  return (
+    <SidePanel
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Add New User"
+      footer={
+        success ? (
+          <SidePanelFooterAction onClick={handleSuccessClose} label="Done" variant="primary" />
+        ) : (
+          <>
+            <SidePanelFooterAction onClick={handleClose} label="Cancel" disabled={isSubmitting} />
+            <SidePanelFooterAction
+              onClick={handleSubmit}
+              label={isSubmitting ? 'Creating...' : 'Create User'}
+              variant="primary"
+              disabled={isSubmitting}
+            />
+          </>
+        )
+      }
+    >
+      {!success && (
+        <SidePanelSection title="User Details">
+          {/* Email */}
+          <div>
+            <label style={labelStyle}>Email Address *</label>
+            <input
               type="email"
               placeholder="user@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full"
-              disabled={isSubmitting || success}
+              style={fieldStyle}
+              disabled={isSubmitting}
             />
           </div>
 
-          {/* Full Name Input */}
-          <div className="space-y-2">
-            <Label htmlFor="fullName" className="text-sm font-medium">
-              Full Name *
-            </Label>
-            <Input
-              id="fullName"
+          {/* Full Name */}
+          <div>
+            <label style={labelStyle}>Full Name *</label>
+            <input
               type="text"
               placeholder="John Doe"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full"
-              disabled={isSubmitting || success}
+              style={fieldStyle}
+              disabled={isSubmitting}
             />
           </div>
 
-          {/* Role Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="role" className="text-sm font-medium">
-              User Role *
-            </Label>
+          {/* Role */}
+          <div>
+            <label style={labelStyle}>User Role *</label>
             <select
-              id="role"
               value={role}
               onChange={(e) => setRole(e.target.value as 'admin' | 'team' | 'vendor')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isSubmitting || success}
+              style={fieldStyle}
+              disabled={isSubmitting}
             >
               <option value="team">Team Member</option>
               <option value="admin">Administrator</option>
               <option value="vendor">Vendor</option>
             </select>
-            <p className="text-xs text-gray-500">
-              {role === 'admin' && '• Full access to all features and user management'}
-              {role === 'team' && '• Can rate projects and view vendor ratings'}
-              {role === 'vendor' && '• Can view their own ratings only'}
+            <p style={{ fontSize: 'var(--stm-text-xs)', color: 'var(--stm-muted-foreground)', marginTop: 'var(--stm-space-1)' }}>
+              {roleDescriptions[role]}
             </p>
           </div>
 
-          {/* Error Message */}
+          {/* Error */}
           {error && (
-            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-800">{error}</p>
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 'var(--stm-space-2)',
+              padding: 'var(--stm-space-3)',
+              backgroundColor: 'color-mix(in srgb, var(--stm-error) 10%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--stm-error) 30%, transparent)',
+              borderRadius: 'var(--stm-radius-md)',
+            }}>
+              <AlertCircle style={{ width: '16px', height: '16px', color: 'var(--stm-error)', flexShrink: 0, marginTop: '2px' }} />
+              <span style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-error)' }}>{error}</span>
             </div>
           )}
+        </SidePanelSection>
+      )}
 
-          {/* Success Message with Password */}
-          {success && tempPassword && (
-            <div className="space-y-3">
-              <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-green-800">User created successfully!</p>
-              </div>
+      {/* Success State */}
+      {success && (
+        <SidePanelSection title="User Created">
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 'var(--stm-space-2)',
+            padding: 'var(--stm-space-3)',
+            backgroundColor: 'color-mix(in srgb, var(--stm-success) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--stm-success) 30%, transparent)',
+            borderRadius: 'var(--stm-radius-md)',
+          }}>
+            <CheckCircle style={{ width: '16px', height: '16px', color: 'var(--stm-success)', flexShrink: 0, marginTop: '2px' }} />
+            <span style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-success)' }}>User created successfully!</span>
+          </div>
 
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm font-semibold text-yellow-900 mb-2">
-                  ⚠️ Temporary Password (copy and share with user):
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 px-3 py-2 bg-white border border-yellow-300 rounded text-sm font-mono">
-                    {tempPassword}
-                  </code>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleCopyPassword}
-                    className="flex-shrink-0"
-                  >
-                    <Copy className="w-4 h-4 mr-1" />
-                    Copy
-                  </Button>
-                </div>
-                <p className="text-xs text-yellow-700 mt-2">
-                  User will need to change this password on first login
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Info Box */}
-          {!success && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-800">
-                <strong>📧 What happens next:</strong>
+          {tempPassword && (
+            <div style={{
+              padding: 'var(--stm-space-4)',
+              backgroundColor: 'color-mix(in srgb, var(--stm-warning) 10%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--stm-warning) 30%, transparent)',
+              borderRadius: 'var(--stm-radius-md)',
+            }}>
+              <p style={{ fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', marginBottom: 'var(--stm-space-2)' }}>
+                Temporary Password — copy and share with user:
               </p>
-              <ul className="text-sm text-blue-700 mt-2 space-y-1 list-disc list-inside">
-                <li>User account created with temporary password</li>
-                <li>Share password securely with the user</li>
-                <li>User must change password on first login</li>
-              </ul>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--stm-space-2)' }}>
+                <code style={{
+                  flex: 1,
+                  padding: 'var(--stm-space-2) var(--stm-space-3)',
+                  backgroundColor: 'var(--stm-card)',
+                  border: '1px solid var(--stm-border)',
+                  borderRadius: 'var(--stm-radius-sm)',
+                  fontSize: 'var(--stm-text-sm)',
+                  fontFamily: 'monospace',
+                  color: 'var(--stm-foreground)',
+                }}>
+                  {tempPassword}
+                </code>
+                <button
+                  onClick={handleCopyPassword}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--stm-space-1)',
+                    padding: 'var(--stm-space-2) var(--stm-space-3)',
+                    fontSize: 'var(--stm-text-sm)',
+                    border: '1px solid var(--stm-border)',
+                    borderRadius: 'var(--stm-radius-md)',
+                    backgroundColor: 'var(--stm-card)',
+                    color: 'var(--stm-foreground)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Copy style={{ width: '14px', height: '14px' }} />
+                  Copy
+                </button>
+              </div>
+              <p style={{ fontSize: 'var(--stm-text-xs)', color: 'var(--stm-muted-foreground)', marginTop: 'var(--stm-space-2)' }}>
+                User will need to change this password on first login
+              </p>
             </div>
           )}
-        </div>
+        </SidePanelSection>
+      )}
 
-        <DialogFooter className="gap-2">
-          {success ? (
-            <Button
-              onClick={handleSuccessClose}
-              className="bg-blue-600 hover:bg-blue-700 w-full"
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Done
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Create User
-                  </>
-                )}
-              </Button>
-            </>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {/* Info Box */}
+      {!success && (
+        <div style={{
+          padding: 'var(--stm-space-4)',
+          backgroundColor: 'color-mix(in srgb, var(--stm-primary) 8%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--stm-primary) 20%, transparent)',
+          borderRadius: 'var(--stm-radius-md)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--stm-space-2)', marginBottom: 'var(--stm-space-2)' }}>
+            <UserPlus style={{ width: '14px', height: '14px', color: 'var(--stm-primary)' }} />
+            <span style={{ fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-primary)' }}>
+              What happens next
+            </span>
+          </div>
+          <ul style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-1)', paddingLeft: 'var(--stm-space-4)' }}>
+            {['User account created with temporary password', 'Share password securely with the user', 'User must change password on first login'].map((item) => (
+              <li key={item} style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)' }}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </SidePanel>
   )
 }

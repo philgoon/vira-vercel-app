@@ -12,68 +12,119 @@ export default function UnauthorizedPage() {
   const { profile, signOut } = useViRAAuth();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-100 px-4">
-      <div className="max-w-md w-full text-center">
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'color-mix(in srgb, var(--stm-error) 6%, var(--stm-muted))',
+      padding: 'var(--stm-space-4)',
+    }}>
+      <div style={{ maxWidth: '420px', width: '100%', textAlign: 'center' }}>
         {/* Icon */}
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-red-600 rounded-full mb-6">
-          <ShieldAlert className="w-10 h-10 text-white" />
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '72px',
+          height: '72px',
+          backgroundColor: 'var(--stm-error)',
+          borderRadius: 'var(--stm-radius-full)',
+          marginBottom: 'var(--stm-space-6)',
+        }}>
+          <ShieldAlert style={{ width: '36px', height: '36px', color: 'white' }} />
         </div>
 
-        {/* Title */}
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+        <h1 style={{
+          fontSize: 'var(--stm-text-3xl)',
+          fontWeight: 'var(--stm-font-bold)',
+          color: 'var(--stm-foreground)',
+          marginBottom: 'var(--stm-space-4)',
+        }}>
           Access Denied
         </h1>
 
-        {/* Message */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <p className="text-gray-700 mb-4">
-            You don't have permission to access this page.
+        <div style={{
+          backgroundColor: 'var(--stm-card)',
+          borderRadius: 'var(--stm-radius-lg)',
+          boxShadow: 'var(--stm-shadow-md)',
+          padding: 'var(--stm-space-6)',
+          marginBottom: 'var(--stm-space-6)',
+        }}>
+          <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', marginBottom: 'var(--stm-space-4)' }}>
+            You don&apos;t have permission to access this page.
           </p>
           {profile && (
-            <div className="bg-gray-50 rounded-lg p-4 text-sm">
-              <p className="text-gray-600">
-                <span className="font-medium">Your Role:</span>{' '}
-                <span className="capitalize">{profile.role}</span>
+            <div style={{
+              backgroundColor: 'var(--stm-muted)',
+              borderRadius: 'var(--stm-radius-md)',
+              padding: 'var(--stm-space-3) var(--stm-space-4)',
+              fontSize: 'var(--stm-text-sm)',
+              textAlign: 'left',
+            }}>
+              <p style={{ color: 'var(--stm-muted-foreground)', marginBottom: 'var(--stm-space-1)' }}>
+                <span style={{ fontWeight: 'var(--stm-font-medium)', color: 'var(--stm-foreground)' }}>Role: </span>
+                <span style={{ textTransform: 'capitalize' }}>{profile.role}</span>
               </p>
-              <p className="text-gray-600 mt-1">
-                <span className="font-medium">Email:</span> {profile.email}
+              <p style={{ color: 'var(--stm-muted-foreground)' }}>
+                <span style={{ fontWeight: 'var(--stm-font-medium)', color: 'var(--stm-foreground)' }}>Email: </span>
+                {profile.email}
               </p>
             </div>
           )}
         </div>
 
-        {/* Actions */}
-        <div className="space-y-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-3)' }}>
           <button
             onClick={() => router.back()}
-            className="w-full bg-gray-600 text-white py-3 rounded-lg font-medium hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+            style={{
+              width: '100%',
+              padding: 'var(--stm-space-3)',
+              backgroundColor: 'var(--stm-muted-foreground)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--stm-radius-lg)',
+              fontSize: 'var(--stm-text-sm)',
+              fontWeight: 'var(--stm-font-medium)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 'var(--stm-space-2)',
+            }}
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft style={{ width: '16px', height: '16px' }} />
             Go Back
           </button>
           <button
             onClick={() => router.push('/')}
             className="btn-primary"
-            style={{ width: '100%', padding: '0.75rem', justifyContent: 'center' }}
+            style={{ width: '100%', padding: 'var(--stm-space-3)', justifyContent: 'center' }}
           >
-            <Home className="w-5 h-5" />
+            <Home style={{ width: '16px', height: '16px' }} />
             Go to Home
           </button>
           <button
             onClick={() => signOut()}
-            className="w-full bg-white text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors border border-gray-300"
+            style={{
+              width: '100%',
+              padding: 'var(--stm-space-3)',
+              backgroundColor: 'var(--stm-card)',
+              color: 'var(--stm-foreground)',
+              border: '1px solid var(--stm-border)',
+              borderRadius: 'var(--stm-radius-lg)',
+              fontSize: 'var(--stm-text-sm)',
+              fontWeight: 'var(--stm-font-medium)',
+              cursor: 'pointer',
+            }}
           >
             Sign Out
           </button>
         </div>
 
-        {/* Help Text */}
-        <p className="mt-6 text-sm text-gray-600">
+        <p style={{ marginTop: 'var(--stm-space-6)', fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)' }}>
           Need different access?{' '}
-          <a
-            href="mailto:admin@example.com"
-            className="text-blue-600 hover:text-blue-700 font-medium"
-          >
+          <a href="mailto:admin@example.com" style={{ color: 'var(--stm-primary)', fontWeight: 'var(--stm-font-medium)' }}>
             Contact your administrator
           </a>
         </p>

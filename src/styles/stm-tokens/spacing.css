@@ -1,0 +1,91 @@
+/**
+ * STM Design System - Spacing Tokens
+ * Spacing scale, border radius, and shadows
+ * Radii and shadows updated from Figma specs
+ */
+
+:root {
+  /* Spacing Scale (4px grid) */
+  --stm-space-0: 0;
+  --stm-space-1: 0.25rem;      /* 4px */
+  --stm-space-2: 0.5rem;       /* 8px */
+  --stm-space-3: 0.75rem;      /* 12px */
+  --stm-space-4: 1rem;         /* 16px */
+  --stm-space-5: 1.25rem;      /* 20px */
+  --stm-space-6: 1.5rem;       /* 24px */
+  --stm-space-8: 2rem;         /* 32px */
+  --stm-space-10: 2.5rem;      /* 40px */
+  --stm-space-12: 3rem;        /* 48px */
+  --stm-space-16: 4rem;        /* 64px */
+  --stm-space-20: 5rem;        /* 80px */
+  --stm-space-24: 6rem;        /* 96px */
+  --stm-space-32: 8rem;        /* 128px */
+  --stm-space-40: 10rem;       /* 160px */
+
+  /* Breakpoints (reference values for JS, can't use in @media)
+     Actual media queries use these values hardcoded in responsive.css */
+  --stm-breakpoint-sm: 640px;
+  --stm-breakpoint-md: 768px;
+  --stm-breakpoint-lg: 1024px;
+  --stm-breakpoint-xl: 1280px;
+  --stm-breakpoint-2xl: 1536px;
+
+  /* Border Radius - scaled up from Figma */
+  --stm-radius-none: 0;
+  --stm-radius-sm: 0.375rem;   /* 6px */
+  --stm-radius-md: 0.625rem;   /* 10px */
+  --stm-radius-lg: 0.875rem;   /* 14px */
+  --stm-radius-xl: 1.25rem;    /* 20px */
+  --stm-radius-2xl: 1.75rem;   /* 28px */
+  --stm-radius-3xl: 2.5rem;    /* 40px - Figma hero sections */
+  --stm-radius-4xl: 3.75rem;   /* 60px - Figma footer */
+  --stm-radius-full: 9999px;
+
+  /* Box Shadows - dramatic per Figma */
+  --stm-shadow-none: 0 0 #0000;
+  --stm-shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08);
+  --stm-shadow-md: 0 4px 8px -1px rgb(0 0 0 / 0.12),
+                   0 2px 4px -2px rgb(0 0 0 / 0.08);
+  --stm-shadow-lg: 1px 10px 20px rgba(0, 0, 0, 0.15);
+  --stm-shadow-xl: 1px 10px 20px rgba(0, 0, 0, 0.25);
+  --stm-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+  --stm-shadow-dramatic: 1px 10px 20px rgba(0, 0, 0, 0.25);
+
+  /* Focus ring shadow */
+  --stm-shadow-focus: 0 0 0 3px rgba(26, 82, 118, 0.15);
+  --stm-shadow-focus-error: 0 0 0 3px rgba(244, 0, 0, 0.15);
+  --stm-shadow-focus-success: 0 0 0 3px rgba(5, 150, 105, 0.15);
+
+  /* Opacity Scale */
+  --stm-opacity-0: 0;
+  --stm-opacity-5: 0.05;
+  --stm-opacity-10: 0.1;
+  --stm-opacity-15: 0.15;
+  --stm-opacity-20: 0.2;
+  --stm-opacity-30: 0.3;
+  --stm-opacity-40: 0.4;
+  --stm-opacity-50: 0.5;
+  --stm-opacity-60: 0.6;
+  --stm-opacity-70: 0.7;
+  --stm-opacity-80: 0.8;
+  --stm-opacity-90: 0.9;
+  --stm-opacity-100: 1;
+
+  /* Semantic opacity */
+  --stm-opacity-disabled: var(--stm-opacity-50);
+  --stm-opacity-placeholder: var(--stm-opacity-60);
+  --stm-opacity-muted: var(--stm-opacity-70);
+  --stm-opacity-subtle: var(--stm-opacity-80);
+  --stm-opacity-decorative: var(--stm-opacity-30);
+
+  /* Z-Index Layers */
+  --stm-z-base: 0;
+  --stm-z-dropdown: 1000;
+  --stm-z-sticky: 1100;
+  --stm-z-fixed: 1200;
+  --stm-z-modal-backdrop: 1300;
+  --stm-z-modal: 1400;
+  --stm-z-popover: 1500;
+  --stm-z-tooltip: 1600;
+  --stm-z-notification: 1700;
+}

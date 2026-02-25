@@ -1,0 +1,2693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VIRA — Vendor Intelligence Recommendation Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg:            #070B14;
+      --surface:       #0E1422;
+      --card:          #131928;
+      --card-hover:    #172035;
+      --border:        rgba(255, 255, 255, 0.06);
+      --border-accent: rgba(38, 136, 198, 0.3);
+      --border-green:  rgba(74, 158, 92, 0.3);
+      --blue:          #2688C6;
+      --blue-dim:      rgba(38, 136, 198, 0.12);
+      --blue-glow:     rgba(38, 136, 198, 0.2);
+      --green:         #4A9E5C;
+      --green-dim:     rgba(74, 158, 92, 0.12);
+      --amber:         #D4842A;
+      --amber-dim:     rgba(212, 132, 42, 0.12);
+      --red:           #E05252;
+      --red-dim:       rgba(224, 82, 82, 0.12);
+      --text-primary:  #E8EDF5;
+      --text-secondary:#7A8BA8;
+      --text-muted:    #3D4A63;
+      --sidebar-w:     260px;
+      --header-h:      64px;
+      --radius:        8px;
+      --radius-lg:     12px;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================================================
+       GRAIN TEXTURE OVERLAY
+    ============================================================ */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 256px 256px;
+    }
+
+    /* ============================================================
+       LAYOUT SHELL
+    ============================================================ */
+    .app-shell {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* ============================================================
+       SIDEBAR
+    ============================================================ */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 10;
+    }
+
+    .sidebar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -1px;
+      width: 1px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent 0%, var(--blue) 30%, var(--blue) 70%, transparent 100%);
+      opacity: 0.15;
+    }
+
+    /* Wordmark */
+    .sidebar-brand {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .wordmark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .wordmark-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--blue);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .wordmark-icon::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+    }
+
+    .wordmark-icon svg {
+      width: 18px;
+      height: 18px;
+      fill: white;
+    }
+
+    .wordmark-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .wordmark-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 20px;
+      letter-spacing: 0.02em;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .wordmark-tagline {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    /* Morse identifier dots */
+    .morse-dots {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .morse-dot {
+      height: 3px;
+      border-radius: 2px;
+      background: var(--text-muted);
+      opacity: 0.5;
+    }
+
+    .morse-dot.short { width: 5px; }
+    .morse-dot.long  { width: 12px; }
+
+    .morse-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      margin-left: 6px;
+    }
+
+    /* Nav */
+    .sidebar-nav {
+      padding: 16px 12px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .nav-section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 0 8px;
+      margin-bottom: 8px;
+      margin-top: 20px;
+    }
+
+    .nav-section-label:first-child {
+      margin-top: 0;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      color: var(--text-secondary);
+      position: relative;
+      margin-bottom: 2px;
+      font-size: 13.5px;
+      font-weight: 400;
+      user-select: none;
+      border: 1px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: rgba(255,255,255,0.03);
+      color: var(--text-primary);
+      border-color: var(--border);
+    }
+
+    .nav-item.active {
+      background: var(--blue-dim);
+      color: var(--blue);
+      border-color: var(--border-accent);
+      font-weight: 500;
+    }
+
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: -12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 60%;
+      background: var(--blue);
+      border-radius: 0 2px 2px 0;
+    }
+
+    .nav-item .nav-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .nav-item.active .nav-icon {
+      opacity: 1;
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      background: var(--red-dim);
+      color: var(--red);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      border: 1px solid rgba(224, 82, 82, 0.2);
+    }
+
+    /* User section */
+    .sidebar-user {
+      padding: 16px 12px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .user-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .user-card:hover {
+      background: rgba(255,255,255,0.03);
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue), #1a6a9e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: white;
+      flex-shrink: 0;
+      border: 1px solid rgba(38,136,198,0.3);
+    }
+
+    .user-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-role {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    .user-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       MAIN CONTENT
+    ============================================================ */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    /* Top Header */
+    .top-header {
+      height: var(--header-h);
+      min-height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .breadcrumb-item {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .breadcrumb-sep {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .breadcrumb-current {
+      font-size: 14px;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-date {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: var(--radius);
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: 1px solid transparent;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--blue);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #3099d8;
+      box-shadow: 0 0 16px rgba(38,136,198,0.35);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border-color: var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.04);
+      color: var(--text-primary);
+    }
+
+    /* ============================================================
+       PAGE CONTENT AREA
+    ============================================================ */
+    .page-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 28px;
+    }
+
+    .page-content::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .page-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .page-content::-webkit-scrollbar-thumb {
+      background: var(--text-muted);
+      border-radius: 3px;
+    }
+
+    /* ============================================================
+       VIEW TABS (internal routing)
+    ============================================================ */
+    .view {
+      display: none;
+      animation: viewFadeIn 0.2s ease;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    @keyframes viewFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================================
+       SECTION HEADER
+    ============================================================ */
+    .section-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 28px;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .section-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 5px;
+    }
+
+    /* ============================================================
+       KPI CARDS
+    ============================================================ */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      animation: cardRise 0.4s ease both;
+    }
+
+    .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+    .kpi-card:nth-child(2) { animation-delay: 0.10s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+    .kpi-card:nth-child(4) { animation-delay: 0.20s; }
+
+    @keyframes cardRise {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .kpi-card:hover {
+      background: var(--card-hover);
+      border-color: var(--border-accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--border-accent);
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--blue), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .kpi-card:hover::before {
+      opacity: 0.5;
+    }
+
+    .kpi-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    /* Corner bracket decoration */
+    .kpi-number-wrap {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+
+    .kpi-number-wrap::before,
+    .kpi-number-wrap::after {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--blue);
+      opacity: 0.5;
+      position: absolute;
+      top: 0;
+      line-height: 1;
+    }
+
+    .kpi-number-wrap::before {
+      content: '⌐';
+      left: -14px;
+      top: 2px;
+    }
+
+    .kpi-number-wrap::after {
+      content: '¬';
+      right: -14px;
+      top: 2px;
+    }
+
+    .kpi-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 36px;
+      font-weight: 500;
+      color: var(--text-primary);
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    .kpi-number.blue  { color: var(--blue); }
+    .kpi-number.green { color: var(--green); }
+
+    .kpi-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .kpi-trend {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    .kpi-trend.up   { color: var(--green); }
+    .kpi-trend.down { color: var(--red); }
+    .kpi-trend.flat { color: var(--text-muted); }
+
+    .trend-arrow {
+      font-size: 14px;
+    }
+
+    /* Sparkline */
+    .sparkline {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 24px;
+    }
+
+    .spark-bar {
+      width: 4px;
+      border-radius: 2px;
+      background: var(--text-muted);
+      transition: background 0.2s;
+    }
+
+    .spark-bar.peak {
+      background: var(--blue);
+    }
+
+    .spark-bar.last {
+      background: var(--green);
+    }
+
+    /* ============================================================
+       DASHBOARD GRID — LOWER SECTION
+    ============================================================ */
+    .dashboard-lower {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    /* Panel base */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      animation: cardRise 0.4s ease both;
+    }
+
+    .panel:nth-child(1) { animation-delay: 0.25s; }
+    .panel:nth-child(2) { animation-delay: 0.30s; }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 16px;
+      color: var(--text-primary);
+    }
+
+    .panel-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+    }
+
+    /* Vendor performance chart bars */
+    .perf-chart {
+      padding: 20px;
+    }
+
+    .perf-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .perf-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .perf-name {
+      width: 130px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 0;
+    }
+
+    .perf-bar-track {
+      flex: 1;
+      height: 6px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .perf-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      background: linear-gradient(90deg, var(--blue), var(--green));
+    }
+
+    .perf-score {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-primary);
+      width: 32px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* Review queue */
+    .review-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+      cursor: pointer;
+    }
+
+    .review-item:last-child {
+      border-bottom: none;
+    }
+
+    .review-item:hover {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .review-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .review-dot.urgent {
+      background: var(--red);
+      box-shadow: 0 0 6px var(--red);
+    }
+
+    .review-dot.pending {
+      background: var(--amber);
+    }
+
+    .review-dot.new {
+      background: var(--blue);
+    }
+
+    .review-info { flex: 1; min-width: 0; }
+
+    .review-project {
+      font-size: 12.5px;
+      color: var(--text-primary);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .review-vendor {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .review-age {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       TOP VENDORS TABLE
+    ============================================================ */
+    .table-panel {
+      animation: cardRise 0.4s ease both;
+      animation-delay: 0.35s;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 12px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-weight: 400;
+    }
+
+    thead th:first-child { padding-left: 20px; }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+      cursor: pointer;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+
+    tbody tr:hover {
+      background: rgba(255,255,255,0.02);
+    }
+
+    tbody td {
+      padding: 13px 20px;
+      vertical-align: middle;
+    }
+
+    .td-vendor {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .vendor-initial {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .td-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .td-category {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .td-score {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .score-high { color: var(--green); }
+    .score-mid  { color: var(--blue); }
+    .score-low  { color: var(--amber); }
+
+    .td-projects {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* Morse rating bars */
+    .morse-rating {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .morse-bar {
+      height: 10px;
+      border-radius: 2px;
+      background: var(--text-muted);
+      opacity: 0.25;
+      transition: all 0.2s;
+    }
+
+    .morse-bar.filled {
+      opacity: 1;
+    }
+
+    .morse-bar.s { width: 6px; }  /* short — dot */
+    .morse-bar.l { width: 14px; } /* long — dash */
+
+    .morse-bar.filled.blue  { background: var(--blue); }
+    .morse-bar.filled.green { background: var(--green); }
+    .morse-bar.filled.amber { background: var(--amber); }
+
+    /* Availability badge */
+    .avail-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .avail-badge.available {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid var(--border-green);
+    }
+
+    .avail-badge.limited {
+      background: var(--amber-dim);
+      color: var(--amber);
+      border: 1px solid rgba(212,132,42,0.25);
+    }
+
+    .avail-badge.unavailable {
+      background: rgba(255,255,255,0.03);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .avail-pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .available .avail-pulse {
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    .limited .avail-pulse {
+      background: var(--amber);
+    }
+
+    .unavailable .avail-pulse {
+      background: var(--text-muted);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ============================================================
+       VENDORS VIEW
+    ============================================================ */
+    .vendor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .vendor-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+      animation: cardRise 0.4s ease both;
+    }
+
+    .vendor-card:nth-child(1) { animation-delay: 0.05s; }
+    .vendor-card:nth-child(2) { animation-delay: 0.08s; }
+    .vendor-card:nth-child(3) { animation-delay: 0.11s; }
+    .vendor-card:nth-child(4) { animation-delay: 0.14s; }
+    .vendor-card:nth-child(5) { animation-delay: 0.17s; }
+    .vendor-card:nth-child(6) { animation-delay: 0.20s; }
+    .vendor-card:nth-child(7) { animation-delay: 0.23s; }
+    .vendor-card:nth-child(8) { animation-delay: 0.26s; }
+
+    .vendor-card:hover {
+      background: var(--card-hover);
+      border-color: var(--border-accent);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px var(--border-accent), 0 0 24px var(--blue-glow);
+    }
+
+    .vendor-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--blue), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .vendor-card:hover::after {
+      opacity: 0.4;
+    }
+
+    .vendor-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .vendor-avatar-lg {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 18px;
+      color: white;
+      flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .vendor-card-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 3px;
+    }
+
+    .vendor-card-category {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .vendor-card-rating {
+      margin-bottom: 14px;
+    }
+
+    .rating-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .rating-score-display {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .rating-number-lg {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .vendor-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .price-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-secondary);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .project-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ============================================================
+       VIRA MATCH VIEW
+    ============================================================ */
+    .match-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .match-input-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      position: sticky;
+      top: 0;
+    }
+
+    .match-input-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(38,136,198,0.08), transparent);
+    }
+
+    .match-input-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 20px;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .match-input-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .match-form {
+      padding: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+    }
+
+    .form-select:focus,
+    .form-textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(38,136,198,0.1);
+    }
+
+    .form-select {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237A8BA8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 30px;
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 110px;
+      line-height: 1.6;
+    }
+
+    .form-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .match-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    .match-btn:hover {
+      background: #3099d8;
+      box-shadow: 0 0 20px rgba(38,136,198,0.4);
+    }
+
+    .match-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* Recommendation cards */
+    .rec-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .rec-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      transition: all 0.2s ease;
+      animation: cardRise 0.4s ease both;
+      cursor: pointer;
+    }
+
+    .rec-card:nth-child(1) { animation-delay: 0.1s; }
+    .rec-card:nth-child(2) { animation-delay: 0.2s; }
+    .rec-card:nth-child(3) { animation-delay: 0.3s; }
+
+    .rec-card:hover {
+      background: var(--card-hover);
+      border-color: var(--border-accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--border-accent);
+    }
+
+    .rec-card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    /* Score arc */
+    .score-arc-wrap {
+      flex-shrink: 0;
+      position: relative;
+      width: 72px;
+      height: 72px;
+    }
+
+    .score-arc-svg {
+      width: 72px;
+      height: 72px;
+      transform: rotate(-90deg);
+    }
+
+    .score-arc-track {
+      fill: none;
+      stroke: rgba(255,255,255,0.05);
+      stroke-width: 4;
+    }
+
+    .score-arc-fill {
+      fill: none;
+      stroke-width: 4;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .score-arc-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .score-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--text-primary);
+    }
+
+    .score-unit {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .rec-info { flex: 1; min-width: 0; }
+
+    .rec-rank {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .rec-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 20px;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+
+    .rec-category {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .rec-reason {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: rgba(255,255,255,0.02);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    .rec-strengths {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 14px;
+    }
+
+    .strength-chip {
+      background: var(--blue-dim);
+      color: var(--blue);
+      border: 1px solid var(--border-accent);
+      border-radius: 20px;
+      padding: 3px 11px;
+      font-size: 11.5px;
+      font-weight: 500;
+    }
+
+    .rec-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      gap: 12px;
+    }
+
+    .rec-meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .rec-meta-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .rec-meta-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* Skeleton loading */
+    .skeleton-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+    }
+
+    .skeleton-line {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--card-hover) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      border-radius: 4px;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .sk-top {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .sk-circle {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .sk-lines {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 8px;
+    }
+
+    /* ============================================================
+       FILTER BAR
+    ============================================================ */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .filter-input {
+      flex: 1;
+      max-width: 300px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .filter-input:focus {
+      border-color: var(--blue);
+    }
+
+    .filter-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      background: var(--card);
+      user-select: none;
+    }
+
+    .filter-chip:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .filter-chip.active {
+      background: var(--blue-dim);
+      border-color: var(--border-accent);
+      color: var(--blue);
+    }
+
+    /* ============================================================
+       SYSTEM STATUS BAR
+    ============================================================ */
+    .status-bar {
+      height: 28px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      gap: 24px;
+      flex-shrink: 0;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    .status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+    }
+
+    .status-dot.ok     { background: var(--green); }
+    .status-dot.warn   { background: var(--amber); }
+    .status-dot.err    { background: var(--red); }
+
+    /* ============================================================
+       UTILITY
+    ============================================================ */
+    .text-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .text-green  { color: var(--green); }
+    .text-blue   { color: var(--blue); }
+    .text-amber  { color: var(--amber); }
+    .text-muted  { color: var(--text-muted); }
+    .text-second { color: var(--text-secondary); }
+
+    .mt-auto { margin-top: auto; }
+    .mb-0    { margin-bottom: 0; }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+
+    /* Tag */
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .tag-blue  { background: var(--blue-dim);  color: var(--blue);  border: 1px solid var(--border-accent); }
+    .tag-green { background: var(--green-dim); color: var(--green); border: 1px solid var(--border-green); }
+
+    /* ============================================================
+       GLOW EFFECTS
+    ============================================================ */
+    .glow-blue  { text-shadow: 0 0 12px rgba(38,136,198,0.6); }
+    .glow-green { text-shadow: 0 0 12px rgba(74,158,92,0.6); }
+
+    /* ============================================================
+       RESPONSIVE TWEAKS
+    ============================================================ */
+    @media (max-width: 1200px) {
+      .kpi-grid          { grid-template-columns: repeat(2, 1fr); }
+      .dashboard-lower   { grid-template-columns: 1fr; }
+      .match-layout      { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================
+       VENDOR COLOR MAP (via JS data)
+    ============================================================ */
+    .vc-0 { background: linear-gradient(135deg, #1a5fa8, #0d3b6b); }
+    .vc-1 { background: linear-gradient(135deg, #2d7a4f, #1a4d32); }
+    .vc-2 { background: linear-gradient(135deg, #7a2d7a, #4d1a4d); }
+    .vc-3 { background: linear-gradient(135deg, #8a4f1a, #5a3210); }
+    .vc-4 { background: linear-gradient(135deg, #1a6b7a, #0d4a56); }
+    .vc-5 { background: linear-gradient(135deg, #5a1a6b, #38104a); }
+    .vc-6 { background: linear-gradient(135deg, #1a4d7a, #0d3050); }
+    .vc-7 { background: linear-gradient(135deg, #4d5a1a, #2e3610); }
+    .vc-8 { background: linear-gradient(135deg, #7a3a1a, #4d2510); }
+    .vc-9 { background: linear-gradient(135deg, #1a7a5a, #0d4d38); }
+
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ============================================================
+       SIDEBAR
+  ============================================================ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="wordmark">
+        <div class="wordmark-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="wordmark-text">
+          <div class="wordmark-name">ViRA</div>
+          <div class="wordmark-tagline">Intelligence Layer</div>
+        </div>
+      </div>
+      <div class="morse-dots">
+        <!-- STM in morse: ... - -- -->
+        <div class="morse-dot short"></div>
+        <div class="morse-dot short"></div>
+        <div class="morse-dot short"></div>
+        <div class="morse-dot long"></div>
+        <div class="morse-dot long"></div>
+        <div class="morse-dot long"></div>
+        <div class="morse-label">STM</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Command</div>
+
+      <div class="nav-item active" data-view="dashboard">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        Dashboard
+      </div>
+
+      <div class="nav-item" data-view="match">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/>
+        </svg>
+        ViRA Match
+        <span class="nav-badge">AI</span>
+      </div>
+
+      <div class="nav-item" data-view="dashboard">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        Reviews
+        <span class="nav-badge">5</span>
+      </div>
+
+      <div class="nav-section-label">Data</div>
+
+      <div class="nav-item" data-view="vendors">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        Vendors
+      </div>
+
+      <div class="nav-item" data-view="dashboard">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+        </svg>
+        Clients
+      </div>
+
+      <div class="nav-item" data-view="dashboard">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        Projects
+      </div>
+
+      <div class="nav-section-label">System</div>
+
+      <div class="nav-item" data-view="dashboard">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.07 4.93A10 10 0 0 0 4.93 19.07"/>
+          <path d="M4.93 4.93A10 10 0 0 0 19.07 19.07"/>
+        </svg>
+        Admin
+      </div>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-card">
+        <div class="user-avatar">CB</div>
+        <div class="user-info">
+          <div class="user-name">Charles Blain</div>
+          <div class="user-role">SVP · Admin</div>
+        </div>
+        <div class="user-status-dot"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       MAIN
+  ============================================================ -->
+  <div class="main-content">
+
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="breadcrumb">
+        <span class="breadcrumb-item">Single Throw</span>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current" id="breadcrumb-current">Dashboard</span>
+      </div>
+      <div class="header-actions">
+        <span class="header-date" id="header-date"></span>
+        <button class="btn btn-ghost">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          Alerts
+        </button>
+        <button class="btn btn-primary" onclick="switchView('match')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+          </svg>
+          Run ViRA Match
+        </button>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <div class="page-content" id="page-content">
+
+      <!-- ======================================================
+           DASHBOARD VIEW
+      ====================================================== -->
+      <div class="view active" id="view-dashboard">
+
+        <div class="section-header">
+          <div>
+            <div class="section-title">Operations Center</div>
+            <div class="section-subtitle">Vendor intelligence snapshot · Updated in real-time</div>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-ghost">Export</button>
+          </div>
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="kpi-grid">
+
+          <div class="kpi-card">
+            <div class="kpi-label">Total Vendors</div>
+            <div class="kpi-number-wrap">
+              <div class="kpi-number blue" data-count="47">0</div>
+            </div>
+            <div class="kpi-meta">
+              <span class="kpi-trend up">
+                <span class="trend-arrow">↑</span>
+                <span>+3 this month</span>
+              </span>
+              <div class="sparkline">
+                <div class="spark-bar" style="height:40%"></div>
+                <div class="spark-bar" style="height:55%"></div>
+                <div class="spark-bar" style="height:45%"></div>
+                <div class="spark-bar" style="height:70%"></div>
+                <div class="spark-bar" style="height:60%"></div>
+                <div class="spark-bar peak" style="height:80%"></div>
+                <div class="spark-bar last" style="height:100%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Active Projects</div>
+            <div class="kpi-number-wrap">
+              <div class="kpi-number" data-count="23">0</div>
+            </div>
+            <div class="kpi-meta">
+              <span class="kpi-trend up">
+                <span class="trend-arrow">↑</span>
+                <span>+8 YoY</span>
+              </span>
+              <div class="sparkline">
+                <div class="spark-bar" style="height:30%"></div>
+                <div class="spark-bar" style="height:50%"></div>
+                <div class="spark-bar" style="height:65%"></div>
+                <div class="spark-bar peak" style="height:85%"></div>
+                <div class="spark-bar" style="height:75%"></div>
+                <div class="spark-bar" style="height:80%"></div>
+                <div class="spark-bar last" style="height:95%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Avg Rating</div>
+            <div class="kpi-number-wrap">
+              <div class="kpi-number green" data-count-decimal="8.4">0</div>
+            </div>
+            <div class="kpi-meta">
+              <span class="kpi-trend up">
+                <span class="trend-arrow">↑</span>
+                <span>+0.3 pts</span>
+              </span>
+              <div class="sparkline">
+                <div class="spark-bar" style="height:70%"></div>
+                <div class="spark-bar" style="height:72%"></div>
+                <div class="spark-bar" style="height:75%"></div>
+                <div class="spark-bar" style="height:78%"></div>
+                <div class="spark-bar peak" style="height:82%"></div>
+                <div class="spark-bar" style="height:80%"></div>
+                <div class="spark-bar last" style="height:85%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Completion Rate</div>
+            <div class="kpi-number-wrap">
+              <div class="kpi-number" data-count="91">0</div>
+            </div>
+            <div class="kpi-meta">
+              <span class="kpi-trend down">
+                <span class="trend-arrow">↓</span>
+                <span>−2% vs Q3</span>
+              </span>
+              <div class="sparkline">
+                <div class="spark-bar peak" style="height:95%"></div>
+                <div class="spark-bar" style="height:88%"></div>
+                <div class="spark-bar" style="height:92%"></div>
+                <div class="spark-bar" style="height:90%"></div>
+                <div class="spark-bar" style="height:87%"></div>
+                <div class="spark-bar" style="height:89%"></div>
+                <div class="spark-bar last" style="height:91%"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Lower Dashboard -->
+        <div class="dashboard-lower">
+
+          <!-- Vendor Performance Chart -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Performance Capsule</div>
+              <span class="panel-badge">6-MONTH AVG</span>
+            </div>
+            <div class="perf-chart">
+              <div class="perf-row">
+                <div class="perf-name">Anchor Digital</div>
+                <div class="perf-bar-track">
+                  <div class="perf-bar-fill" style="width:92%"></div>
+                </div>
+                <div class="perf-score">9.2</div>
+              </div>
+              <div class="perf-row">
+                <div class="perf-name">Bright Signal</div>
+                <div class="perf-bar-track">
+                  <div class="perf-bar-fill" style="width:88%"></div>
+                </div>
+                <div class="perf-score">8.8</div>
+              </div>
+              <div class="perf-row">
+                <div class="perf-name">Meridian Content</div>
+                <div class="perf-bar-track">
+                  <div class="perf-bar-fill" style="width:85%"></div>
+                </div>
+                <div class="perf-score">8.5</div>
+              </div>
+              <div class="perf-row">
+                <div class="perf-name">Coastal PPC</div>
+                <div class="perf-bar-track">
+                  <div class="perf-bar-fill" style="width:83%"></div>
+                </div>
+                <div class="perf-score">8.3</div>
+              </div>
+              <div class="perf-row">
+                <div class="perf-name">Vertex Social</div>
+                <div class="perf-bar-track">
+                  <div class="perf-bar-fill" style="width:79%"></div>
+                </div>
+                <div class="perf-score">7.9</div>
+              </div>
+              <div class="perf-row">
+                <div class="perf-name">Peak Analytics</div>
+                <div class="perf-bar-track">
+                  <div class="perf-bar-fill" style="width:76%"></div>
+                </div>
+                <div class="perf-score">7.6</div>
+              </div>
+              <div class="perf-row">
+                <div class="perf-name">Core Creative</div>
+                <div class="perf-bar-track">
+                  <div class="perf-bar-fill" style="width:72%"></div>
+                </div>
+                <div class="perf-score">7.2</div>
+              </div>
+              <div class="perf-row mb-0">
+                <div class="perf-name">Relay Media</div>
+                <div class="perf-bar-track">
+                  <div class="perf-bar-fill" style="width:68%"></div>
+                </div>
+                <div class="perf-score">6.8</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Review Queue -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Review Queue</div>
+              <span class="panel-badge">5 PENDING</span>
+            </div>
+            <div class="review-item">
+              <div class="review-dot urgent"></div>
+              <div class="review-info">
+                <div class="review-project">TechNova Q4 Campaign</div>
+                <div class="review-vendor">Anchor Digital · SEO</div>
+              </div>
+              <div class="review-age">3d ago</div>
+            </div>
+            <div class="review-item">
+              <div class="review-dot pending"></div>
+              <div class="review-info">
+                <div class="review-project">Helix Brand Refresh</div>
+                <div class="review-vendor">Core Creative · Design</div>
+              </div>
+              <div class="review-age">5d ago</div>
+            </div>
+            <div class="review-item">
+              <div class="review-dot new"></div>
+              <div class="review-info">
+                <div class="review-project">Summit PPC Launch</div>
+                <div class="review-vendor">Coastal PPC · Paid</div>
+              </div>
+              <div class="review-age">1d ago</div>
+            </div>
+            <div class="review-item">
+              <div class="review-dot pending"></div>
+              <div class="review-info">
+                <div class="review-project">Orion Social Strategy</div>
+                <div class="review-vendor">Vertex Social · Social</div>
+              </div>
+              <div class="review-age">7d ago</div>
+            </div>
+            <div class="review-item">
+              <div class="review-dot new"></div>
+              <div class="review-info">
+                <div class="review-project">Atlas Email Series</div>
+                <div class="review-vendor">Relay Media · Email</div>
+              </div>
+              <div class="review-age">2d ago</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Top Vendors Table -->
+        <div class="panel table-panel">
+          <div class="panel-header">
+            <div class="panel-title">Top Performers</div>
+            <span class="panel-badge">RANKED BY VIRA SCORE</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Vendor</th>
+                <th>Category</th>
+                <th>ViRA Score</th>
+                <th>Rating</th>
+                <th>Projects</th>
+                <th>Availability</th>
+              </tr>
+            </thead>
+            <tbody id="top-vendors-tbody">
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+      <!-- /view-dashboard -->
+
+      <!-- ======================================================
+           VENDORS VIEW
+      ====================================================== -->
+      <div class="view" id="view-vendors">
+
+        <div class="section-header">
+          <div>
+            <div class="section-title">Vendor Roster</div>
+            <div class="section-subtitle">47 vendors · 38 active</div>
+          </div>
+          <button class="btn btn-primary">+ Add Vendor</button>
+        </div>
+
+        <div class="filter-bar">
+          <input class="filter-input" type="text" placeholder="Search vendors..." />
+          <div class="filter-chip active">All</div>
+          <div class="filter-chip">SEO</div>
+          <div class="filter-chip">Content</div>
+          <div class="filter-chip">Paid</div>
+          <div class="filter-chip">Social</div>
+          <div class="filter-chip">Design</div>
+          <div class="filter-chip">Analytics</div>
+        </div>
+
+        <div class="vendor-grid" id="vendor-grid">
+        </div>
+
+      </div>
+      <!-- /view-vendors -->
+
+      <!-- ======================================================
+           VIRA MATCH VIEW
+      ====================================================== -->
+      <div class="view" id="view-match">
+
+        <div class="section-header">
+          <div>
+            <div class="section-title">ViRA Match Engine</div>
+            <div class="section-subtitle">AI-powered vendor recommendations · GPT-4o mini</div>
+          </div>
+          <span class="tag tag-green">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-right:5px;"></span>
+            Model Active
+          </span>
+        </div>
+
+        <div class="match-layout">
+
+          <!-- Input Panel -->
+          <div class="match-input-panel">
+            <div class="match-input-header">
+              <div class="match-input-title">Project Brief</div>
+              <div class="match-input-sub">Describe the project — ViRA scores and ranks matching vendors</div>
+            </div>
+            <div class="match-form">
+              <div class="form-group">
+                <label class="form-label">Service Category</label>
+                <select class="form-select" id="match-category">
+                  <option value="">Select category...</option>
+                  <option>SEO</option>
+                  <option>Content Marketing</option>
+                  <option>Paid Search</option>
+                  <option>Social Media</option>
+                  <option>Email Marketing</option>
+                  <option>Design &amp; Creative</option>
+                  <option>Analytics</option>
+                  <option>Web Development</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Project Scope</label>
+                <textarea class="form-textarea" id="match-scope" placeholder="Describe the project goals, deliverables, timeline, and any special requirements..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Budget Range</label>
+                <select class="form-select">
+                  <option>Any budget</option>
+                  <option>Under $5k</option>
+                  <option>$5k – $15k</option>
+                  <option>$15k – $50k</option>
+                  <option>$50k+</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Priority Signal</label>
+                <select class="form-select">
+                  <option>Balanced (score + availability)</option>
+                  <option>Highest rated</option>
+                  <option>Available now</option>
+                  <option>Best value</option>
+                </select>
+              </div>
+              <button class="match-btn" onclick="runMatch()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/>
+                </svg>
+                Run ViRA Match
+              </button>
+            </div>
+          </div>
+
+          <!-- Recommendations -->
+          <div>
+            <div id="rec-state-idle" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:320px;color:var(--text-muted);gap:12px;">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/>
+              </svg>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.1em;">AWAITING PROJECT BRIEF</div>
+            </div>
+
+            <div id="rec-state-loading" style="display:none;flex-direction:column;gap:14px;">
+              <div class="skeleton-card">
+                <div class="sk-top">
+                  <div class="skeleton-line sk-circle"></div>
+                  <div class="sk-lines">
+                    <div class="skeleton-line" style="height:12px;width:60%"></div>
+                    <div class="skeleton-line" style="height:18px;width:80%"></div>
+                    <div class="skeleton-line" style="height:11px;width:40%"></div>
+                  </div>
+                </div>
+                <div class="skeleton-line" style="height:70px;width:100%;margin-bottom:12px;"></div>
+                <div style="display:flex;gap:7px;">
+                  <div class="skeleton-line" style="height:24px;width:90px;border-radius:20px;"></div>
+                  <div class="skeleton-line" style="height:24px;width:110px;border-radius:20px;"></div>
+                  <div class="skeleton-line" style="height:24px;width:80px;border-radius:20px;"></div>
+                </div>
+              </div>
+              <div class="skeleton-card">
+                <div class="sk-top">
+                  <div class="skeleton-line sk-circle"></div>
+                  <div class="sk-lines">
+                    <div class="skeleton-line" style="height:12px;width:50%"></div>
+                    <div class="skeleton-line" style="height:18px;width:70%"></div>
+                    <div class="skeleton-line" style="height:11px;width:35%"></div>
+                  </div>
+                </div>
+                <div class="skeleton-line" style="height:70px;width:100%;"></div>
+              </div>
+              <div class="skeleton-card">
+                <div class="sk-top">
+                  <div class="skeleton-line sk-circle"></div>
+                  <div class="sk-lines">
+                    <div class="skeleton-line" style="height:12px;width:55%"></div>
+                    <div class="skeleton-line" style="height:18px;width:75%"></div>
+                    <div class="skeleton-line" style="height:11px;width:45%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="rec-state-results" style="display:none;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:0.1em;" id="rec-meta-line">3 RECOMMENDATIONS · SEO</div>
+                <span class="tag tag-blue">ViRA Scored</span>
+              </div>
+              <div class="rec-list" id="rec-list"></div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+      <!-- /view-match -->
+
+    </div>
+    <!-- /page-content -->
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <div class="status-item">
+        <div class="status-dot ok"></div>
+        Supabase Connected
+      </div>
+      <div class="status-item">
+        <div class="status-dot ok"></div>
+        AI Ready
+      </div>
+      <div class="status-item">
+        <div class="status-dot warn"></div>
+        5 Reviews Pending
+      </div>
+      <div class="status-item" style="margin-left:auto;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);">ViRA v2.4.1</span>
+      </div>
+    </div>
+
+  </div>
+  <!-- /main-content -->
+
+</div>
+
+<script>
+  /* ============================================================
+     DATA
+  ============================================================ */
+  const vendors = [
+    {
+      id: 1,
+      name: 'Anchor Digital',
+      category: 'SEO',
+      rating: 9.2,
+      viraScore: 94,
+      projects: 18,
+      availability: 'available',
+      pricing: '$150–200/hr',
+      tier: 'Retainer',
+      colorClass: 'vc-0',
+      initial: 'A',
+      strengths: ['Technical SEO', 'Content Strategy', 'Link Building']
+    },
+    {
+      id: 2,
+      name: 'Bright Signal',
+      category: 'Paid Search',
+      rating: 8.8,
+      viraScore: 89,
+      projects: 14,
+      availability: 'available',
+      pricing: '$120–160/hr',
+      tier: 'Project',
+      colorClass: 'vc-1',
+      initial: 'B',
+      strengths: ['Google Ads', 'Bid Optimization', 'Conversion Tracking']
+    },
+    {
+      id: 3,
+      name: 'Meridian Content',
+      category: 'Content',
+      rating: 8.5,
+      viraScore: 86,
+      projects: 22,
+      availability: 'limited',
+      pricing: '$80–110/hr',
+      tier: 'Retainer',
+      colorClass: 'vc-2',
+      initial: 'M',
+      strengths: ['Long-form Content', 'SEO Writing', 'Editorial Calendar']
+    },
+    {
+      id: 4,
+      name: 'Coastal PPC',
+      category: 'Paid Search',
+      rating: 8.3,
+      viraScore: 84,
+      projects: 11,
+      availability: 'available',
+      pricing: '$100–140/hr',
+      tier: 'Project',
+      colorClass: 'vc-3',
+      initial: 'C',
+      strengths: ['Meta Ads', 'Audience Targeting', 'Creative Testing']
+    },
+    {
+      id: 5,
+      name: 'Vertex Social',
+      category: 'Social Media',
+      rating: 7.9,
+      viraScore: 80,
+      projects: 9,
+      availability: 'limited',
+      pricing: '$90–120/hr',
+      tier: 'Retainer',
+      colorClass: 'vc-4',
+      initial: 'V',
+      strengths: ['Community Management', 'TikTok Strategy', 'Influencer']
+    },
+    {
+      id: 6,
+      name: 'Peak Analytics',
+      category: 'Analytics',
+      rating: 7.6,
+      viraScore: 77,
+      projects: 16,
+      availability: 'available',
+      pricing: '$130–170/hr',
+      tier: 'Project',
+      colorClass: 'vc-5',
+      initial: 'P',
+      strengths: ['GA4 Implementation', 'BigQuery', 'Dashboard Design']
+    },
+    {
+      id: 7,
+      name: 'Core Creative',
+      category: 'Design',
+      rating: 7.2,
+      viraScore: 73,
+      projects: 7,
+      availability: 'unavailable',
+      pricing: '$110–150/hr',
+      tier: 'Project',
+      colorClass: 'vc-6',
+      initial: 'C',
+      strengths: ['Brand Identity', 'Motion Design', 'Print']
+    },
+    {
+      id: 8,
+      name: 'Relay Media',
+      category: 'Email',
+      rating: 6.8,
+      viraScore: 69,
+      projects: 13,
+      availability: 'available',
+      pricing: '$70–95/hr',
+      tier: 'Retainer',
+      colorClass: 'vc-7',
+      initial: 'R',
+      strengths: ['HubSpot', 'Automation Flows', 'A/B Testing']
+    },
+    {
+      id: 9,
+      name: 'Nova Web Lab',
+      category: 'Web Dev',
+      rating: 8.1,
+      viraScore: 82,
+      projects: 5,
+      availability: 'limited',
+      pricing: '$160–220/hr',
+      tier: 'Project',
+      colorClass: 'vc-8',
+      initial: 'N',
+      strengths: ['Next.js', 'Headless CMS', 'Performance Optimization']
+    },
+    {
+      id: 10,
+      name: 'Axiom SEO',
+      category: 'SEO',
+      rating: 7.4,
+      viraScore: 75,
+      projects: 8,
+      availability: 'available',
+      pricing: '$100–130/hr',
+      tier: 'Project',
+      colorClass: 'vc-9',
+      initial: 'A',
+      strengths: ['Local SEO', 'E-commerce SEO', 'Penalty Recovery']
+    }
+  ];
+
+  /* ============================================================
+     NAV / VIEW SWITCHING
+  ============================================================ */
+  const breadcrumbLabels = {
+    dashboard: 'Dashboard',
+    vendors:   'Vendors',
+    match:     'ViRA Match'
+  };
+
+  function switchView(viewId) {
+    document.querySelectorAll('.nav-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.view === viewId);
+    });
+    document.querySelectorAll('.view').forEach(el => {
+      el.classList.toggle('active', el.id === 'view-' + viewId);
+    });
+    document.getElementById('breadcrumb-current').textContent = breadcrumbLabels[viewId] || viewId;
+  }
+
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const view = el.dataset.view;
+      if (view) switchView(view);
+    });
+  });
+
+  /* ============================================================
+     HEADER DATE
+  ============================================================ */
+  function setHeaderDate() {
+    const now = new Date();
+    const opts = { month: 'short', day: 'numeric', year: 'numeric' };
+    document.getElementById('header-date').textContent = now.toLocaleDateString('en-US', opts).toUpperCase();
+  }
+  setHeaderDate();
+
+  /* ============================================================
+     KPI COUNTER ANIMATION
+  ============================================================ */
+  function animateCounter(el, target, isDecimal) {
+    const duration = 1200;
+    const start = performance.now();
+    function step(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      const val = isDecimal
+        ? (ease * target).toFixed(1)
+        : Math.round(ease * target);
+      el.textContent = isDecimal ? val : val + (el.classList.contains('pct') ? '%' : '');
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function runCounters() {
+    document.querySelectorAll('[data-count]').forEach(el => {
+      animateCounter(el, parseInt(el.dataset.count), false);
+    });
+    document.querySelectorAll('[data-count-decimal]').forEach(el => {
+      animateCounter(el, parseFloat(el.dataset.countDecimal), true);
+    });
+  }
+
+  setTimeout(runCounters, 300);
+
+  /* ============================================================
+     TOP VENDORS TABLE
+  ============================================================ */
+  function getMorseRating(score) {
+    // Score 0-10. Render as 5 capsule segments: mix of short/long
+    const filled = Math.round(score / 2); // 0–5 filled
+    const pattern = ['s','l','s','l','l']; // short, long, short, long, long
+    return pattern.map((type, i) => {
+      const isFilled = i < filled;
+      let colorClass = '';
+      if (isFilled) {
+        colorClass = score >= 8.5 ? 'green' : score >= 7 ? 'blue' : 'amber';
+      }
+      return `<div class="morse-bar ${type} ${isFilled ? 'filled ' + colorClass : ''}"></div>`;
+    }).join('');
+  }
+
+  function getAvailBadge(status) {
+    const labels = { available: 'Available', limited: 'Limited', unavailable: 'Unavailable' };
+    return `<span class="avail-badge ${status}"><span class="avail-pulse"></span>${labels[status]}</span>`;
+  }
+
+  function getScoreClass(score) {
+    if (score >= 85) return 'score-high';
+    if (score >= 70) return 'score-mid';
+    return 'score-low';
+  }
+
+  function renderTopVendorsTable() {
+    const sorted = [...vendors].sort((a, b) => b.viraScore - a.viraScore).slice(0, 8);
+    const tbody = document.getElementById('top-vendors-tbody');
+    tbody.innerHTML = sorted.map((v, i) => `
+      <tr>
+        <td>
+          <span class="text-mono text-muted" style="font-size:12px;">${String(i+1).padStart(2,'0')}</span>
+        </td>
+        <td>
+          <div class="td-vendor">
+            <div class="vendor-initial ${v.colorClass}" style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:white;">
+              ${v.initial}
+            </div>
+            <div>
+              <div class="td-name">${v.name}</div>
+              <div class="td-category">${v.category}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span class="tag tag-blue" style="font-size:10px;">${v.category}</span>
+        </td>
+        <td>
+          <span class="td-score ${getScoreClass(v.viraScore)}">${v.viraScore}</span>
+        </td>
+        <td>
+          <div class="morse-rating">${getMorseRating(v.rating)}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:3px;">${v.rating}/10</div>
+        </td>
+        <td>
+          <span class="td-projects">${v.projects}</span>
+        </td>
+        <td>
+          ${getAvailBadge(v.availability)}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  renderTopVendorsTable();
+
+  /* ============================================================
+     VENDOR GRID
+  ============================================================ */
+  function renderVendorGrid() {
+    const grid = document.getElementById('vendor-grid');
+    grid.innerHTML = vendors.map(v => {
+      const ratingColor = v.rating >= 8.5 ? 'var(--green)' : v.rating >= 7 ? 'var(--blue)' : 'var(--amber)';
+      return `
+        <div class="vendor-card">
+          <div class="vendor-card-top">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div class="vendor-avatar-lg ${v.colorClass}">${v.initial}</div>
+              <div>
+                <div class="vendor-card-name">${v.name}</div>
+                <div class="vendor-card-category">${v.category}</div>
+              </div>
+            </div>
+            ${getAvailBadge(v.availability)}
+          </div>
+
+          <div class="vendor-card-rating">
+            <div class="rating-label">Performance Rating</div>
+            <div class="rating-score-display">
+              <div class="rating-number-lg" style="color:${ratingColor};">${v.rating}</div>
+              <div class="morse-rating">${getMorseRating(v.rating)}</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <div class="rating-label">ViRA Score</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="flex:1;height:4px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;">
+                <div style="height:100%;width:${v.viraScore}%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:2px;"></div>
+              </div>
+              <span class="text-mono" style="font-size:12px;color:var(--text-secondary);">${v.viraScore}</span>
+            </div>
+          </div>
+
+          <div class="vendor-card-footer">
+            <span class="price-badge">${v.pricing}</span>
+            <span class="project-count">${v.projects} projects</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  renderVendorGrid();
+
+  /* ============================================================
+     VIRA MATCH
+  ============================================================ */
+  const mockRecommendations = [
+    {
+      rank: 1,
+      name: 'Anchor Digital',
+      category: 'SEO',
+      score: 94,
+      colorClass: 'vc-0',
+      initial: 'A',
+      reason: 'Anchor Digital is the strongest match for this engagement. Their technical SEO bench depth, combined with consistent 9.2/10 ratings across 18 completed projects, positions them as the low-risk, high-return choice. Their team has executed three campaigns in the same vertical this year, demonstrating repeatable process — not just capability.',
+      strengths: ['Technical SEO Depth', 'Track Record 9.2/10', 'Vertical Experience'],
+      consideration: 'Lead times can reach 3 weeks for new engagements.',
+      pricing: '$150–200/hr',
+      projects: 18,
+      availability: 'available',
+      avgRating: '9.2'
+    },
+    {
+      rank: 2,
+      name: 'Meridian Content',
+      category: 'Content',
+      score: 86,
+      colorClass: 'vc-2',
+      initial: 'M',
+      reason: 'Meridian Content brings strong editorial consistency and a structured content calendar process that integrates well with SEO objectives. 22 completed projects across diverse clients gives them one of the widest reference sets in the roster. Currently at limited capacity — worth booking early for Q1 work.',
+      strengths: ['Long-form Quality', 'Editorial Process', '22 Project History'],
+      consideration: 'Currently at 70% capacity — confirm availability before committing scope.',
+      pricing: '$80–110/hr',
+      projects: 22,
+      availability: 'limited',
+      avgRating: '8.5'
+    },
+    {
+      rank: 3,
+      name: 'Axiom SEO',
+      category: 'SEO',
+      score: 75,
+      colorClass: 'vc-9',
+      initial: 'A',
+      reason: 'Axiom SEO offers good value if budget is a constraint. Their local SEO and e-commerce specialization may be relevant depending on project scope. Lower project count (8) means a shorter reference set, but their 7.4 rating is solid. Best suited as a supporting vendor or for narrowly scoped deliverables.',
+      strengths: ['Competitive Rate', 'Local SEO Specialist', 'Available Now'],
+      consideration: 'Fewer completed projects — request references for comparable scope.',
+      pricing: '$100–130/hr',
+      projects: 8,
+      availability: 'available',
+      avgRating: '7.4'
+    }
+  ];
+
+  function buildScoreArc(score, colorStr) {
+    const r = 28;
+    const circumference = 2 * Math.PI * r;
+    const offset = circumference * (1 - score / 100);
+    const color = score >= 85 ? '#4A9E5C' : score >= 70 ? '#2688C6' : '#D4842A';
+    return `
+      <div class="score-arc-wrap">
+        <svg class="score-arc-svg" viewBox="0 0 72 72">
+          <circle class="score-arc-track" cx="36" cy="36" r="${r}"/>
+          <circle class="score-arc-fill"
+            cx="36" cy="36" r="${r}"
+            stroke="${color}"
+            stroke-dasharray="${circumference}"
+            stroke-dashoffset="${offset}"
+          />
+        </svg>
+        <div class="score-arc-text">
+          <div class="score-number">${score}</div>
+          <div class="score-unit">SCORE</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderRecommendations(category) {
+    const list = document.getElementById('rec-list');
+    document.getElementById('rec-meta-line').textContent =
+      `${mockRecommendations.length} RECOMMENDATIONS · ${category.toUpperCase()}`;
+
+    list.innerHTML = mockRecommendations.map(r => `
+      <div class="rec-card">
+        <div class="rec-card-top">
+          ${buildScoreArc(r.score)}
+          <div class="rec-info">
+            <div class="rec-rank">MATCH #${r.rank}</div>
+            <div class="rec-name">${r.name}</div>
+            <div class="rec-category">${r.category} · ${r.pricing}</div>
+          </div>
+          <div style="flex-shrink:0;">
+            ${getAvailBadge(r.availability)}
+          </div>
+        </div>
+
+        <div class="rec-reason">${r.reason}</div>
+
+        <div class="rec-strengths">
+          ${r.strengths.map(s => `<div class="strength-chip">${s}</div>`).join('')}
+        </div>
+
+        <div class="rec-footer">
+          <div class="rec-meta-item">
+            <div class="rec-meta-label">Avg Rating</div>
+            <div class="rec-meta-value" style="color:var(--green);">${r.avgRating}/10</div>
+          </div>
+          <div class="rec-meta-item">
+            <div class="rec-meta-label">Projects Done</div>
+            <div class="rec-meta-value">${r.projects}</div>
+          </div>
+          <div class="rec-meta-item">
+            <div class="rec-meta-label">Pricing</div>
+            <div class="rec-meta-value" style="font-size:11px;">${r.pricing}</div>
+          </div>
+          <div class="rec-meta-item" style="margin-left:auto;">
+            <div class="rec-meta-label">Consideration</div>
+            <div style="font-size:11px;color:var(--text-muted);max-width:200px;">${r.consideration}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function runMatch() {
+    const category = document.getElementById('match-category').value || 'SEO';
+
+    // Show skeleton
+    document.getElementById('rec-state-idle').style.display    = 'none';
+    document.getElementById('rec-state-loading').style.display  = 'flex';
+    document.getElementById('rec-state-results').style.display  = 'none';
+
+    setTimeout(() => {
+      document.getElementById('rec-state-loading').style.display = 'none';
+      document.getElementById('rec-state-results').style.display = 'block';
+      renderRecommendations(category);
+    }, 2200);
+  }
+
+  /* ============================================================
+     FILTER CHIPS (vendor view — purely visual)
+  ============================================================ */
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      chip.closest('.filter-bar').querySelectorAll('.filter-chip')
+        .forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  });
+
+</script>
+</body>
+</html>

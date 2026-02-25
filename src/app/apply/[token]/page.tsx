@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ChevronRight, ChevronLeft, CheckCircle, Building2, Briefcase, DollarSign, Calendar, Globe } from 'lucide-react'
+import { ChevronRight, ChevronLeft, CheckCircle, Building2, Briefcase, DollarSign, Calendar, Globe, XCircle } from 'lucide-react'
 
 interface InviteData {
   email: string
@@ -29,6 +29,27 @@ interface FormData {
   portfolio_url: string
   sample_work_urls: string
   notes: string
+}
+
+const inputStyle = {
+  width: '100%',
+  padding: 'var(--stm-space-3)',
+  border: '1px solid var(--stm-border)',
+  borderRadius: 'var(--stm-radius-md)',
+  fontSize: 'var(--stm-text-base)',
+  fontFamily: 'var(--stm-font-body)',
+  backgroundColor: 'var(--stm-background)',
+  color: 'var(--stm-foreground)',
+  outline: 'none',
+}
+
+const labelStyle = {
+  display: 'block',
+  fontSize: 'var(--stm-text-sm)',
+  fontWeight: 'var(--stm-font-medium)',
+  color: 'var(--stm-foreground)',
+  marginBottom: 'var(--stm-space-2)',
+  fontFamily: 'var(--stm-font-body)',
 }
 
 export default function VendorApplicationPage() {
@@ -60,24 +81,20 @@ export default function VendorApplicationPage() {
     notes: ''
   })
 
-  useEffect(() => {
-    validateInvite()
-  }, [token])
+  useEffect(() => { validateInvite() }, [token])
 
   const validateInvite = async () => {
     try {
       const response = await fetch(`/api/vendor-invites/validate?token=${token}`)
       const data = await response.json()
-
       if (!response.ok) {
         setError(data.error || 'Invalid invitation link')
         setLoading(false)
         return
       }
-
       setInviteData(data.invite)
       setLoading(false)
-    } catch (err) {
+    } catch {
       setError('Failed to validate invitation')
       setLoading(false)
     }
@@ -87,18 +104,12 @@ export default function VendorApplicationPage() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const nextStep = () => {
-    if (currentStep < 5) setCurrentStep(currentStep + 1)
-  }
-
-  const prevStep = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1)
-  }
+  const nextStep = () => { if (currentStep < 5) setCurrentStep(currentStep + 1) }
+  const prevStep = () => { if (currentStep > 1) setCurrentStep(currentStep - 1) }
 
   const handleSubmit = async () => {
     setSubmitting(true)
     setError('')
-
     try {
       const response = await fetch('/api/vendor-applications/submit', {
         method: 'POST',
@@ -123,56 +134,57 @@ export default function VendorApplicationPage() {
           notes: formData.notes
         })
       })
-
       const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit application')
-      }
-
-      // Success - redirect to success page
+      if (!response.ok) throw new Error(data.error || 'Failed to submit application')
       router.push('/apply/success')
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit application')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to submit application')
       setSubmitting(false)
     }
   }
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--stm-page-background)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: '3rem',
-            height: '3rem',
-            border: '3px solid #1A5276',
-            borderTopColor: 'transparent',
-            borderRadius: '50%',
-            margin: '0 auto 1rem',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          <p style={{ color: '#6b7280' }}>Validating invitation...</p>
+          <div className="stm-loader stm-loader-lg" style={{ justifyContent: 'center', marginBottom: 'var(--stm-space-4)' }}>
+            <span className="stm-loader-capsule stm-loader-dot" />
+            <span className="stm-loader-capsule stm-loader-dot" />
+            <span className="stm-loader-capsule stm-loader-dot" />
+            <span className="stm-loader-capsule stm-loader-dash" />
+            <span className="stm-loader-capsule stm-loader-dash" />
+            <span className="stm-loader-capsule stm-loader-dash" />
+          </div>
+          <div style={{ color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)', fontSize: 'var(--stm-text-sm)' }}>
+            Validating invitation...
+          </div>
         </div>
-        <style jsx>{`
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     )
   }
 
   if (error && !inviteData) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb', padding: '2rem' }}>
-        <div style={{ maxWidth: '28rem', textAlign: 'center', backgroundColor: 'white', padding: '2rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
-          <div style={{ width: '4rem', height: '4rem', backgroundColor: '#fee2e2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-            <span style={{ fontSize: '2rem' }}>❌</span>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--stm-page-background)', padding: 'var(--stm-space-8)' }}>
+        <div style={{ maxWidth: '28rem', textAlign: 'center', backgroundColor: 'var(--stm-card)', padding: 'var(--stm-space-8)', borderRadius: 'var(--stm-radius-lg)', boxShadow: 'var(--stm-shadow-md)', border: '1px solid var(--stm-border)' }}>
+          <div style={{
+            width: '64px', height: '64px',
+            backgroundColor: 'color-mix(in srgb, var(--stm-error) 12%, transparent)',
+            borderRadius: 'var(--stm-radius-full)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto var(--stm-space-4)',
+          }}>
+            <XCircle style={{ width: '32px', height: '32px', color: 'var(--stm-error)' }} />
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' }}>Invalid Invitation</h1>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>{error}</p>
-          <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Please contact the administrator for a new invitation link.</p>
+          <div style={{ fontSize: 'var(--stm-text-2xl)', fontWeight: 'var(--stm-font-bold)', color: 'var(--stm-foreground)', marginBottom: 'var(--stm-space-2)', fontFamily: 'var(--stm-font-body)' }}>
+            Invalid Invitation
+          </div>
+          <div style={{ color: 'var(--stm-muted-foreground)', marginBottom: 'var(--stm-space-6)', fontFamily: 'var(--stm-font-body)', fontSize: 'var(--stm-text-sm)' }}>
+            {error}
+          </div>
+          <div style={{ color: 'var(--stm-muted-foreground)', fontSize: 'var(--stm-text-sm)', fontFamily: 'var(--stm-font-body)' }}>
+            Please contact the administrator for a new invitation link.
+          </div>
         </div>
       </div>
     )
@@ -186,70 +198,76 @@ export default function VendorApplicationPage() {
     { num: 5, title: 'Portfolio', icon: Globe }
   ]
 
+  const canSubmit = !submitting && formData.company_name && formData.contact_name
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', padding: '2rem' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--stm-page-background)', padding: 'var(--stm-space-8)' }}>
       <div style={{ maxWidth: '48rem', margin: '0 auto' }}>
+
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1A5276', marginBottom: '0.5rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: 'var(--stm-space-8)' }}>
+          <div style={{ fontSize: 'var(--stm-text-4xl)', fontWeight: 'var(--stm-font-bold)', color: 'var(--stm-primary)', marginBottom: 'var(--stm-space-2)', fontFamily: 'var(--stm-font-body)' }}>
             Vendor Application
-          </h1>
-          <p style={{ color: '#6b7280' }}>
+          </div>
+          <div style={{ color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)' }}>
             Complete your profile to join our vendor network
-          </p>
+          </div>
           {inviteData && (
-            <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+            <div style={{ color: 'var(--stm-muted-foreground)', fontSize: 'var(--stm-text-sm)', marginTop: 'var(--stm-space-2)', fontFamily: 'var(--stm-font-body)' }}>
               Applying as: <strong>{inviteData.email}</strong>
-            </p>
+            </div>
           )}
         </div>
 
         {/* Progress Steps */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', marginBottom: '2rem', boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)' }}>
+        <div style={{ backgroundColor: 'var(--stm-card)', borderRadius: 'var(--stm-radius-lg)', padding: 'var(--stm-space-6)', marginBottom: 'var(--stm-space-8)', boxShadow: 'var(--stm-shadow-sm)', border: '1px solid var(--stm-border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             {steps.map((step, index) => {
               const Icon = step.icon
               const isActive = step.num === currentStep
               const isCompleted = step.num < currentStep
-              
+
               return (
                 <div key={step.num} style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{
-                      width: '3rem',
-                      height: '3rem',
-                      borderRadius: '50%',
-                      backgroundColor: isCompleted ? '#6B8F71' : isActive ? '#1A5276' : '#f3f4f6',
-                      borderWidth: '2px',
-                      borderStyle: 'solid',
-                      borderColor: isCompleted ? '#6B8F71' : isActive ? '#1A5276' : '#e5e7eb',
-                      color: isCompleted || isActive ? 'white' : '#6E6F71',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginBottom: '0.75rem',
-                      transition: 'all 300ms'
+                      width: '48px', height: '48px',
+                      borderRadius: 'var(--stm-radius-full)',
+                      backgroundColor: isCompleted
+                        ? 'color-mix(in srgb, var(--stm-success) 12%, transparent)'
+                        : isActive
+                          ? 'var(--stm-primary)'
+                          : 'var(--stm-muted)',
+                      border: isCompleted
+                        ? '2px solid var(--stm-success)'
+                        : isActive
+                          ? '2px solid var(--stm-primary)'
+                          : '2px solid var(--stm-border)',
+                      color: isCompleted ? 'var(--stm-success)' : isActive ? 'white' : 'var(--stm-muted-foreground)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      marginBottom: 'var(--stm-space-3)',
+                      transition: 'all 300ms',
                     }}>
                       {isCompleted ? <CheckCircle size={20} /> : <Icon size={20} />}
                     </div>
                     <span style={{
-                      fontSize: '0.75rem',
-                      fontWeight: isActive ? '600' : '400',
-                      color: isActive ? '#1A5276' : '#6b7280',
-                      textAlign: 'center'
+                      fontSize: 'var(--stm-text-xs)',
+                      fontWeight: isActive ? 'var(--stm-font-semibold)' : 'var(--stm-font-normal)',
+                      color: isActive ? 'var(--stm-primary)' : 'var(--stm-muted-foreground)',
+                      textAlign: 'center',
+                      fontFamily: 'var(--stm-font-body)',
                     }}>
                       {step.title}
                     </span>
                   </div>
                   {index < steps.length - 1 && (
                     <div style={{
-                      flex: 1,
-                      height: '2px',
-                      backgroundColor: isCompleted ? '#6B8F71' : '#e5e7eb',
-                      marginBottom: '2rem',
+                      flex: 1, height: '2px',
+                      backgroundColor: isCompleted ? 'var(--stm-success)' : 'var(--stm-border)',
+                      marginBottom: 'var(--stm-space-8)',
                       minWidth: '30px',
-                      marginLeft: '0.5rem',
-                      marginRight: '0.5rem'
+                      marginLeft: 'var(--stm-space-2)',
+                      marginRight: 'var(--stm-space-2)',
                     }} />
                   )}
                 </div>
@@ -259,101 +277,41 @@ export default function VendorApplicationPage() {
         </div>
 
         {/* Form Card */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '2rem', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+        <div style={{ backgroundColor: 'var(--stm-card)', borderRadius: 'var(--stm-radius-lg)', padding: 'var(--stm-space-8)', boxShadow: 'var(--stm-shadow-md)', border: '1px solid var(--stm-border)' }}>
           {error && (
-            <div style={{ backgroundColor: '#fee2e2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1.5rem' }}>
-              <p style={{ color: '#991b1b', fontSize: '0.875rem' }}>{error}</p>
+            <div style={{
+              backgroundColor: 'color-mix(in srgb, var(--stm-error) 10%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--stm-error) 30%, transparent)',
+              borderRadius: 'var(--stm-radius-md)',
+              padding: 'var(--stm-space-4)',
+              marginBottom: 'var(--stm-space-6)',
+            }}>
+              <div style={{ color: 'var(--stm-error)', fontSize: 'var(--stm-text-sm)', fontFamily: 'var(--stm-font-body)' }}>{error}</div>
             </div>
           )}
 
           {/* Step 1: Basic Info */}
           {currentStep === 1 && (
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#111827', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: 'var(--stm-text-2xl)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', marginBottom: 'var(--stm-space-6)', fontFamily: 'var(--stm-font-body)' }}>
                 Basic Information
-              </h2>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-4)' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Company Name <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.company_name}
-                    onChange={(e) => updateFormData('company_name', e.target.value)}
-                    placeholder="Your Company LLC"
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none'
-                    }}
-                  />
+                  <label style={labelStyle}>Company Name <span style={{ color: 'var(--stm-error)' }}>*</span></label>
+                  <input type="text" value={formData.company_name} onChange={(e) => updateFormData('company_name', e.target.value)} placeholder="Your Company LLC" required style={inputStyle} />
                 </div>
-
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Contact Name <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.contact_name}
-                    onChange={(e) => updateFormData('contact_name', e.target.value)}
-                    placeholder="John Doe"
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none'
-                    }}
-                  />
+                  <label style={labelStyle}>Contact Name <span style={{ color: 'var(--stm-error)' }}>*</span></label>
+                  <input type="text" value={formData.contact_name} onChange={(e) => updateFormData('contact_name', e.target.value)} placeholder="John Doe" required style={inputStyle} />
                 </div>
-
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Phone
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => updateFormData('phone', e.target.value)}
-                    placeholder="+1 (555) 123-4567"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none'
-                    }}
-                  />
+                  <label style={labelStyle}>Phone</label>
+                  <input type="tel" value={formData.phone} onChange={(e) => updateFormData('phone', e.target.value)} placeholder="+1 (555) 123-4567" style={inputStyle} />
                 </div>
-
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Website
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.website}
-                    onChange={(e) => updateFormData('website', e.target.value)}
-                    placeholder="https://yourcompany.com"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none'
-                    }}
-                  />
+                  <label style={labelStyle}>Website</label>
+                  <input type="url" value={formData.website} onChange={(e) => updateFormData('website', e.target.value)} placeholder="https://yourcompany.com" style={inputStyle} />
                 </div>
               </div>
             </div>
@@ -362,47 +320,17 @@ export default function VendorApplicationPage() {
           {/* Step 2: Services */}
           {currentStep === 2 && (
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#111827', marginBottom: '1.5rem' }}>
-                Services & Expertise
-              </h2>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ fontSize: 'var(--stm-text-2xl)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', marginBottom: 'var(--stm-space-6)', fontFamily: 'var(--stm-font-body)' }}>
+                Services &amp; Expertise
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-4)' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Industry
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.industry}
-                    onChange={(e) => updateFormData('industry', e.target.value)}
-                    placeholder="e.g., Marketing, Technology, Healthcare"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none'
-                    }}
-                  />
+                  <label style={labelStyle}>Industry</label>
+                  <input type="text" value={formData.industry} onChange={(e) => updateFormData('industry', e.target.value)} placeholder="e.g., Marketing, Technology, Healthcare" style={inputStyle} />
                 </div>
-
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Service Category
-                  </label>
-                  <select
-                    value={formData.service_category}
-                    onChange={(e) => updateFormData('service_category', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none'
-                    }}
-                  >
+                  <label style={labelStyle}>Service Category</label>
+                  <select value={formData.service_category} onChange={(e) => updateFormData('service_category', e.target.value)} style={inputStyle}>
                     <option value="">Select a category</option>
                     <option value="content">Content Creation</option>
                     <option value="seo">SEO</option>
@@ -414,26 +342,9 @@ export default function VendorApplicationPage() {
                     <option value="consulting">Consulting</option>
                   </select>
                 </div>
-
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Skills & Specialties
-                  </label>
-                  <textarea
-                    value={formData.skills}
-                    onChange={(e) => updateFormData('skills', e.target.value)}
-                    placeholder="Describe your key skills and specialties..."
-                    rows={4}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none',
-                      resize: 'vertical'
-                    }}
-                  />
+                  <label style={labelStyle}>Skills &amp; Specialties</label>
+                  <textarea value={formData.skills} onChange={(e) => updateFormData('skills', e.target.value)} placeholder="Describe your key skills and specialties..." rows={4} style={{ ...inputStyle, resize: 'vertical' }} />
                 </div>
               </div>
             </div>
@@ -442,27 +353,13 @@ export default function VendorApplicationPage() {
           {/* Step 3: Pricing */}
           {currentStep === 3 && (
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#111827', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: 'var(--stm-text-2xl)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', marginBottom: 'var(--stm-space-6)', fontFamily: 'var(--stm-font-body)' }}>
                 Pricing Information
-              </h2>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-4)' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Pricing Structure
-                  </label>
-                  <select
-                    value={formData.pricing_structure}
-                    onChange={(e) => updateFormData('pricing_structure', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none'
-                    }}
-                  >
+                  <label style={labelStyle}>Pricing Structure</label>
+                  <select value={formData.pricing_structure} onChange={(e) => updateFormData('pricing_structure', e.target.value)} style={inputStyle}>
                     <option value="">Select pricing structure</option>
                     <option value="hourly">Hourly Rate</option>
                     <option value="project">Per Project</option>
@@ -470,25 +367,9 @@ export default function VendorApplicationPage() {
                     <option value="custom">Custom</option>
                   </select>
                 </div>
-
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Rate / Cost
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.rate_cost}
-                    onChange={(e) => updateFormData('rate_cost', e.target.value)}
-                    placeholder="e.g., $100/hr or $5000/project"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none'
-                    }}
-                  />
+                  <label style={labelStyle}>Rate / Cost</label>
+                  <input type="text" value={formData.rate_cost} onChange={(e) => updateFormData('rate_cost', e.target.value)} placeholder="e.g., $100/hr or $5000/project" style={inputStyle} />
                 </div>
               </div>
             </div>
@@ -497,72 +378,26 @@ export default function VendorApplicationPage() {
           {/* Step 4: Availability */}
           {currentStep === 4 && (
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#111827', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: 'var(--stm-text-2xl)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', marginBottom: 'var(--stm-space-6)', fontFamily: 'var(--stm-font-body)' }}>
                 Availability
-              </h2>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-4)' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Current Status
-                  </label>
-                  <select
-                    value={formData.availability_status}
-                    onChange={(e) => updateFormData('availability_status', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none'
-                    }}
-                  >
+                  <label style={labelStyle}>Current Status</label>
+                  <select value={formData.availability_status} onChange={(e) => updateFormData('availability_status', e.target.value)} style={inputStyle}>
                     <option value="Available">Available</option>
                     <option value="Limited">Limited Availability</option>
                     <option value="Unavailable">Unavailable</option>
                     <option value="On Leave">On Leave</option>
                   </select>
                 </div>
-
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Available From Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.available_from}
-                    onChange={(e) => updateFormData('available_from', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none'
-                    }}
-                  />
+                  <label style={labelStyle}>Available From Date</label>
+                  <input type="date" value={formData.available_from} onChange={(e) => updateFormData('available_from', e.target.value)} style={inputStyle} />
                 </div>
-
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Availability Notes
-                  </label>
-                  <textarea
-                    value={formData.availability_notes}
-                    onChange={(e) => updateFormData('availability_notes', e.target.value)}
-                    placeholder="Any additional details about your availability..."
-                    rows={3}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none',
-                      resize: 'vertical'
-                    }}
-                  />
+                  <label style={labelStyle}>Availability Notes</label>
+                  <textarea value={formData.availability_notes} onChange={(e) => updateFormData('availability_notes', e.target.value)} placeholder="Any additional details about your availability..." rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
                 </div>
               </div>
             </div>
@@ -571,93 +406,41 @@ export default function VendorApplicationPage() {
           {/* Step 5: Portfolio */}
           {currentStep === 5 && (
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#111827', marginBottom: '1.5rem' }}>
-                Portfolio & Samples
-              </h2>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ fontSize: 'var(--stm-text-2xl)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', marginBottom: 'var(--stm-space-6)', fontFamily: 'var(--stm-font-body)' }}>
+                Portfolio &amp; Samples
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-4)' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Portfolio URL
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.portfolio_url}
-                    onChange={(e) => updateFormData('portfolio_url', e.target.value)}
-                    placeholder="https://portfolio.com"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none'
-                    }}
-                  />
+                  <label style={labelStyle}>Portfolio URL</label>
+                  <input type="url" value={formData.portfolio_url} onChange={(e) => updateFormData('portfolio_url', e.target.value)} placeholder="https://portfolio.com" style={inputStyle} />
                 </div>
-
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Sample Work URLs
-                  </label>
-                  <textarea
-                    value={formData.sample_work_urls}
-                    onChange={(e) => updateFormData('sample_work_urls', e.target.value)}
-                    placeholder="Add links to your best work (one per line)"
-                    rows={4}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none',
-                      resize: 'vertical'
-                    }}
-                  />
+                  <label style={labelStyle}>Sample Work URLs</label>
+                  <textarea value={formData.sample_work_urls} onChange={(e) => updateFormData('sample_work_urls', e.target.value)} placeholder="Add links to your best work (one per line)" rows={4} style={{ ...inputStyle, resize: 'vertical' }} />
                 </div>
-
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
-                    Additional Notes
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => updateFormData('notes', e.target.value)}
-                    placeholder="Anything else you'd like us to know..."
-                    rows={3}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none',
-                      resize: 'vertical'
-                    }}
-                  />
+                  <label style={labelStyle}>Additional Notes</label>
+                  <textarea value={formData.notes} onChange={(e) => updateFormData('notes', e.target.value)} placeholder="Anything else you'd like us to know..." rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
                 </div>
               </div>
             </div>
           )}
 
           {/* Navigation Buttons */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'var(--stm-space-8)', paddingTop: 'var(--stm-space-6)', borderTop: '1px solid var(--stm-border)' }}>
             <button
               onClick={prevStep}
               disabled={currentStep === 1}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.5rem',
-                backgroundColor: currentStep === 1 ? '#f3f4f6' : 'white',
-                color: currentStep === 1 ? '#9ca3af' : '#1A5276',
-                border: '1px solid #e5e7eb',
-                borderRadius: '0.5rem',
-                fontWeight: '500',
+                display: 'flex', alignItems: 'center', gap: 'var(--stm-space-2)',
+                padding: 'var(--stm-space-3) var(--stm-space-6)',
+                backgroundColor: currentStep === 1 ? 'var(--stm-muted)' : 'var(--stm-card)',
+                color: currentStep === 1 ? 'var(--stm-muted-foreground)' : 'var(--stm-primary)',
+                border: '1px solid var(--stm-border)',
+                borderRadius: 'var(--stm-radius-md)',
+                fontWeight: 'var(--stm-font-medium)',
+                fontFamily: 'var(--stm-font-body)',
                 cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
-                transition: 'all 150ms'
               }}
             >
               <ChevronLeft size={20} />
@@ -667,7 +450,13 @@ export default function VendorApplicationPage() {
             {currentStep < 5 ? (
               <button
                 onClick={nextStep}
-                className="btn-primary"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 'var(--stm-space-2)',
+                  padding: 'var(--stm-space-3) var(--stm-space-6)',
+                  backgroundColor: 'var(--stm-primary)', color: 'white', border: 'none',
+                  borderRadius: 'var(--stm-radius-md)', cursor: 'pointer',
+                  fontWeight: 'var(--stm-font-medium)', fontFamily: 'var(--stm-font-body)',
+                }}
               >
                 Next
                 <ChevronRight size={20} />
@@ -675,11 +464,15 @@ export default function VendorApplicationPage() {
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={submitting || !formData.company_name || !formData.contact_name}
-                className="btn-success"
+                disabled={!canSubmit}
                 style={{
-                  opacity: (submitting || !formData.company_name || !formData.contact_name) ? 0.5 : 1,
-                  cursor: (submitting || !formData.company_name || !formData.contact_name) ? 'not-allowed' : 'pointer'
+                  display: 'flex', alignItems: 'center', gap: 'var(--stm-space-2)',
+                  padding: 'var(--stm-space-3) var(--stm-space-6)',
+                  backgroundColor: 'var(--stm-success)', color: 'white', border: 'none',
+                  borderRadius: 'var(--stm-radius-md)',
+                  cursor: canSubmit ? 'pointer' : 'not-allowed',
+                  opacity: canSubmit ? 1 : 0.5,
+                  fontWeight: 'var(--stm-font-medium)', fontFamily: 'var(--stm-font-body)',
                 }}
               >
                 {submitting ? 'Submitting...' : 'Submit Application'}
@@ -689,13 +482,6 @@ export default function VendorApplicationPage() {
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   )
 }

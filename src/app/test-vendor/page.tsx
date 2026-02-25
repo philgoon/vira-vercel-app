@@ -13,7 +13,7 @@ export default function TestVendorPage() {
           style={{ 
             display: 'inline-block',
             padding: '0.5rem 1rem',
-            backgroundColor: '#1A5276',
+            backgroundColor: 'var(--stm-primary)',
             color: 'white',
             textDecoration: 'none',
             borderRadius: '0.375rem'
@@ -29,7 +29,7 @@ export default function TestVendorPage() {
           style={{ 
             display: 'inline-block',
             padding: '0.5rem 1rem',
-            backgroundColor: '#6B8F71',
+            backgroundColor: 'var(--stm-secondary)',
             color: 'white',
             textDecoration: 'none',
             borderRadius: '0.375rem'

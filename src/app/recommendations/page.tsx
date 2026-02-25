@@ -91,10 +91,10 @@ function RecommendationsContent() {
   })
 
   const getScoreColor = (score: number) => {
-    if (score >= 90) return '#1A5276' // Brand blue for top scores
-    if (score >= 80) return '#6B8F71' // Brand green for good scores
-    if (score >= 70) return '#6E6F71' // Brand gray for decent scores
-    return '#dc2626' // Red for low scores
+    if (score >= 90) return 'var(--stm-primary)' // Brand blue for top scores
+    if (score >= 80) return 'var(--stm-secondary)' // Brand green for good scores
+    if (score >= 70) return 'var(--stm-marketing)' // Brand gray for decent scores
+    return 'var(--stm-error)' // Red for low scores
   }
 
   const getRankIcon = (index: number) => {
@@ -161,7 +161,7 @@ function RecommendationsContent() {
         <div className="max-w-4xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#1A5276' }}>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--stm-primary)' }}>
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -177,7 +177,7 @@ function RecommendationsContent() {
                 </Button>
               </Link>
               <Link href="/">
-                <Button style={{ backgroundColor: '#1A5276' }} className="text-white hover:opacity-90">
+                <Button style={{ backgroundColor: 'var(--stm-primary)' }} className="text-white hover:opacity-90">
                   Dashboard
                 </Button>
               </Link>
@@ -285,15 +285,15 @@ function RecommendationsContent() {
                             {/* Pricing Information */}
                             <div style={{
                               padding: '1rem',
-                              backgroundColor: '#f0f9ff',
+                              backgroundColor: 'var(--stm-single-50)',
                               borderRadius: '0.375rem',
-                              border: '1px solid #0ea5e9',
+                              border: '1px solid var(--stm-accent)',
                               marginBottom: '1rem'
                             }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                <span style={{ fontSize: '1rem', fontWeight: '600', color: '#0c4a6e' }}>💰 Pricing</span>
+                                <span style={{ fontSize: 'var(--stm-text-base)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-primary)' }}>💰 Pricing</span>
                               </div>
-                              <div style={{ fontSize: '0.875rem', color: '#0c4a6e' }}>
+                              <div style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-primary)' }}>
                                 <div><strong>Structure:</strong> {rec.pricingStructure || 'Not specified'}</div>
                                 <div><strong>Rate:</strong> {rec.rateCost || 'Contact for pricing'}</div>
                               </div>
@@ -351,9 +351,9 @@ function RecommendationsContent() {
 
             {/* Enhancement Notice */}
             {isEnhanced && (
-              <Card className="p-6 border-2" style={{ backgroundColor: '#f8fafc', borderColor: '#1A5276' }}>
+              <Card className="p-6 border-2" style={{ backgroundColor: 'var(--stm-single-50)', borderColor: 'var(--stm-primary)' }}>
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#1A5276' }}>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--stm-primary)' }}>
                     <Sparkles className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -377,7 +377,7 @@ function RecommendationsContent() {
               We couldn&apos;t find any matching vendors for your criteria. Please try adjusting your search.
             </p>
             <Link href="/vira-match">
-              <Button style={{ backgroundColor: '#1A5276' }} className="text-white hover:opacity-90">
+              <Button style={{ backgroundColor: 'var(--stm-primary)' }} className="text-white hover:opacity-90">
                 Try New Search
               </Button>
             </Link>
@@ -395,7 +395,7 @@ export default function RecommendationsPage() {
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-4xl mx-auto px-6 py-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center animate-pulse" style={{ backgroundColor: '#1A5276' }}>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center animate-pulse" style={{ backgroundColor: 'var(--stm-primary)' }}>
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -407,7 +407,7 @@ export default function RecommendationsPage() {
         </div>
         <div className="max-w-4xl mx-auto px-6 py-8">
           <div className="flex items-center justify-center py-12">
-            <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#1A5276', borderTopColor: 'transparent' }}></div>
+            <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--stm-primary)', borderTopColor: 'transparent' }}></div>
           </div>
         </div>
       </div>

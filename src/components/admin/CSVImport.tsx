@@ -1,11 +1,48 @@
 'use client'
 
+// [EPIC-002 M4] Migrated from shadcn + Tailwind to STM inline styles
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, Upload, Eye, FileCheck } from 'lucide-react'
 
 type WizardStep = 'upload' | 'preview' | 'confirm' | 'complete'
+
+const rowStatusStyle = (item: any) => {
+  const color = item.is_duplicate
+    ? 'var(--stm-warning)'
+    : item.vendor_found
+    ? 'var(--stm-success)'
+    : 'var(--stm-error)'
+  return {
+    padding: 'var(--stm-space-3)',
+    backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
+    border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+    borderRadius: 'var(--stm-radius-sm)',
+    fontSize: 'var(--stm-text-sm)',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 'var(--stm-space-3)',
+    opacity: !item.vendor_found || item.is_duplicate ? 0.7 : 1,
+  }
+}
+
+const importedStyle = (status: string) => {
+  const map: Record<string, string> = { imported: 'var(--stm-success)', skipped: 'var(--stm-warning)', error: 'var(--stm-error)' }
+  const color = map[status] || 'var(--stm-muted-foreground)'
+  return {
+    padding: 'var(--stm-space-3)',
+    backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
+    border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+    borderRadius: 'var(--stm-radius-sm)',
+    fontSize: 'var(--stm-text-sm)',
+  }
+}
+
+const steps = [
+  { id: 'upload',   label: 'Upload CSV',      icon: Upload },
+  { id: 'preview',  label: 'Preview Data',    icon: Eye },
+  { id: 'confirm',  label: 'Confirm Import',  icon: FileCheck },
+  { id: 'complete', label: 'Complete',        icon: CheckCircle },
+]
 
 export default function CSVImport() {
   const [currentStep, setCurrentStep] = useState<WizardStep>('upload')
@@ -25,67 +62,43 @@ export default function CSVImport() {
     }
   }
 
-  // Toggle project selection
   const toggleProject = (index: number) => {
-    const newSelected = new Set(selectedProjects)
-    if (newSelected.has(index)) {
-      newSelected.delete(index)
-    } else {
-      newSelected.add(index)
-    }
-    setSelectedProjects(newSelected)
+    const next = new Set(selectedProjects)
+    next.has(index) ? next.delete(index) : next.add(index)
+    setSelectedProjects(next)
   }
 
-  // Select all projects (only valid ones)
   const selectAll = () => {
     if (!preview?.preview_data) return
-    const validIndices = preview.preview_data
+    const valid = preview.preview_data
       .map((item: any, idx: number) => ({ item, idx }))
       .filter(({ item }: any) => item.vendor_found && !item.is_duplicate)
       .map(({ idx }: any) => idx)
-    setSelectedProjects(new Set(validIndices))
+    setSelectedProjects(new Set(valid))
   }
 
-  // Deselect all
-  const deselectAll = () => {
-    setSelectedProjects(new Set())
-  }
+  const deselectAll = () => setSelectedProjects(new Set())
 
-  // Step 2: Preview
   const handlePreview = async () => {
     if (!file) return
     setLoading(true)
     const formData = new FormData()
     formData.append('file', file)
     formData.append('confirm', 'false')
-
-    const response = await fetch('/api/admin/import-csv', {
-      method: 'POST',
-      body: formData,
-    })
-
+    const response = await fetch('/api/admin/import-csv', { method: 'POST', body: formData })
     const data = await response.json()
     setPreview(data)
-    
-    // Auto-select all valid projects (vendor found, not duplicate)
     if (data.preview_data) {
-      const validIndices = data.preview_data
+      const valid = data.preview_data
         .map((item: any, idx: number) => ({ item, idx }))
         .filter(({ item }: any) => item.vendor_found && !item.is_duplicate)
         .map(({ idx }: any) => idx)
-      setSelectedProjects(new Set(validIndices))
+      setSelectedProjects(new Set(valid))
     }
-    
     setCurrentStep('preview')
     setLoading(false)
   }
 
-  // Step 3: Move to confirmation
-  const handleMoveToConfirm = () => {
-    setCurrentStep('confirm')
-  }
-
-  // Step 4: Confirm and Import
   const handleConfirmImport = async () => {
     if (!file) return
     setLoading(true)
@@ -93,184 +106,180 @@ export default function CSVImport() {
     formData.append('file', file)
     formData.append('confirm', 'true')
     formData.append('selectedIndices', JSON.stringify(Array.from(selectedProjects)))
-
-    const response = await fetch('/api/admin/import-csv', {
-      method: 'POST',
-      body: formData,
-    })
-
+    const response = await fetch('/api/admin/import-csv', { method: 'POST', body: formData })
     const data = await response.json()
     setResult(data)
     setCurrentStep('complete')
     setLoading(false)
   }
 
-  // Reset wizard
   const handleReset = () => {
     setFile(null)
     setPreview(null)
     setResult(null)
     setCurrentStep('upload')
+    setSelectedProjects(new Set())
   }
 
-  const steps = [
-    { id: 'upload', label: 'Upload CSV', icon: Upload },
-    { id: 'preview', label: 'Preview Data', icon: Eye },
-    { id: 'confirm', label: 'Confirm Import', icon: FileCheck },
-    { id: 'complete', label: 'Complete', icon: CheckCircle }
-  ]
-
-  const getStepIndex = () => steps.findIndex(s => s.id === currentStep)
+  const stepIndex = steps.findIndex(s => s.id === currentStep)
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Import Projects from CSV</CardTitle>
-        {/* Wizard Progress */}
-        <div className="flex items-center mt-6" style={{ justifyContent: 'space-between' }}>
+    <div style={{
+      backgroundColor: 'var(--stm-card)',
+      border: '1px solid var(--stm-border)',
+      borderRadius: 'var(--stm-radius-lg)',
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{ padding: 'var(--stm-space-5) var(--stm-space-6)', borderBottom: '1px solid var(--stm-border)' }}>
+        <h3 style={{ fontSize: 'var(--stm-text-base)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', margin: '0 0 var(--stm-space-5)' }}>
+          Import Projects from CSV
+        </h3>
+
+        {/* Step Progress */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           {steps.map((step, idx) => {
             const StepIcon = step.icon
             const isActive = currentStep === step.id
-            const isCompleted = getStepIndex() > idx
+            const isCompleted = stepIndex > idx
+            const color = isCompleted ? 'var(--stm-secondary)' : isActive ? 'var(--stm-primary)' : 'var(--stm-border)'
             return (
-              <div key={step.id} className="flex items-center" style={{ flex: idx < steps.length - 1 ? 1 : '0 0 auto' }}>
-                <div className="flex flex-col items-center" style={{ minWidth: '80px' }}>
-                  <div className="rounded-full flex items-center justify-center border-2" style={{
-                    width: '3rem',
-                    height: '3rem',
-                    backgroundColor: isCompleted ? '#6B8F71' : isActive ? '#1A5276' : '#f3f4f6',
-                    borderColor: isCompleted ? '#6B8F71' : isActive ? '#1A5276' : '#e5e7eb',
-                    color: isCompleted || isActive ? 'white' : '#6E6F71'
+              <div key={step.id} style={{ display: 'flex', alignItems: 'center', flex: idx < steps.length - 1 ? 1 : '0 0 auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '72px' }}>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: 'var(--stm-radius-full)',
+                    backgroundColor: isCompleted || isActive ? color : 'var(--stm-muted)',
+                    border: `2px solid ${color}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <StepIcon className="w-6 h-6" />
+                    <StepIcon style={{ width: '18px', height: '18px', color: isCompleted || isActive ? 'white' : 'var(--stm-muted-foreground)' }} />
                   </div>
-                  <span className={`text-xs mt-2 text-center ${isActive ? 'font-semibold' : ''}`}>
+                  <span style={{ fontSize: 'var(--stm-text-xs)', marginTop: 'var(--stm-space-1)', textAlign: 'center', color: isActive ? 'var(--stm-foreground)' : 'var(--stm-muted-foreground)', fontWeight: isActive ? 'var(--stm-font-semibold)' : 'var(--stm-font-normal)' }}>
                     {step.label}
                   </span>
                 </div>
                 {idx < steps.length - 1 && (
-                  <div className="h-0.5" style={{
-                    flex: 1,
-                    backgroundColor: isCompleted ? '#6B8F71' : '#e5e7eb',
-                    minWidth: '30px',
-                    marginLeft: '0.5rem',
-                    marginRight: '0.5rem'
-                  }} />
+                  <div style={{ flex: 1, height: '2px', backgroundColor: isCompleted ? 'var(--stm-secondary)' : 'var(--stm-border)', margin: '0 var(--stm-space-2)', marginBottom: 'var(--stm-space-5)' }} />
                 )}
               </div>
             )
           })}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: 'var(--stm-space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-4)' }}>
+
         {/* Step 1: Upload */}
         {currentStep === 'upload' && (
           <>
-            <div className="space-y-2">
-              <p className="text-sm text-gray-700 mb-2">
-                Upload a CSV file with columns: <strong>Ticket Assignee</strong>, <strong>Ticket Title</strong>,
-                <strong>Ticket Company Name</strong>, <strong>Ticket Created Date</strong>, <strong>Ticket Submitted By</strong>.
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-2)' }}>
+              <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-foreground)', margin: 0 }}>
+                Upload a CSV file with columns: <strong>Ticket Assignee</strong>, <strong>Ticket Title</strong>, <strong>Ticket Company Name</strong>, <strong>Ticket Created Date</strong>, <strong>Ticket Submitted By</strong>.
               </p>
-              <p className="text-xs text-gray-500 space-y-1">
-                <span className="block">✓ Vendors will be matched automatically by <strong>Ticket Assignee</strong></span>
-                <span className="block">✓ Reviewers will be auto-assigned if <strong>Ticket Submitted By</strong> matches a user name</span>
-                <span className="block text-gray-400">→ Unmatched projects can be manually assigned in the Reviews tab</span>
-              </p>
-              <input type="file" accept=".csv" onChange={handleFileChange} className="block w-full text-sm" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-1)' }}>
+                {[
+                  'Vendors will be matched automatically by Ticket Assignee',
+                  'Reviewers will be auto-assigned if Ticket Submitted By matches a user name',
+                  'Unmatched projects can be manually assigned in the Reviews tab',
+                ].map((text, i) => (
+                  <p key={i} style={{ fontSize: 'var(--stm-text-xs)', color: i < 2 ? 'var(--stm-muted-foreground)' : 'var(--stm-muted-foreground)', margin: 0 }}>
+                    {i < 2 ? '✓' : '→'} {text}
+                  </p>
+                ))}
+              </div>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-foreground)', marginTop: 'var(--stm-space-2)' }}
+              />
             </div>
-            <Button onClick={handlePreview} disabled={!file || loading}>
+            <button
+              onClick={handlePreview}
+              disabled={!file || loading}
+              style={{ alignSelf: 'flex-start', padding: 'var(--stm-space-2) var(--stm-space-4)', backgroundColor: 'var(--stm-primary)', color: 'white', border: 'none', borderRadius: 'var(--stm-radius-md)', fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-medium)', cursor: 'pointer', opacity: !file || loading ? 0.5 : 1 }}
+            >
               {loading ? 'Analyzing...' : 'Next: Preview Data'}
-            </Button>
+            </button>
           </>
         )}
 
         {/* Step 2: Preview */}
-        {currentStep === 'preview' && preview && preview.preview && (
+        {currentStep === 'preview' && preview?.preview && (
           <>
-            <div className="p-4 border rounded" style={{ backgroundColor: '#E8F4F8', borderColor: '#1A5276' }}>
-              <div className="flex items-center justify-between mb-3">
+            <div style={{
+              padding: 'var(--stm-space-4)',
+              backgroundColor: `color-mix(in srgb, var(--stm-primary) 5%, transparent)`,
+              border: '1px solid color-mix(in srgb, var(--stm-primary) 20%, transparent)',
+              borderRadius: 'var(--stm-radius-md)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--stm-space-3)' }}>
                 <div>
-                  <h3 className="font-semibold" style={{ color: '#1A5276' }}>📋 Import Preview</h3>
-                  <p className="text-sm" style={{ color: '#1A5276' }}>
+                  <p style={{ fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-primary)', margin: 0 }}>Import Preview</p>
+                  <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-primary)', margin: 0 }}>
                     Found <strong>{preview.total_records}</strong> projects. Selected: <strong>{selectedProjects.size}</strong>
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={selectAll} size="sm" variant="outline">
+                <div style={{ display: 'flex', gap: 'var(--stm-space-2)' }}>
+                  <button onClick={selectAll} style={{ padding: 'var(--stm-space-1) var(--stm-space-3)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-sm)', background: 'var(--stm-card)', fontSize: 'var(--stm-text-xs)', cursor: 'pointer', color: 'var(--stm-foreground)' }}>
                     Select All Valid
-                  </Button>
-                  <Button onClick={deselectAll} size="sm" variant="outline">
+                  </button>
+                  <button onClick={deselectAll} style={{ padding: 'var(--stm-space-1) var(--stm-space-3)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-sm)', background: 'var(--stm-card)', fontSize: 'var(--stm-text-xs)', cursor: 'pointer', color: 'var(--stm-foreground)' }}>
                     Deselect All
-                  </Button>
+                  </button>
                 </div>
               </div>
-              <div className="max-h-96 overflow-y-auto space-y-2">
-                {preview.preview_data.map((item: any, idx: number) => {
-                  const isValid = item.vendor_found && !item.is_duplicate
-                  const isSelected = selectedProjects.has(idx)
-                  return (
-                    <div 
-                      key={idx} 
-                      className={`p-3 rounded text-sm flex items-start gap-3 ${
-                        item.is_duplicate ? 'bg-yellow-100 border border-yellow-300' :
-                        item.vendor_found ? 'bg-green-100 border border-green-300' : 
-                        'bg-red-100 border border-red-300'
-                      } ${!isValid ? 'opacity-60' : ''}`}
-                    >
-                      {/* Checkbox */}
-                      <input 
-                        type="checkbox"
-                        checked={isSelected}
-                        disabled={!isValid}
-                        onChange={() => toggleProject(idx)}
-                        className="mt-1 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
-                      />
-                      <div className="flex-1">
-                        <div className="font-semibold">{item.title}</div>
-                        <div className="text-xs mt-1 space-y-1">
-                          <div>Company: {item.company}</div>
-                          <div>
-                            Vendor: {item.vendor_name} {item.vendor_found ? '✓ Found' : '❌ NOT FOUND'}
-                          </div>
-                          {item.is_duplicate && (
-                            <div className="text-orange-700 font-semibold">⚠️ DUPLICATE - Will be skipped</div>
-                          )}
-                          {item.has_description && !item.is_duplicate && (
-                            <div className="text-blue-700">📝 Has description (AI summary will be generated)</div>
-                          )}
-                        </div>
+              <div style={{ maxHeight: '384px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-2)' }}>
+                {preview.preview_data.map((item: any, idx: number) => (
+                  <div key={idx} style={rowStatusStyle(item)}>
+                    <input
+                      type="checkbox"
+                      checked={selectedProjects.has(idx)}
+                      disabled={!item.vendor_found || item.is_duplicate}
+                      onChange={() => toggleProject(idx)}
+                      style={{ marginTop: '2px', width: '14px', height: '14px', cursor: !item.vendor_found || item.is_duplicate ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', margin: 0 }}>{item.title}</p>
+                      <div style={{ fontSize: 'var(--stm-text-xs)', color: 'var(--stm-muted-foreground)', marginTop: 'var(--stm-space-1)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span>Company: {item.company}</span>
+                        <span>Vendor: {item.vendor_name} {item.vendor_found ? '✓ Found' : '❌ NOT FOUND'}</span>
+                        {item.is_duplicate && <span style={{ color: 'var(--stm-warning)', fontWeight: 'var(--stm-font-semibold)' }}>⚠ DUPLICATE – Will be skipped</span>}
+                        {item.has_description && !item.is_duplicate && <span style={{ color: 'var(--stm-primary)' }}>Has description (AI summary will be generated)</span>}
                       </div>
                     </div>
-                  )
-                })}
+                  </div>
+                ))}
               </div>
             </div>
-            {(preview.preview_data.some((item: any) => !item.vendor_found) || 
-              preview.preview_data.some((item: any) => item.is_duplicate)) && (
-              <div className="p-4 border rounded space-y-2" style={{ backgroundColor: '#fffbeb', borderColor: '#F59E0B' }}>
-                {preview.preview_data.some((item: any) => !item.vendor_found) && (
-                  <p className="text-sm" style={{ color: '#92400e' }}>
-                    ⚠️ <strong>Unknown Vendors:</strong> Some vendors were not found in the system. Those projects will be skipped.
+
+            {(preview.preview_data.some((i: any) => !i.vendor_found) || preview.preview_data.some((i: any) => i.is_duplicate)) && (
+              <div style={{ padding: 'var(--stm-space-4)', backgroundColor: `color-mix(in srgb, var(--stm-warning) 8%, transparent)`, border: `1px solid color-mix(in srgb, var(--stm-warning) 25%, transparent)`, borderRadius: 'var(--stm-radius-md)', display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-2)' }}>
+                {preview.preview_data.some((i: any) => !i.vendor_found) && (
+                  <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-warning)', margin: 0 }}>
+                    ⚠ <strong>Unknown Vendors:</strong> Some vendors were not found. Those projects will be skipped.
                   </p>
                 )}
-                {preview.preview_data.some((item: any) => item.is_duplicate) && (
-                  <p className="text-sm" style={{ color: '#92400e' }}>
-                    ⚠️ <strong>Duplicates:</strong> {preview.preview_data.filter((item: any) => item.is_duplicate).length} project(s) already exist with the same title, client, and date. They will be skipped.
+                {preview.preview_data.some((i: any) => i.is_duplicate) && (
+                  <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-warning)', margin: 0 }}>
+                    ⚠ <strong>Duplicates:</strong> {preview.preview_data.filter((i: any) => i.is_duplicate).length} project(s) already exist. They will be skipped.
                   </p>
                 )}
               </div>
             )}
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleMoveToConfirm} 
-                className="bg-blue-600 hover:bg-blue-700"
+
+            <div style={{ display: 'flex', gap: 'var(--stm-space-2)' }}>
+              <button
+                onClick={() => setCurrentStep('confirm')}
                 disabled={selectedProjects.size === 0}
+                style={{ padding: 'var(--stm-space-2) var(--stm-space-4)', backgroundColor: 'var(--stm-primary)', color: 'white', border: 'none', borderRadius: 'var(--stm-radius-md)', fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-medium)', cursor: 'pointer', opacity: selectedProjects.size === 0 ? 0.5 : 1 }}
               >
                 Next: Confirm Import ({selectedProjects.size} selected)
-              </Button>
-              <Button onClick={handleReset} variant="outline">
+              </button>
+              <button onClick={handleReset} style={{ padding: 'var(--stm-space-2) var(--stm-space-4)', backgroundColor: 'var(--stm-card)', color: 'var(--stm-foreground)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-md)', fontSize: 'var(--stm-text-sm)', cursor: 'pointer' }}>
                 Start Over
-              </Button>
+              </button>
             </div>
           </>
         )}
@@ -278,140 +287,114 @@ export default function CSVImport() {
         {/* Step 3: Confirm */}
         {currentStep === 'confirm' && (
           <>
-            <div className="p-4 bg-yellow-50 border border-yellow-300 rounded">
-              <h3 className="font-semibold text-yellow-800 mb-2">⚠️ Final Confirmation</h3>
-              <p className="text-sm text-yellow-700 mb-3">
+            <div style={{ padding: 'var(--stm-space-4)', backgroundColor: `color-mix(in srgb, var(--stm-warning) 8%, transparent)`, border: `1px solid color-mix(in srgb, var(--stm-warning) 30%, transparent)`, borderRadius: 'var(--stm-radius-md)' }}>
+              <p style={{ fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-warning)', marginBottom: 'var(--stm-space-2)' }}>
+                ⚠ Final Confirmation
+              </p>
+              <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-foreground)', marginBottom: 'var(--stm-space-3)' }}>
                 You are about to import <strong>{selectedProjects.size}</strong> selected projects into the database.
               </p>
-              <ul className="text-sm text-yellow-700 space-y-1 ml-4 list-disc">
-                <li>Vendors will be automatically matched by name</li>
-                <li>Reviewers will be auto-assigned if "Submitted By" name matches a user</li>
-                <li>AI summaries will be generated for all descriptions</li>
-                <li>Unmatched projects will need manual reviewer assignment</li>
-                <li>This action cannot be undone</li>
+              <ul style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', paddingLeft: 'var(--stm-space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-1)' }}>
+                {[
+                  'Vendors will be automatically matched by name',
+                  'Reviewers will be auto-assigned if "Submitted By" name matches a user',
+                  'AI summaries will be generated for all descriptions',
+                  'Unmatched projects will need manual reviewer assignment',
+                  'This action cannot be undone',
+                ].map((item, i) => <li key={i}>{item}</li>)}
               </ul>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleConfirmImport} disabled={loading} className="bg-green-600 hover:bg-green-700">
+            <div style={{ display: 'flex', gap: 'var(--stm-space-2)' }}>
+              <button
+                onClick={handleConfirmImport}
+                disabled={loading}
+                style={{ padding: 'var(--stm-space-2) var(--stm-space-4)', backgroundColor: 'var(--stm-success)', color: 'white', border: 'none', borderRadius: 'var(--stm-radius-md)', fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-medium)', cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
+              >
                 {loading ? 'Importing...' : 'Confirm & Import'}
-              </Button>
-              <Button onClick={() => setCurrentStep('preview')} variant="outline" disabled={loading}>
-                Back to Preview
-              </Button>
-              <Button onClick={handleReset} variant="outline" disabled={loading}>
+              </button>
+              <button onClick={() => setCurrentStep('preview')} disabled={loading} style={{ padding: 'var(--stm-space-2) var(--stm-space-4)', backgroundColor: 'var(--stm-card)', color: 'var(--stm-foreground)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-md)', fontSize: 'var(--stm-text-sm)', cursor: 'pointer', opacity: loading ? 0.5 : 1 }}>
+                Back
+              </button>
+              <button onClick={handleReset} disabled={loading} style={{ padding: 'var(--stm-space-2) var(--stm-space-4)', backgroundColor: 'var(--stm-card)', color: 'var(--stm-foreground)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-md)', fontSize: 'var(--stm-text-sm)', cursor: 'pointer', opacity: loading ? 0.5 : 1 }}>
                 Cancel
-              </Button>
+              </button>
             </div>
           </>
         )}
+
         {/* Step 4: Complete */}
         {currentStep === 'complete' && result && (
-          <div className="space-y-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-4)' }}>
             {result.success ? (
               <>
-                <div className="p-4 bg-green-50 border border-green-200 rounded">
-                  <h3 className="font-semibold text-green-800 mb-2">Import Successful!</h3>
-                  <ul className="text-sm space-y-1 text-green-700">
+                <div style={{ padding: 'var(--stm-space-4)', backgroundColor: `color-mix(in srgb, var(--stm-success) 8%, transparent)`, border: `1px solid color-mix(in srgb, var(--stm-success) 25%, transparent)`, borderRadius: 'var(--stm-radius-md)' }}>
+                  <p style={{ fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-success)', marginBottom: 'var(--stm-space-2)' }}>Import Successful!</p>
+                  <ul style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-foreground)', paddingLeft: 'var(--stm-space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-1)' }}>
                     <li>✅ Imported: {result.imported} projects</li>
-                    {result.reviewers_auto_assigned > 0 && (
-                      <li>👤 Reviewers Auto-Assigned: {result.reviewers_auto_assigned} (matched by name)</li>
-                    )}
-                    {result.ai_summaries_generated > 0 && (
-                      <li>🤖 AI Summaries Generated: {result.ai_summaries_generated}</li>
-                    )}
-                    {result.skipped_duplicates > 0 && (
-                      <li>⚠️ Skipped Duplicates: {result.skipped_duplicates}</li>
-                    )}
-                    {result.skipped_unknown_vendors > 0 && (
-                      <li>⚠️ Unknown Vendors: {result.skipped_unknown_vendors}</li>
-                    )}
+                    {result.reviewers_auto_assigned > 0 && <li>Reviewers Auto-Assigned: {result.reviewers_auto_assigned}</li>}
+                    {result.ai_summaries_generated > 0 && <li>AI Summaries Generated: {result.ai_summaries_generated}</li>}
+                    {result.skipped_duplicates > 0 && <li style={{ color: 'var(--stm-warning)' }}>Skipped Duplicates: {result.skipped_duplicates}</li>}
+                    {result.skipped_unknown_vendors > 0 && <li style={{ color: 'var(--stm-warning)' }}>Unknown Vendors: {result.skipped_unknown_vendors}</li>}
                   </ul>
-                  {result.note && (
-                    <p className="text-sm text-gray-700 mt-3 italic">{result.note}</p>
-                  )}
+                  {result.note && <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', marginTop: 'var(--stm-space-3)', fontStyle: 'italic' }}>{result.note}</p>}
                 </div>
 
-                {/* Available Reviewers */}
-                {result.available_reviewers && result.available_reviewers.length > 0 && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded">
-                    <h4 className="font-semibold text-blue-800 mb-2">👥 Active Reviewers ({result.available_reviewers.length})</h4>
-                    <ul className="text-sm space-y-1 text-blue-700">
-                      {result.available_reviewers.map((reviewer: any, idx: number) => (
-                        <li key={idx}>• {reviewer.name || reviewer.email}</li>
-                      ))}
+                {result.available_reviewers?.length > 0 && (
+                  <div style={{ padding: 'var(--stm-space-4)', backgroundColor: `color-mix(in srgb, var(--stm-primary) 5%, transparent)`, border: `1px solid color-mix(in srgb, var(--stm-primary) 20%, transparent)`, borderRadius: 'var(--stm-radius-md)' }}>
+                    <p style={{ fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-primary)', marginBottom: 'var(--stm-space-2)' }}>Active Reviewers ({result.available_reviewers.length})</p>
+                    <ul style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', paddingLeft: 'var(--stm-space-4)' }}>
+                      {result.available_reviewers.map((r: any, i: number) => <li key={i}>{r.name || r.email}</li>)}
                     </ul>
                   </div>
                 )}
 
-                {/* Detailed Project Results */}
-                {result.project_details && result.project_details.length > 0 && (
-                  <div className="p-4 bg-gray-50 border border-gray-200 rounded">
-                    <h4 className="font-semibold text-gray-800 mb-3">📊 Project Details</h4>
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                {result.project_details?.length > 0 && (
+                  <div style={{ padding: 'var(--stm-space-4)', backgroundColor: 'var(--stm-muted)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-md)' }}>
+                    <p style={{ fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', marginBottom: 'var(--stm-space-3)' }}>Project Details</p>
+                    <div style={{ maxHeight: '384px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-2)' }}>
                       {result.project_details.map((project: any, idx: number) => (
-                        <div key={idx} className={`p-3 rounded text-sm ${
-                          project.status === 'imported' ? 'bg-green-100 border border-green-300' :
-                          project.status === 'skipped' ? 'bg-yellow-100 border border-yellow-300' :
-                          'bg-red-100 border border-red-300'
-                        }`}>
-                          <div className="font-semibold">{project.title}</div>
-                          <div className="text-xs mt-1 space-y-1">
-                            <div>Company: {project.company}</div>
-                            <div>Vendor: {project.vendor_name} {project.vendor_matched && '✓'}</div>
+                        <div key={idx} style={importedStyle(project.status)}>
+                          <p style={{ fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', margin: 0 }}>{project.title}</p>
+                          <div style={{ fontSize: 'var(--stm-text-xs)', color: 'var(--stm-muted-foreground)', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span>Company: {project.company}</span>
+                            <span>Vendor: {project.vendor_name} {project.vendor_matched && '✓'}</span>
                             {project.status === 'imported' && (
                               <>
-                                {project.reviewer_assigned ? (
-                                  <div className="text-green-700 font-medium">
-                                    ✓ Reviewer: {project.reviewer_name}
-                                  </div>
-                                ) : (
-                                  <div className="text-orange-700">
-                                    ⚠️ No reviewer assigned
-                                  </div>
-                                )}
-                                {project.ai_summary_generated && (
-                                  <div className="text-blue-700">🤖 AI Summary Generated</div>
-                                )}
-                                {project.note && (
-                                  <div className="text-xs text-gray-600 italic">{project.note}</div>
-                                )}
+                                <span style={{ color: project.reviewer_assigned ? 'var(--stm-success)' : 'var(--stm-warning)' }}>
+                                  {project.reviewer_assigned ? `✓ Reviewer: ${project.reviewer_name}` : '⚠ No reviewer assigned'}
+                                </span>
+                                {project.ai_summary_generated && <span style={{ color: 'var(--stm-primary)' }}>AI Summary Generated</span>}
+                                {project.note && <span style={{ fontStyle: 'italic' }}>{project.note}</span>}
                               </>
                             )}
-                            {project.status === 'skipped' && (
-                              <div className="text-orange-700">⚠️ {project.reason}</div>
-                            )}
-                            {project.status === 'error' && (
-                              <div className="text-red-700">❌ {project.reason}</div>
-                            )}
+                            {project.status === 'skipped' && <span style={{ color: 'var(--stm-warning)' }}>⚠ {project.reason}</span>}
+                            {project.status === 'error' && <span style={{ color: 'var(--stm-error)' }}>❌ {project.reason}</span>}
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-                
-                {/* Import Another Button */}
-                <Button onClick={handleReset} className="w-full">
+
+                <button onClick={handleReset} style={{ padding: 'var(--stm-space-3)', backgroundColor: 'var(--stm-primary)', color: 'white', border: 'none', borderRadius: 'var(--stm-radius-md)', fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-medium)', cursor: 'pointer' }}>
                   Import Another CSV
-                </Button>
+                </button>
               </>
             ) : (
               <>
-                <div className="p-4 bg-red-50 border border-red-200 rounded">
-                  <h3 className="font-semibold text-red-800 mb-2">Import Failed</h3>
-                  <p className="text-sm text-red-700">{result.error || 'Unknown error'}</p>
-                  {result.warning && (
-                    <p className="text-sm text-orange-700 mt-2">⚠️ {result.warning}</p>
-                  )}
+                <div style={{ padding: 'var(--stm-space-4)', backgroundColor: `color-mix(in srgb, var(--stm-error) 8%, transparent)`, border: `1px solid color-mix(in srgb, var(--stm-error) 25%, transparent)`, borderRadius: 'var(--stm-radius-md)' }}>
+                  <p style={{ fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-error)', marginBottom: 'var(--stm-space-2)' }}>Import Failed</p>
+                  <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-foreground)' }}>{result.error || 'Unknown error'}</p>
+                  {result.warning && <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-warning)', marginTop: 'var(--stm-space-2)' }}>⚠ {result.warning}</p>}
                 </div>
-                <Button onClick={handleReset} variant="outline">
+                <button onClick={handleReset} style={{ alignSelf: 'flex-start', padding: 'var(--stm-space-2) var(--stm-space-4)', backgroundColor: 'var(--stm-card)', color: 'var(--stm-foreground)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-md)', fontSize: 'var(--stm-text-sm)', cursor: 'pointer' }}>
                   Try Again
-                </Button>
+                </button>
               </>
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

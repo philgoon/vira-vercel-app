@@ -5,7 +5,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Save, Building2, Users, MessageSquare, FileText, DollarSign, StickyNote } from 'lucide-react';
+import { Building2, Users, MessageSquare, FileText, DollarSign, StickyNote } from 'lucide-react';
+import { SidePanel, SidePanelSection, SidePanelFooterAction } from '@/components/layout/SidePanel';
 import { Client } from '@/types';
 
 interface ClientProfileModalProps {
@@ -41,8 +42,7 @@ export default function ClientProfileModal({ client, isOpen, onClose, onSave }: 
     }
   }, [isOpen, client]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setIsSaving(true);
     setError(null);
 
@@ -67,12 +67,7 @@ export default function ClientProfileModal({ client, isOpen, onClose, onSave }: 
         throw new Error(errData.error || 'Failed to update client profile');
       }
 
-      // Call onSave with updated client data
-      onSave({
-        ...client,
-        ...formData,
-      });
-
+      onSave({ ...client, ...formData });
       onClose();
     } catch (err: any) {
       console.error('Error updating client profile:', err);
@@ -82,172 +77,173 @@ export default function ClientProfileModal({ client, isOpen, onClose, onSave }: 
     }
   };
 
-  if (!isOpen) return null;
+  const fieldStyle = {
+    width: '100%',
+    padding: 'var(--stm-space-3) var(--stm-space-3)',
+    fontSize: 'var(--stm-text-sm)',
+    border: '1px solid var(--stm-border)',
+    borderRadius: 'var(--stm-radius-md)',
+    backgroundColor: 'var(--stm-background)',
+    color: 'var(--stm-foreground)',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box' as const,
+    outline: 'none',
+  };
+
+  const labelStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--stm-space-2)',
+    fontSize: 'var(--stm-text-sm)',
+    fontWeight: 'var(--stm-font-medium)',
+    color: 'var(--stm-foreground)',
+    marginBottom: 'var(--stm-space-2)',
+  };
+
+  const hintStyle = {
+    fontSize: 'var(--stm-text-xs)',
+    color: 'var(--stm-muted-foreground)',
+    marginTop: 'var(--stm-space-1)',
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Edit Client Profile</h2>
-              <p className="text-sm text-gray-600">{client.client_name}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+    <SidePanel
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Edit Profile: ${client.client_name}`}
+      footer={
+        <>
+          <SidePanelFooterAction onClick={onClose} label="Cancel" disabled={isSaving} />
+          <SidePanelFooterAction
+            onClick={handleSubmit}
+            label={isSaving ? 'Saving...' : 'Save Profile'}
+            variant="primary"
             disabled={isSaving}
-          >
-            <X className="w-6 h-6" />
-          </button>
+          />
+        </>
+      }
+    >
+      {error && (
+        <div style={{
+          padding: 'var(--stm-space-3) var(--stm-space-4)',
+          backgroundColor: 'color-mix(in srgb, var(--stm-error) 10%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--stm-error) 30%, transparent)',
+          borderRadius: 'var(--stm-radius-md)',
+          marginBottom: 'var(--stm-space-4)',
+          fontSize: 'var(--stm-text-sm)',
+          color: 'var(--stm-error)',
+        }}>
+          {error}
+        </div>
+      )}
+
+      <SidePanelSection title="Business Context">
+        {/* Industry */}
+        <div>
+          <div style={labelStyle}>
+            <Building2 style={{ width: '14px', height: '14px' }} />
+            Industry / Sector
+          </div>
+          <input
+            type="text"
+            value={formData.industry}
+            onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+            style={fieldStyle}
+            placeholder="e.g., Healthcare, Technology, Retail, Finance"
+          />
+          <div style={hintStyle}>Client's primary industry or business sector</div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          )}
-
-          {/* Industry */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Building2 className="w-4 h-4" />
-              Industry / Sector
-            </label>
-            <input
-              type="text"
-              value={formData.industry}
-              onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="e.g., Healthcare, Technology, Retail, Finance"
-            />
-            <p className="text-xs text-gray-500 mt-1">Client's primary industry or business sector</p>
+        {/* Budget Range */}
+        <div>
+          <div style={labelStyle}>
+            <DollarSign style={{ width: '14px', height: '14px' }} />
+            Typical Budget Range
           </div>
+          <select
+            value={formData.budget_range}
+            onChange={(e) => setFormData({ ...formData, budget_range: e.target.value })}
+            style={fieldStyle}
+          >
+            <option value="">Select budget range...</option>
+            <option value="Under $5k">Under $5k</option>
+            <option value="$5k - $10k">$5k - $10k</option>
+            <option value="$10k - $25k">$10k - $25k</option>
+            <option value="$25k - $50k">$25k - $50k</option>
+            <option value="$50k - $100k">$50k - $100k</option>
+            <option value="$100k+">$100k+</option>
+          </select>
+          <div style={hintStyle}>Typical project budget range for this client</div>
+        </div>
+      </SidePanelSection>
 
-          {/* Target Audience */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Target Audience
-            </label>
-            <textarea
-              value={formData.target_audience}
-              onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Describe the client's target audience demographics, interests, and behaviors..."
-            />
-            <p className="text-xs text-gray-500 mt-1">Who is this client trying to reach?</p>
+      <SidePanelSection title="Audience & Voice">
+        {/* Target Audience */}
+        <div>
+          <div style={labelStyle}>
+            <Users style={{ width: '14px', height: '14px' }} />
+            Target Audience
           </div>
+          <textarea
+            value={formData.target_audience}
+            onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
+            rows={3}
+            style={{ ...fieldStyle, resize: 'vertical' as const, minHeight: '80px' }}
+            placeholder="Describe the client's target audience demographics, interests, and behaviors..."
+          />
+          <div style={hintStyle}>Who is this client trying to reach?</div>
+        </div>
 
-          {/* Brand Voice */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              Brand Voice / Tone
-            </label>
-            <input
-              type="text"
-              value={formData.brand_voice}
-              onChange={(e) => setFormData({ ...formData, brand_voice: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="e.g., Professional, Casual, Technical, Friendly, Authoritative"
-            />
-            <p className="text-xs text-gray-500 mt-1">Communication style and tone preferences</p>
+        {/* Brand Voice */}
+        <div>
+          <div style={labelStyle}>
+            <MessageSquare style={{ width: '14px', height: '14px' }} />
+            Brand Voice / Tone
           </div>
+          <input
+            type="text"
+            value={formData.brand_voice}
+            onChange={(e) => setFormData({ ...formData, brand_voice: e.target.value })}
+            style={fieldStyle}
+            placeholder="e.g., Professional, Casual, Technical, Friendly, Authoritative"
+          />
+          <div style={hintStyle}>Communication style and tone preferences</div>
+        </div>
+      </SidePanelSection>
 
-          {/* Marketing Brief */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Marketing Brief / Strategy
-            </label>
-            <textarea
-              value={formData.marketing_brief}
-              onChange={(e) => setFormData({ ...formData, marketing_brief: e.target.value })}
-              rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Describe the client's marketing goals, strategy, key messaging, and objectives..."
-            />
-            <p className="text-xs text-gray-500 mt-1">Overall marketing strategy and goals</p>
+      <SidePanelSection title="Strategy & Notes">
+        {/* Marketing Brief */}
+        <div>
+          <div style={labelStyle}>
+            <FileText style={{ width: '14px', height: '14px' }} />
+            Marketing Brief / Strategy
           </div>
+          <textarea
+            value={formData.marketing_brief}
+            onChange={(e) => setFormData({ ...formData, marketing_brief: e.target.value })}
+            rows={4}
+            style={{ ...fieldStyle, resize: 'vertical' as const, minHeight: '100px' }}
+            placeholder="Describe the client's marketing goals, strategy, key messaging, and objectives..."
+          />
+          <div style={hintStyle}>Overall marketing strategy and goals</div>
+        </div>
 
-          {/* Budget Range */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <DollarSign className="w-4 h-4" />
-              Typical Budget Range
-            </label>
-            <select
-              value={formData.budget_range}
-              onChange={(e) => setFormData({ ...formData, budget_range: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Select budget range...</option>
-              <option value="Under $5k">Under $5k</option>
-              <option value="$5k - $10k">$5k - $10k</option>
-              <option value="$10k - $25k">$10k - $25k</option>
-              <option value="$25k - $50k">$25k - $50k</option>
-              <option value="$50k - $100k">$50k - $100k</option>
-              <option value="$100k+">$100k+</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-1">Typical project budget range for this client</p>
+        {/* Notes */}
+        <div>
+          <div style={labelStyle}>
+            <StickyNote style={{ width: '14px', height: '14px' }} />
+            Additional Notes
           </div>
-
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <StickyNote className="w-4 h-4" />
-              Additional Notes
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Any additional context, preferences, or important information about this client..."
-            />
-            <p className="text-xs text-gray-500 mt-1">Internal notes and context</p>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSaving}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isSaving ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  <span>Save Profile</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <textarea
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            rows={3}
+            style={{ ...fieldStyle, resize: 'vertical' as const, minHeight: '80px' }}
+            placeholder="Any additional context, preferences, or important information about this client..."
+          />
+          <div style={hintStyle}>Internal notes and context</div>
+        </div>
+      </SidePanelSection>
+    </SidePanel>
   );
 }

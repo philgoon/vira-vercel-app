@@ -1,11 +1,15 @@
-// [R1.3] [R-QW2+C3] src/lib/ai.ts: Initializes and exports the OpenAI client for GPT-5.
+// [R1.3] [R-QW2+C3] src/lib/ai.ts: Initializes and exports AI clients.
 import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 
-// [R4.1] Ensure the API key is handled securely and not exposed client-side.
-const apiKey = process.env.OPENAI_API_KEY;
-
-if (!apiKey) {
+const openaiKey = process.env.OPENAI_API_KEY;
+if (!openaiKey) {
   throw new Error('OPENAI_API_KEY is not set in environment variables.');
 }
+export const openai = new OpenAI({ apiKey: openaiKey });
 
-export const openai = new OpenAI({ apiKey });
+const anthropicKey = process.env.ANTHROPIC_API_KEY;
+if (!anthropicKey) {
+  throw new Error('ANTHROPIC_API_KEY is not set in environment variables.');
+}
+export const anthropic = new Anthropic({ apiKey: anthropicKey });

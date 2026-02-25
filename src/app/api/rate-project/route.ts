@@ -33,6 +33,9 @@ const prepareProjectUpdateData = (body: RatingRequestBody) => {
     // [R-QW1] Timeline Status
     timeline_status: body.timeline_status || null,
 
+    // Calculated overall (average of 3 dimensions — triggers assignment auto-complete)
+    project_overall_rating_calc: (body.project_success_rating + body.quality_rating + body.communication_rating) / 3,
+
     // Timestamps
     updated_at: new Date().toISOString(),
   };

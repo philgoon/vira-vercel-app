@@ -6,17 +6,51 @@
 import { useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { UserProfile } from '@/types';
-import { getRoleDisplayName, getRoleBadgeColor } from '@/lib/auth';
+import { getRoleDisplayName } from '@/lib/auth';
 import { Users, Plus, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
+
+const roleBadgeStyle = (role: string) => {
+  const colors: Record<string, string> = {
+    admin: 'var(--stm-error)',
+    team: 'var(--stm-primary)',
+    vendor: 'var(--stm-success)',
+  };
+  const color = colors[role] || 'var(--stm-muted-foreground)';
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: 'var(--stm-space-1) var(--stm-space-2)',
+    borderRadius: 'var(--stm-radius-full)',
+    fontSize: 'var(--stm-text-xs)',
+    fontWeight: 'var(--stm-font-medium)',
+    backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
+    color,
+  };
+};
+
+const thStyle = {
+  padding: 'var(--stm-space-3) var(--stm-space-4)',
+  textAlign: 'left' as const,
+  fontSize: 'var(--stm-text-xs)',
+  fontWeight: 'var(--stm-font-semibold)',
+  color: 'var(--stm-muted-foreground)',
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.05em',
+};
+
+const tdStyle = {
+  padding: 'var(--stm-space-3) var(--stm-space-4)',
+  fontSize: 'var(--stm-text-sm)',
+  color: 'var(--stm-foreground)',
+  borderBottom: '1px solid var(--stm-border)',
+};
 
 export default function UsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  useEffect(() => { fetchUsers(); }, []);
 
   const fetchUsers = async () => {
     try {
@@ -43,149 +77,141 @@ export default function UsersPage() {
       if (!res.ok) throw new Error('Failed to update user status');
       fetchUsers();
     } catch (err: any) {
-      console.error('Error updating user status:', err);
       alert('Failed to update user status: ' + err.message);
     }
   };
 
   return (
     <ProtectedRoute allowedRoles={['admin']}>
-      <div className="p-8">
+      <div style={{ padding: 'var(--stm-space-8)' }}>
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Users className="w-8 h-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+        <div style={{ marginBottom: 'var(--stm-space-8)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--stm-space-3)', marginBottom: 'var(--stm-space-2)' }}>
+            <Users style={{ width: '28px', height: '28px', color: 'var(--stm-primary)' }} />
+            <h1 style={{ fontSize: 'var(--stm-text-3xl)', fontWeight: 'var(--stm-font-bold)', color: 'var(--stm-foreground)', margin: 0 }}>
+              User Management
+            </h1>
           </div>
-          <p className="text-gray-600">
+          <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)' }}>
             Manage user accounts, roles, and permissions
           </p>
         </div>
 
-        {/* Error Message */}
+        {/* Error */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">{error}</p>
+          <div style={{
+            padding: 'var(--stm-space-4)',
+            backgroundColor: 'color-mix(in srgb, var(--stm-error) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--stm-error) 30%, transparent)',
+            borderRadius: 'var(--stm-radius-md)',
+            marginBottom: 'var(--stm-space-6)',
+            fontSize: 'var(--stm-text-sm)',
+            color: 'var(--stm-error)',
+          }}>
+            {error}
           </div>
         )}
 
-        {/* Users Table */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {/* Table Header */}
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
+        {/* Table Card */}
+        <div style={{
+          backgroundColor: 'var(--stm-card)',
+          borderRadius: 'var(--stm-radius-lg)',
+          boxShadow: 'var(--stm-shadow-sm)',
+          overflow: 'hidden',
+          border: '1px solid var(--stm-border)',
+        }}>
+          {/* Table Header Bar */}
+          <div style={{
+            padding: 'var(--stm-space-4) var(--stm-space-6)',
+            borderBottom: '1px solid var(--stm-border)',
+            backgroundColor: 'var(--stm-muted)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <h2 style={{ fontSize: 'var(--stm-text-base)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', margin: 0 }}>
               All Users ({users.length})
             </h2>
-            <button className="btn-primary" style={{ fontSize: '0.875rem' }}>
-              <Plus className="w-4 h-4" />
+            <button className="btn-primary" style={{ fontSize: 'var(--stm-text-sm)' }}>
+              <Plus style={{ width: '14px', height: '14px' }} />
               Add User
             </button>
           </div>
 
-          {/* Loading State */}
+          {/* Loading */}
           {isLoading ? (
-            <div className="p-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading users...</p>
+            <div style={{ padding: 'var(--stm-space-12)', textAlign: 'center' }}>
+              <div className="stm-loader stm-loader-lg" style={{ justifyContent: 'center', marginBottom: 'var(--stm-space-4)' }}>
+                <span className="stm-loader-capsule stm-loader-dot" />
+                <span className="stm-loader-capsule stm-loader-dot" />
+                <span className="stm-loader-capsule stm-loader-dot" />
+                <span className="stm-loader-capsule stm-loader-dash" />
+                <span className="stm-loader-capsule stm-loader-dash" />
+                <span className="stm-loader-capsule stm-loader-dash" />
+              </div>
+              <div style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)' }}>Loading users...</div>
             </div>
           ) : users.length === 0 ? (
-            <div className="p-12 text-center">
-              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">No users found</p>
+            <div style={{ padding: 'var(--stm-space-12)', textAlign: 'center' }}>
+              <Users style={{ width: '40px', height: '40px', color: 'var(--stm-border)', margin: '0 auto var(--stm-space-4)' }} />
+              <div style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)' }}>No users found</div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Role
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Last Login
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--stm-muted)', borderBottom: '1px solid var(--stm-border)' }}>
+                    {['User', 'Role', 'Status', 'Last Login', 'Created', ''].map((h, i) => (
+                      <th key={i} style={{ ...thStyle, textAlign: i === 5 ? 'right' : 'left' }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody>
                   {users.map((user) => (
-                    <tr key={user.user_id} className="hover:bg-gray-50">
-                      {/* User Info */}
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {user.full_name || 'No name'}
-                          </p>
-                          <p className="text-sm text-gray-500">{user.email}</p>
-                        </div>
+                    <tr
+                      key={user.user_id}
+                      style={{ backgroundColor: 'var(--stm-card)', transition: 'background-color var(--stm-duration-fast)' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--stm-muted)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--stm-card)')}
+                    >
+                      <td style={tdStyle}>
+                        <p style={{ fontWeight: 'var(--stm-font-medium)', margin: 0 }}>{user.full_name || 'No name'}</p>
+                        <p style={{ fontSize: 'var(--stm-text-xs)', color: 'var(--stm-muted-foreground)', margin: 0 }}>{user.email}</p>
                       </td>
-
-                      {/* Role */}
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(
-                            user.role
-                          )}`}
-                        >
-                          {getRoleDisplayName(user.role)}
-                        </span>
+                      <td style={tdStyle}>
+                        <span style={roleBadgeStyle(user.role)}>{getRoleDisplayName(user.role)}</span>
                       </td>
-
-                      {/* Status */}
-                      <td className="px-6 py-4">
+                      <td style={tdStyle}>
                         <button
                           onClick={() => toggleUserStatus(user.user_id, user.is_active)}
-                          className="flex items-center gap-1.5"
+                          style={{ display: 'flex', alignItems: 'center', gap: 'var(--stm-space-1)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                         >
                           {user.is_active ? (
                             <>
-                              <CheckCircle className="w-4 h-4 text-green-600" />
-                              <span className="text-sm text-green-600 font-medium">
-                                Active
-                              </span>
+                              <CheckCircle style={{ width: '14px', height: '14px', color: 'var(--stm-success)' }} />
+                              <span style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-success)', fontWeight: 'var(--stm-font-medium)' }}>Active</span>
                             </>
                           ) : (
                             <>
-                              <XCircle className="w-4 h-4 text-red-600" />
-                              <span className="text-sm text-red-600 font-medium">
-                                Inactive
-                              </span>
+                              <XCircle style={{ width: '14px', height: '14px', color: 'var(--stm-error)' }} />
+                              <span style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-error)', fontWeight: 'var(--stm-font-medium)' }}>Inactive</span>
                             </>
                           )}
                         </button>
                       </td>
-
-                      {/* Last Login */}
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {user.last_login_at
-                          ? new Date(user.last_login_at).toLocaleDateString()
-                          : 'Never'}
+                      <td style={{ ...tdStyle, color: 'var(--stm-muted-foreground)' }}>
+                        {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : 'Never'}
                       </td>
-
-                      {/* Created */}
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td style={{ ...tdStyle, color: 'var(--stm-muted-foreground)' }}>
                         {new Date(user.created_at).toLocaleDateString()}
                       </td>
-
-                      {/* Actions */}
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                            <Edit className="w-4 h-4" />
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--stm-space-1)' }}>
+                          <button style={{ padding: 'var(--stm-space-2)', color: 'var(--stm-primary)', background: 'none', border: 'none', borderRadius: 'var(--stm-radius-md)', cursor: 'pointer' }}>
+                            <Edit style={{ width: '14px', height: '14px' }} />
                           </button>
-                          <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                            <Trash2 className="w-4 h-4" />
+                          <button style={{ padding: 'var(--stm-space-2)', color: 'var(--stm-error)', background: 'none', border: 'none', borderRadius: 'var(--stm-radius-md)', cursor: 'pointer' }}>
+                            <Trash2 style={{ width: '14px', height: '14px' }} />
                           </button>
                         </div>
                       </td>
@@ -198,15 +224,21 @@ export default function UsersPage() {
         </div>
 
         {/* Info Box */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-900 mb-2">
+        <div style={{
+          marginTop: 'var(--stm-space-6)',
+          padding: 'var(--stm-space-4)',
+          backgroundColor: 'color-mix(in srgb, var(--stm-primary) 8%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--stm-primary) 20%, transparent)',
+          borderRadius: 'var(--stm-radius-md)',
+        }}>
+          <h3 style={{ fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-primary)', marginBottom: 'var(--stm-space-2)' }}>
             User Management Notes
           </h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• <strong>Admin:</strong> Full access to all features and user management</li>
-            <li>• <strong>Team:</strong> Can rate projects and view vendor ratings</li>
-            <li>• <strong>Vendor:</strong> Can view their own ratings only</li>
-            <li>• Click status to toggle user active/inactive</li>
+          <ul style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-1)', fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', paddingLeft: 'var(--stm-space-4)' }}>
+            <li><strong>Admin:</strong> Full access to all features and user management</li>
+            <li><strong>Team:</strong> Can rate projects and view vendor ratings</li>
+            <li><strong>Vendor:</strong> Can view their own ratings only</li>
+            <li>Click status to toggle user active/inactive</li>
           </ul>
         </div>
       </div>

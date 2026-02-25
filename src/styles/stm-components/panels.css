@@ -1,0 +1,306 @@
+/**
+ * STM Design System - Side Panels
+ * Right-sliding overlay panels for detail views
+ * Pure STM tokens, no Tailwind
+ */
+
+/* ========================================
+   SIDE PANEL OVERLAY
+   ======================================== */
+
+.stm-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--stm-duration-normal) var(--stm-ease-out),
+    visibility var(--stm-duration-normal) var(--stm-ease-out);
+  z-index: 39;
+}
+
+.stm-panel-overlay.stm-panel-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ========================================
+   SIDE PANEL CONTAINER
+   ======================================== */
+
+.stm-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  width: 480px;
+  background: var(--stm-background);
+  border-left: 1px solid var(--stm-border);
+  box-shadow: var(--stm-shadow-lg);
+  transform: translateX(100%);
+  transition: transform var(--stm-duration-normal) var(--stm-ease-out);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+}
+
+.stm-panel.stm-panel-open {
+  transform: translateX(0);
+}
+
+/* ========================================
+   PANEL HEADER
+   ======================================== */
+
+.stm-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--stm-space-6);
+  border-bottom: 1px solid var(--stm-border);
+  flex-shrink: 0;
+}
+
+.stm-panel-title {
+  font-size: var(--stm-text-xl);
+  font-weight: var(--stm-font-semibold);
+  color: var(--stm-foreground);
+  margin: 0;
+}
+
+.stm-panel-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: var(--stm-radius-md);
+  color: var(--stm-muted-foreground);
+  cursor: pointer;
+  transition: all var(--stm-duration-fast) var(--stm-ease-out);
+  font-size: var(--stm-text-lg);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.stm-panel-close:hover {
+  background: var(--stm-muted);
+  color: var(--stm-foreground);
+}
+
+/* ========================================
+   PANEL BODY (Scrollable Content)
+   ======================================== */
+
+.stm-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--stm-space-6);
+}
+
+/* Scrollbar styling */
+.stm-panel-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.stm-panel-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stm-panel-body::-webkit-scrollbar-thumb {
+  background: var(--stm-border);
+  border-radius: var(--stm-radius-full);
+  transition: background var(--stm-duration-fast) var(--stm-ease-out);
+}
+
+.stm-panel-body::-webkit-scrollbar-thumb:hover {
+  background: var(--stm-muted-foreground);
+}
+
+/* ========================================
+   PANEL CONTENT SECTIONS
+   ======================================== */
+
+.stm-panel-section {
+  margin-bottom: var(--stm-space-8);
+}
+
+.stm-panel-section:last-child {
+  margin-bottom: 0;
+}
+
+.stm-panel-section-title {
+  font-size: var(--stm-text-sm);
+  font-weight: var(--stm-font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--stm-muted-foreground);
+  margin: 0 0 var(--stm-space-4) 0;
+}
+
+.stm-panel-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stm-space-4);
+}
+
+/* ========================================
+   PANEL FIELD (Label + Value)
+   ======================================== */
+
+.stm-panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stm-space-2);
+}
+
+.stm-panel-field-label {
+  font-size: var(--stm-text-xs);
+  font-weight: var(--stm-font-semibold);
+  color: var(--stm-muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stm-panel-field-value {
+  font-size: var(--stm-text-base);
+  color: var(--stm-foreground);
+  line-height: var(--stm-leading-relaxed);
+}
+
+.stm-panel-field-value.stm-panel-field-muted {
+  color: var(--stm-muted-foreground);
+}
+
+/* ========================================
+   PANEL TABS
+   ======================================== */
+
+.stm-panel-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--stm-border);
+  margin-bottom: var(--stm-space-6);
+}
+
+.stm-panel-tab {
+  flex: 1;
+  padding: var(--stm-space-3) var(--stm-space-4);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--stm-muted-foreground);
+  font-size: var(--stm-text-sm);
+  font-weight: var(--stm-font-medium);
+  cursor: pointer;
+  transition: all var(--stm-duration-fast) var(--stm-ease-out);
+}
+
+.stm-panel-tab:hover {
+  color: var(--stm-foreground);
+}
+
+.stm-panel-tab.stm-panel-tab-active {
+  color: var(--stm-primary);
+  border-bottom-color: var(--stm-primary);
+}
+
+/* ========================================
+   PANEL FOOTER
+   ======================================== */
+
+.stm-panel-footer {
+  display: flex;
+  gap: var(--stm-space-3);
+  padding: var(--stm-space-6);
+  border-top: 1px solid var(--stm-border);
+  flex-shrink: 0;
+  background: var(--stm-background);
+}
+
+.stm-panel-footer-action {
+  flex: 1;
+  padding: var(--stm-space-3) var(--stm-space-4);
+  background: transparent;
+  border: 1px solid var(--stm-border);
+  border-radius: var(--stm-radius-md);
+  color: var(--stm-foreground);
+  font-size: var(--stm-text-sm);
+  font-weight: var(--stm-font-medium);
+  cursor: pointer;
+  transition: all var(--stm-duration-fast) var(--stm-ease-out);
+}
+
+.stm-panel-footer-action:hover {
+  background: var(--stm-muted);
+  border-color: var(--stm-muted-foreground);
+}
+
+.stm-panel-footer-action.stm-panel-footer-action-primary {
+  background: var(--stm-primary);
+  border-color: var(--stm-primary);
+  color: white;
+}
+
+.stm-panel-footer-action.stm-panel-footer-action-primary:hover {
+  background: var(--stm-accent);
+  border-color: var(--stm-accent);
+}
+
+/* ========================================
+   PANEL DATA DISPLAY
+   ======================================== */
+
+.stm-panel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--stm-space-2);
+  padding: var(--stm-space-1) var(--stm-space-3);
+  background: var(--stm-muted);
+  border-radius: var(--stm-radius-full);
+  font-size: var(--stm-text-xs);
+  color: var(--stm-foreground);
+  font-weight: var(--stm-font-medium);
+}
+
+.stm-panel-badge.stm-panel-badge-success {
+  background: var(--stm-success);
+  background: color-mix(in srgb, var(--stm-success) 15%, transparent);
+  color: var(--stm-success);
+}
+
+.stm-panel-badge.stm-panel-badge-warning {
+  background: var(--stm-warning);
+  background: color-mix(in srgb, var(--stm-warning) 15%, transparent);
+  color: var(--stm-warning);
+}
+
+.stm-panel-badge.stm-panel-badge-error {
+  background: var(--stm-error);
+  background: color-mix(in srgb, var(--stm-error) 15%, transparent);
+  color: var(--stm-error);
+}
+
+/* ========================================
+   PANEL DIVIDER
+   ======================================== */
+
+.stm-panel-divider {
+  height: 1px;
+  background: var(--stm-border);
+  margin: var(--stm-space-6) 0;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 640px) {
+  .stm-panel {
+    width: 100%;
+  }
+}

@@ -39,6 +39,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'project_id is required' }, { status: 400 });
     }
 
+    // Compute overall if all 3 dimensions are present (triggers assignment auto-complete)
+    const { project_success_rating, quality_rating, communication_rating } = ratingData;
+    if (project_success_rating && quality_rating && communication_rating) {
+      ratingData.project_overall_rating_calc =
+        (project_success_rating + quality_rating + communication_rating) / 3;
+    }
+
     // Update the projects table directly (view will auto-update)
     const { data: updatedProject, error } = await supabaseAdmin
       .from('projects')

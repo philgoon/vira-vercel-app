@@ -3,8 +3,34 @@
 import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Edit2, Calendar, User, Building, CheckCircle, Clock, AlertCircle, Star } from 'lucide-react';
-import Link from 'next/link';
 import { Project } from '@/types';
+
+const STATUS_STYLE: Record<string, { color: string; bg: string }> = {
+  completed:  { color: 'var(--stm-success)', bg: 'color-mix(in srgb, var(--stm-success) 12%, transparent)' },
+  active:     { color: 'var(--stm-primary)', bg: 'color-mix(in srgb, var(--stm-primary) 12%, transparent)' },
+  'in progress': { color: 'var(--stm-warning)', bg: 'color-mix(in srgb, var(--stm-warning) 12%, transparent)' },
+  planning:   { color: 'var(--stm-muted-foreground)', bg: 'var(--stm-muted)' },
+  proposed:   { color: 'var(--stm-muted-foreground)', bg: 'var(--stm-muted)' },
+};
+
+const labelStyle = {
+  display: 'flex' as const,
+  alignItems: 'center' as const,
+  gap: 'var(--stm-space-2)',
+  fontSize: 'var(--stm-text-xs)',
+  fontWeight: 'var(--stm-font-semibold)',
+  color: 'var(--stm-muted-foreground)',
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase' as const,
+  fontFamily: 'var(--stm-font-body)',
+  marginBottom: 'var(--stm-space-2)',
+};
+
+const valueStyle = {
+  fontSize: 'var(--stm-text-sm)',
+  color: 'var(--stm-foreground)',
+  fontFamily: 'var(--stm-font-body)',
+};
 
 export default function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -17,380 +43,236 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
   useEffect(() => {
     async function fetchProject() {
       try {
-        console.log('Fetching project with ID:', id);
         const response = await fetch(`/api/projects?id=${id}`);
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch project');
-        }
-
+        if (!response.ok) throw new Error('Failed to fetch project');
         const data = await response.json();
         const projectData = data.projects?.find((p: Project) => p.project_id.toString() === id);
-
-        if (!projectData) {
-          throw new Error('Project not found');
-        }
-
+        if (!projectData) throw new Error('Project not found');
         setProject(projectData);
-        console.log('Project loaded:', projectData);
       } catch (err) {
-        console.error('Error loading project:', err);
         setError(err instanceof Error ? err.message : 'Failed to load project');
       } finally {
         setLoading(false);
       }
     }
-
     fetchProject();
   }, [id]);
 
-  const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return <CheckCircle style={{ width: '1rem', height: '1rem' }} />;
-      case 'in progress':
-      case 'active':
-        return <Clock style={{ width: '1rem', height: '1rem' }} />;
-      case 'planning':
-      case 'proposed':
-        return <AlertCircle style={{ width: '1rem', height: '1rem' }} />;
-      default:
-        return <Clock style={{ width: '1rem', height: '1rem' }} />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return { color: '#166534', backgroundColor: '#dcfce7', borderColor: '#bbf7d0' };
-      case 'in progress':
-      case 'active':
-        return { color: '#ca8a04', backgroundColor: '#fef3c7', borderColor: '#fde68a' };
-      case 'planning':
-      case 'proposed':
-        return { color: '#1d4ed8', backgroundColor: '#dbeafe', borderColor: '#93c5fd' };
-      default:
-        return { color: '#6b7280', backgroundColor: '#f9fafb', borderColor: '#e5e7eb' };
-    }
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Not set';
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch {
-      return dateString;
-    }
-  };
-
-  const getProjectType = () => {
-    // TODO: Add service_categories to Project interface when available
-    return 'General Project';
-  };
-
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div style={{
-          width: '2rem',
-          height: '2rem',
-          border: '2px solid #1A5276',
-          borderTop: '2px solid transparent',
-          borderRadius: '50%',
-          margin: '0 auto 1rem',
-          animation: 'spin 1s linear infinite'
-        }}></div>
-        <p style={{ color: '#6b7280' }}>Loading project details...</p>
+      <div style={{ padding: 'var(--stm-space-8)', textAlign: 'center' }}>
+        <div className="stm-loader stm-loader-lg" style={{ justifyContent: 'center', marginBottom: 'var(--stm-space-4)' }}>
+          <span className="stm-loader-capsule stm-loader-dot" />
+          <span className="stm-loader-capsule stm-loader-dot" />
+          <span className="stm-loader-capsule stm-loader-dot" />
+          <span className="stm-loader-capsule stm-loader-dash" />
+          <span className="stm-loader-capsule stm-loader-dash" />
+          <span className="stm-loader-capsule stm-loader-dash" />
+        </div>
+        <div style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)' }}>
+          Loading project details...
+        </div>
       </div>
     );
   }
 
   if (error || !project) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <div style={{ padding: 'var(--stm-space-8)', textAlign: 'center' }}>
         <div style={{
-          backgroundColor: '#fef2f2',
-          border: '1px solid #fecaca',
-          borderRadius: '0.5rem',
-          padding: '1rem',
-          marginBottom: '1rem'
+          backgroundColor: 'color-mix(in srgb, var(--stm-error) 8%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--stm-error) 20%, transparent)',
+          borderRadius: 'var(--stm-radius-md)',
+          padding: 'var(--stm-space-4)',
+          marginBottom: 'var(--stm-space-4)',
+          fontSize: 'var(--stm-text-sm)',
+          color: 'var(--stm-error)',
+          fontFamily: 'var(--stm-font-body)',
         }}>
-          <p style={{ color: '#dc2626' }}>Error: {error || 'Project not found'}</p>
+          {error || 'Project not found'}
         </div>
         <button
           onClick={() => router.push('/projects')}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.5rem 1rem',
-            backgroundColor: '#1A5276',
-            color: 'white',
-            border: 'none',
-            borderRadius: '0.375rem',
-            cursor: 'pointer',
-            margin: '0 auto'
+            display: 'inline-flex', alignItems: 'center', gap: 'var(--stm-space-2)',
+            padding: 'var(--stm-space-2) var(--stm-space-4)',
+            backgroundColor: 'var(--stm-primary)', color: 'white',
+            border: 'none', borderRadius: 'var(--stm-radius-md)',
+            cursor: 'pointer', fontSize: 'var(--stm-text-sm)', fontFamily: 'var(--stm-font-body)',
           }}
         >
-          <ArrowLeft style={{ width: '1rem', height: '1rem' }} />
+          <ArrowLeft style={{ width: '14px', height: '14px' }} />
           Back to Projects
         </button>
       </div>
     );
   }
 
+  const statusKey = project.status?.toLowerCase() || '';
+  const statusStyle = STATUS_STYLE[statusKey] || { color: 'var(--stm-muted-foreground)', bg: 'var(--stm-muted)' };
+  const StatusIcon = statusKey === 'completed' ? CheckCircle : statusKey === 'planning' || statusKey === 'proposed' ? AlertCircle : Clock;
+
+  const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString() : 'Not set';
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+    <div style={{ padding: 'var(--stm-space-8)', backgroundColor: 'var(--stm-page-background)', minHeight: '100%' }}>
       {/* Header */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '1.5rem' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button
-              onClick={() => router.push('/projects')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem',
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: '#1A5276',
-                cursor: 'pointer',
-                fontSize: '0.875rem'
-              }}
-            >
-              <ArrowLeft style={{ width: '1.25rem', height: '1.25rem' }} />
-              Back to Projects
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '3rem',
-                height: '3rem',
-                backgroundColor: '#1A5276',
-                borderRadius: '0.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'white' }}>
-                  {project.project_title.charAt(0)}
-                </span>
-              </div>
-
-              <div>
-                <h1 style={{
-                  fontSize: '1.875rem',
-                  fontWeight: 'bold',
-                  color: '#1A5276',
-                  margin: 0,
-                  fontFamily: 'var(--font-headline)'
-                }}>
-                  {project.project_title}
-                </h1>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.25rem' }}>
-                  <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                    {getProjectType()}
-                  </span>
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.125rem 0.5rem',
-                    borderRadius: '9999px',
-                    fontSize: '0.75rem',
-                    fontWeight: '500',
-                    ...getStatusColor(project.status)
-                  }}>
-                    {getStatusIcon(project.status)}
-                    {project.status}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
+      <div style={{
+        backgroundColor: 'var(--stm-card)', border: '1px solid var(--stm-border)',
+        borderRadius: 'var(--stm-radius-lg)', padding: 'var(--stm-space-5)',
+        marginBottom: 'var(--stm-space-6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--stm-space-4)' }}>
           <button
-            onClick={() => router.push(`/projects/${id}/edit`)}
+            onClick={() => router.push('/projects')}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              backgroundColor: '#6B8F71',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: '500'
+              display: 'flex', alignItems: 'center', gap: 'var(--stm-space-2)',
+              padding: 'var(--stm-space-2)', background: 'none', border: 'none',
+              color: 'var(--stm-primary)', cursor: 'pointer', fontSize: 'var(--stm-text-sm)',
+              fontFamily: 'var(--stm-font-body)',
             }}
           >
-            <Edit2 style={{ width: '1rem', height: '1rem' }} />
-            Edit Project
+            <ArrowLeft style={{ width: '16px', height: '16px' }} />
+            Back
           </button>
-        </div>
-      </div>
 
-      {/* Content */}
-      <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
-          {/* Main Information */}
-          <div style={{ display: 'grid', gap: '2rem' }}>
-            {/* Project Details */}
-            <div className="professional-card" style={{ padding: '2rem' }}>
-              <h2 style={{
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                marginBottom: '1.5rem',
-                color: '#111827'
-              }}>
-                Project Information
-              </h2>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <Calendar style={{ width: '1rem', height: '1rem', color: '#1A5276' }} />
-                    <label style={{ fontWeight: '600', color: '#374151', fontSize: '0.875rem' }}>Expected Deadline</label>
-                  </div>
-                  <p style={{ margin: 0, color: '#6b7280' }}>{'Not set'}</p>
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <User style={{ width: '1rem', height: '1rem', color: '#1A5276' }} />
-                    <label style={{ fontWeight: '600', color: '#374151', fontSize: '0.875rem' }}>Team Member</label>
-                  </div>
-                  <p style={{ margin: 0, color: '#6b7280' }}>{'Not assigned'}</p>
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <Building style={{ width: '1rem', height: '1rem', color: '#1A5276' }} />
-                    <label style={{ fontWeight: '600', color: '#374151', fontSize: '0.875rem' }}>Assigned Vendor</label>
-                  </div>
-                  <p style={{ margin: 0, color: '#6b7280' }}>
-                    {project.vendor_name || 'Not assigned'}
-                  </p>
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <Calendar style={{ width: '1rem', height: '1rem', color: '#1A5276' }} />
-                    <label style={{ fontWeight: '600', color: '#374151', fontSize: '0.875rem' }}>Last Updated</label>
-                  </div>
-                  <p style={{ margin: 0, color: '#6b7280' }}>{formatDate(project.updated_at)}</p>
-                </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--stm-space-3)' }}>
+            <div style={{
+              width: '44px', height: '44px', backgroundColor: 'var(--stm-muted)',
+              borderRadius: 'var(--stm-radius-md)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              fontSize: 'var(--stm-text-xl)', fontWeight: 'var(--stm-font-bold)',
+              color: 'var(--stm-primary)', fontFamily: 'var(--stm-font-body)',
+            }}>
+              {project.project_title.charAt(0)}
+            </div>
+            <div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--stm-foreground)', fontFamily: 'var(--stm-font-body)', lineHeight: 1 }}>
+                {project.project_title}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--stm-space-3)', marginTop: 'var(--stm-space-2)' }}>
+                <span style={{ fontSize: 'var(--stm-text-xs)', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)' }}>
+                  General Project
+                </span>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 'var(--stm-space-1)',
+                  padding: 'var(--stm-space-1) var(--stm-space-2)',
+                  borderRadius: 'var(--stm-radius-full)',
+                  fontSize: 'var(--stm-text-xs)', fontWeight: 'var(--stm-font-medium)',
+                  backgroundColor: statusStyle.bg, color: statusStyle.color,
+                  fontFamily: 'var(--stm-font-body)',
+                }}>
+                  <StatusIcon style={{ width: '11px', height: '11px' }} />
+                  {project.status}
+                </span>
               </div>
             </div>
-
-            {/* Note: project_description and key_skills_required not available in current Project interface */}
           </div>
+        </div>
 
-          {/* Sidebar */}
-          <div style={{ display: 'grid', gap: '2rem' }}>
-            {/* Quick Actions */}
-            <div className="professional-card" style={{ padding: '2rem' }}>
-              <h3 style={{
-                fontSize: '1.125rem',
-                fontWeight: '600',
-                marginBottom: '1.5rem',
-                color: '#111827'
-              }}>
-                Quick Actions
-              </h3>
+        <button
+          onClick={() => router.push(`/projects/${id}/edit`)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 'var(--stm-space-2)',
+            padding: 'var(--stm-space-2) var(--stm-space-4)',
+            backgroundColor: 'var(--stm-secondary)', color: 'white',
+            border: 'none', borderRadius: 'var(--stm-radius-md)',
+            cursor: 'pointer', fontSize: 'var(--stm-text-sm)',
+            fontWeight: 'var(--stm-font-medium)', fontFamily: 'var(--stm-font-body)',
+          }}
+        >
+          <Edit2 style={{ width: '14px', height: '14px' }} />
+          Edit Project
+        </button>
+      </div>
 
-              <div style={{ display: 'grid', gap: '0.75rem' }}>
-                {project.status?.toLowerCase() === 'completed' && (
-                  <Link
-                    href={`/rate-project?project_id=${project.project_id}`}
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <button style={{
-                      width: '100%',
-                      padding: '0.75rem 1rem',
-                      backgroundColor: '#ea580c',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      cursor: 'pointer',
-                      fontWeight: '500',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem'
-                    }}>
-                      <Star style={{ width: '1rem', height: '1rem' }} />
-                      Rate Project
-                    </button>
-                  </Link>
-                )}
+      {/* Content Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--stm-space-6)' }}>
 
+        {/* Main: Project Information */}
+        <div style={{ backgroundColor: 'var(--stm-card)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-lg)', padding: 'var(--stm-space-6)' }}>
+          <div style={{ fontSize: 'var(--stm-text-base)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', fontFamily: 'var(--stm-font-body)', marginBottom: 'var(--stm-space-5)' }}>
+            Project Information
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--stm-space-5)' }}>
+            {[
+              { label: 'Expected Deadline', icon: Calendar, value: formatDate((project as any).expected_deadline) },
+              { label: 'Team Member',       icon: User,     value: (project as any).team_member || 'Not assigned' },
+              { label: 'Assigned Vendor',   icon: Building, value: project.vendor_name || 'Not assigned' },
+              { label: 'Last Updated',      icon: Calendar, value: formatDate(project.updated_at) },
+            ].map(({ label, icon: Icon, value }) => (
+              <div key={label}>
+                <div style={labelStyle}>
+                  <Icon style={{ width: '12px', height: '12px' }} />
+                  {label}
+                </div>
+                <div style={valueStyle}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Sidebar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-4)' }}>
+          {/* Quick Actions */}
+          <div style={{ backgroundColor: 'var(--stm-card)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-lg)', padding: 'var(--stm-space-5)' }}>
+            <div style={{ fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', fontFamily: 'var(--stm-font-body)', marginBottom: 'var(--stm-space-4)' }}>
+              Quick Actions
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stm-space-3)' }}>
+              {project.status?.toLowerCase() === 'completed' && (
                 <button
-                  onClick={() => router.push(`/projects/${id}/edit`)}
+                  onClick={() => router.push('/ratings')}
                   style={{
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    backgroundColor: '#6B8F71',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.375rem',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem'
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    gap: 'var(--stm-space-2)', padding: 'var(--stm-space-3)',
+                    backgroundColor: 'var(--stm-warning)', color: 'white',
+                    border: 'none', borderRadius: 'var(--stm-radius-md)',
+                    cursor: 'pointer', fontWeight: 'var(--stm-font-medium)',
+                    fontSize: 'var(--stm-text-sm)', fontFamily: 'var(--stm-font-body)',
                   }}
                 >
-                  <Edit2 style={{ width: '1rem', height: '1rem' }} />
-                  Edit Project
+                  <Star style={{ width: '14px', height: '14px' }} />
+                  Rate Project
                 </button>
-              </div>
+              )}
+              <button
+                onClick={() => router.push(`/projects/${id}/edit`)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 'var(--stm-space-2)', padding: 'var(--stm-space-3)',
+                  backgroundColor: 'var(--stm-secondary)', color: 'white',
+                  border: 'none', borderRadius: 'var(--stm-radius-md)',
+                  cursor: 'pointer', fontWeight: 'var(--stm-font-medium)',
+                  fontSize: 'var(--stm-text-sm)', fontFamily: 'var(--stm-font-body)',
+                }}
+              >
+                <Edit2 style={{ width: '14px', height: '14px' }} />
+                Edit Project
+              </button>
             </div>
+          </div>
 
-            {/* Project Stats */}
-            <div className="professional-card" style={{ padding: '2rem' }}>
-              <h3 style={{
-                fontSize: '1.125rem',
-                fontWeight: '600',
-                marginBottom: '1.5rem',
-                color: '#111827'
-              }}>
-                Project Statistics
-              </h3>
-
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                <div style={{
-                  padding: '1rem',
-                  backgroundColor: '#f9fafb',
-                  borderRadius: '0.375rem',
-                  border: '1px solid #e5e7eb'
-                }}>
-                  <p style={{
-                    margin: 0,
-                    fontSize: '0.75rem',
-                    color: '#6b7280',
-                    textAlign: 'center'
-                  }}>
-                    Project ID: {project.project_id}
-                  </p>
-                </div>
-
-                {/* Note: initial_vendor_rating not available in current Project interface */}
-              </div>
+          {/* Project Stats */}
+          <div style={{ backgroundColor: 'var(--stm-card)', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-lg)', padding: 'var(--stm-space-5)' }}>
+            <div style={{ fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-semibold)', color: 'var(--stm-foreground)', fontFamily: 'var(--stm-font-body)', marginBottom: 'var(--stm-space-4)' }}>
+              Project Statistics
+            </div>
+            <div style={{
+              padding: 'var(--stm-space-3)',
+              backgroundColor: 'var(--stm-muted)',
+              borderRadius: 'var(--stm-radius-md)',
+              fontSize: 'var(--stm-text-xs)',
+              color: 'var(--stm-muted-foreground)',
+              fontFamily: 'var(--stm-font-body)',
+              textAlign: 'center',
+            }}>
+              Project ID: {project.project_id}
             </div>
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

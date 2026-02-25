@@ -1,8 +1,8 @@
-// [R7.7] Updated clients page using actual Supabase schema
+// [EPIC-002] Clients — card grid matching vendor roster layout
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Building, Briefcase, Calendar, Users, Edit } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, Edit } from 'lucide-react';
 import { Client } from '@/types';
 import ClientModal from '@/components/modals/ClientModal';
 import ClientProfileModal from '@/components/modals/ClientProfileModal';
@@ -14,16 +14,26 @@ interface Project {
   project_title: string;
   vendor_name: string;
   project_overall_rating_calc: number | null;
-  created_at: string;
-  updated_at: string;
 }
 
 interface ClientVendorData {
   vendorName: string;
-  projects: Array<{
-    title: string;
-    rating: number | null;
-  }>;
+  projects: Array<{ title: string; rating: number | null }>;
+}
+
+function groupVendorsByClient(projects: Project[]): Record<string, ClientVendorData[]> {
+  const map: Record<string, ClientVendorData[]> = {};
+  projects.forEach(({ client_name, vendor_name, project_title, project_overall_rating_calc }) => {
+    if (!client_name || !vendor_name || !project_title) return;
+    if (!map[client_name]) map[client_name] = [];
+    let vendorData = map[client_name].find(v => v.vendorName === vendor_name);
+    if (!vendorData) {
+      vendorData = { vendorName: vendor_name, projects: [] };
+      map[client_name].push(vendorData);
+    }
+    vendorData.projects.push({ title: project_title, rating: project_overall_rating_calc });
+  });
+  return map;
 }
 
 export default function ClientsPage() {
@@ -34,339 +44,258 @@ export default function ClientsPage() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const { isAdmin } = useViRAAuth();
 
-  // [R4] [client-page-enhancement] Group vendors and projects by client
-  const groupVendorsByClient = (projects: Project[]) => {
-    const clientVendorMap: Record<string, ClientVendorData[]> = {};
-
-    // [R4] Defensive programming - ensure projects is always an array
-    const safeProjects = Array.isArray(projects) ? projects : [];
-
-    console.log('=== CLIENT VENDOR GROUPING DEBUG ===');
-    console.log('Total projects to process:', safeProjects.length);
-
-    safeProjects.forEach(project => {
-      const { client_name, vendor_name, project_title, project_overall_rating_calc } = project;
-
-      // [R4] Debug specific client
-      if (client_name === 'Bergen Oral & Maxillofacial Surgery') {
-        console.log('Bergen project:', {
-          client_name,
-          vendor_name,
-          project_title,
-          rating: project_overall_rating_calc
-        });
-      }
-
-      // [R4] Skip if essential data is missing
-      if (!client_name || !vendor_name || !project_title) {
-        console.log('Skipping project due to missing data:', { client_name, vendor_name, project_title });
-        return;
-      }
-
-      if (!clientVendorMap[client_name]) {
-        clientVendorMap[client_name] = [];
-      }
-
-      // Find existing vendor for this client
-      let vendorData = clientVendorMap[client_name].find(v => v.vendorName === vendor_name);
-
-      if (!vendorData) {
-        vendorData = {
-          vendorName: vendor_name,
-          projects: []
-        };
-        clientVendorMap[client_name].push(vendorData);
-      }
-
-      // Add project to vendor
-      vendorData.projects.push({
-        title: project_title,
-        rating: project_overall_rating_calc
-      });
-    });
-
-    // [R4] Debug results
-    console.log('Bergen vendor map result:', clientVendorMap['Bergen Oral & Maxillofacial Surgery']);
-
-    return clientVendorMap;
-  };
-
-  // [R4] Fetch both clients and projects data
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const [clientsResponse, projectsResponse] = await Promise.all([
-          fetch('/api/clients'),
-          fetch('/api/projects')
-        ]);
-
-        if (!clientsResponse.ok || !projectsResponse.ok) {
-          throw new Error('Failed to fetch data');
-        }
-
-        const clientsData = await clientsResponse.json();
-        const response = await projectsResponse.json();
-
-        // [R4] CRITICAL FIX: Extract projects array from API response object
-        const projectsData = response.projects || [];
-
-        // [R4] Defensive programming with proper error handling
+    Promise.all([fetch('/api/clients'), fetch('/api/projects')])
+      .then(async ([cr, pr]) => {
+        if (!cr.ok || !pr.ok) throw new Error('Failed to fetch data');
+        const clientsData = await cr.json();
+        const projectsData = await pr.json();
         setClients(Array.isArray(clientsData) ? clientsData : []);
-
-        // Group vendors and projects by client - ensure projectsData is array
-        const safeProjectsData = Array.isArray(projectsData) ? projectsData : [];
-        const vendorMap = groupVendorsByClient(safeProjectsData);
-        setClientVendors(vendorMap);
-
-      } catch (err) {
-        console.error('Error fetching client/project data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch data');
-        // [R4] Set safe defaults on error
-        setClients([]);
-        setClientVendors({});
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
+        setClientVendors(groupVendorsByClient(projectsData.projects || []));
+      })
+      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load'))
+      .finally(() => setLoading(false));
   }, []);
 
+  const filteredClients = useMemo(() => {
+    if (!search.trim()) return clients;
+    const q = search.toLowerCase();
+    return clients.filter(c => c.client_name.toLowerCase().includes(q));
+  }, [clients, search]);
+
   return (
-    <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
-      {/* Header */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h1 style={{
-                fontSize: '1.875rem',
-                fontFamily: 'var(--font-headline)',
-                fontWeight: 'bold',
-                color: '#1A5276'
-              }}>Clients</h1>
-              <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
-                Manage your client relationships with vendor and project overview
-              </p>
-            </div>
+    <div style={{ padding: 'var(--stm-space-8)', backgroundColor: 'var(--stm-page-background)', minHeight: '100%' }}>
+
+      {/* Section Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 'var(--stm-space-5)' }}>
+        <div>
+          <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--stm-foreground)', lineHeight: 1, letterSpacing: '-0.01em', fontFamily: 'var(--stm-font-body)' }}>
+            Clients
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--stm-muted-foreground)', marginTop: '4px', fontFamily: 'var(--stm-font-body)' }}>
+            {loading ? 'Loading...' : `${filteredClients.length} client${filteredClients.length !== 1 ? 's' : ''}`}
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '1.5rem' }}>
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <div style={{
-              width: '2rem',
-              height: '2rem',
-              border: '2px solid #1A5276',
-              borderTop: '2px solid transparent',
-              borderRadius: '50%',
-              margin: '0 auto 1rem',
-              animation: 'spin 1s linear infinite'
-            }}></div>
-            <p style={{ color: '#6b7280' }}>Loading clients...</p>
-          </div>
-        )}
-
-        {error && (
-          <div style={{
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: '0.5rem',
-            padding: '1rem',
-            textAlign: 'center'
-          }}>
-            <p style={{ color: '#dc2626' }}>Error: {error}</p>
-          </div>
-        )}
-
-        {!loading && !error && clients.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{
-              width: '4rem',
-              height: '4rem',
-              backgroundColor: '#f3f4f6',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1rem'
-            }}>
-              <Building style={{ width: '2rem', height: '2rem', color: '#9ca3af' }} />
-            </div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '0.5rem' }}>
-              No clients found
-            </h3>
-            <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
-              No clients exist yet.
-            </p>
-            <button style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#6B8F71',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              fontWeight: '500'
-            }}>
-              Add Your First Client
-            </button>
-          </div>
-        )}
-
-        {/* Client List - Enhanced with vendor/project information */}
-        {!loading && !error && clients.length > 0 && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '1.5rem',
-            maxWidth: '1600px',
-            margin: '0 auto'
-          }}>
-            {clients.map((client) => {
-              const vendorData = clientVendors[client.client_name] || [];
-              return (
-                <div
-                  key={client.client_key}
-                  className="list-card list-card-client"
-                  onClick={() => {
-                    setSelectedClient(client);
-                    setIsModalOpen(true);
-                  }}
-                >
-                  {/* Client Header */}
-                  <div className="list-card-client-header">
-                    <div className="list-card-avatar">
-                      <span className="list-card-avatar-text">
-                        {client.client_name.charAt(0)}
-                      </span>
-                    </div>
-
-                    <div className="list-card-content">
-                      <h3 className="list-card-client-title">
-                        {client.client_name}
-                      </h3>
-
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Briefcase style={{ width: '1rem', height: '1rem' }} />
-                            <span>{client.total_projects} {client.total_projects === 1 ? 'project' : 'projects'}</span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Calendar style={{ width: '1rem', height: '1rem' }} />
-                            <span>
-                              Last: {client.last_project_date ? new Date(client.last_project_date).toLocaleDateString() : 'N/A'}
-                            </span>
-                          </div>
-                        </div>
-                        {isAdmin && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedClient(client);
-                              setIsProfileModalOpen(true);
-                            }}
-                            className="btn-primary"
-                            style={{ fontSize: '0.75rem', padding: '0.375rem 0.75rem' }}
-                            title="Edit Client Profile"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                            Edit Profile
-                          </button>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Users style={{ width: '1rem', height: '1rem' }} />
-                        <span>{vendorData.length} {vendorData.length === 1 ? 'vendor' : 'vendors'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* [R4] Quick preview of top vendors */}
-                  {vendorData.length > 0 && (
-                    <div style={{
-                      fontSize: '0.875rem',
-                      color: '#6b7280',
-                      borderTop: '1px solid #e5e7eb',
-                      paddingTop: '0.75rem'
-                    }}>
-                      <div style={{ fontWeight: '500', marginBottom: '0.5rem' }}>Recent Vendors:</div>
-                      {vendorData.slice(0, 2).map((vendor, idx) => (
-                        <div key={idx} style={{ marginBottom: '0.25rem' }}>
-                          • {vendor.vendorName} ({vendor.projects.length} {vendor.projects.length === 1 ? 'project' : 'projects'})
-                        </div>
-                      ))}
-                      {vendorData.length > 2 && (
-                        <div style={{ fontStyle: 'italic', color: '#9ca3af' }}>
-                          +{vendorData.length - 2} more vendors...
-                        </div>
-                      )}
-                      <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#9ca3af' }}>
-                        Click to see all projects and vendors
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Summary */}
-        {!loading && !error && clients.length > 0 && (
-          <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-              Showing {clients.length} clients with vendor and project details
-            </p>
-          </div>
-        )}
+      {/* Search */}
+      <div style={{ position: 'relative', maxWidth: '320px', marginBottom: 'var(--stm-space-6)' }}>
+        <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '13px', height: '13px', color: 'var(--stm-muted-foreground)', pointerEvents: 'none' }} />
+        <input
+          type="text"
+          placeholder="Search clients..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{
+            width: '100%', padding: '8px 12px 8px 32px', fontFamily: 'var(--stm-font-body)',
+            fontSize: '12px', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-md)',
+            backgroundColor: 'var(--stm-card)', color: 'var(--stm-foreground)', outline: 'none',
+          }}
+        />
       </div>
 
-      {/* Client Modal */}
+      {/* Loading */}
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+          <div className="stm-loader stm-loader-lg" style={{ justifyContent: 'center', marginBottom: '16px' }}>
+            <span className="stm-loader-capsule stm-loader-dot" />
+            <span className="stm-loader-capsule stm-loader-dot" />
+            <span className="stm-loader-capsule stm-loader-dot" />
+            <span className="stm-loader-capsule stm-loader-dash" />
+            <span className="stm-loader-capsule stm-loader-dash" />
+            <span className="stm-loader-capsule stm-loader-dash" />
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)' }}>Loading clients...</div>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div style={{ padding: '12px 16px', backgroundColor: 'color-mix(in srgb, var(--stm-error) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--stm-error) 20%, transparent)', borderRadius: 'var(--stm-radius-lg)', color: 'var(--stm-error)', fontSize: '13px', fontFamily: 'var(--stm-font-body)' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Client Grid */}
+      {!loading && !error && filteredClients.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
+          {filteredClients.map((client, idx) => {
+            const vendorData = clientVendors[client.client_name] || [];
+            const totalVendors = vendorData.length;
+            const lastDate = client.last_project_date
+              ? new Date(client.last_project_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+              : null;
+
+            return (
+              <div
+                key={client.client_key}
+                onClick={() => { setSelectedClient(client); setIsModalOpen(true); }}
+                style={{
+                  backgroundColor: 'var(--stm-card)',
+                  border: '1px solid var(--stm-border)',
+                  borderRadius: 'var(--stm-radius-lg)',
+                  padding: '18px',
+                  cursor: 'pointer',
+                  transition: 'all 0.18s ease',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  zIndex: 3,
+                  animationDelay: `${idx * 0.03}s`,
+                }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.borderColor = 'var(--stm-primary)';
+                  el.style.boxShadow = '0 6px 24px rgba(26,82,118,0.12)';
+                  el.style.transform = 'translateY(-2px)';
+                  const bar = el.querySelector('.cl-accent-bar') as HTMLElement;
+                  if (bar) bar.style.opacity = '1';
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.borderColor = 'var(--stm-border)';
+                  el.style.boxShadow = 'none';
+                  el.style.transform = 'translateY(0)';
+                  const bar = el.querySelector('.cl-accent-bar') as HTMLElement;
+                  if (bar) bar.style.opacity = '0';
+                }}
+              >
+                {/* Accent bar */}
+                <div className="cl-accent-bar" style={{
+                  position: 'absolute', top: 0, bottom: 0, left: 0, width: '3px',
+                  background: 'linear-gradient(180deg, var(--stm-primary), var(--stm-accent))',
+                  opacity: 0, transition: 'opacity 0.18s', borderRadius: '3px 0 0 3px',
+                }} />
+
+                {/* Top: name + initial */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div style={{ flex: 1, minWidth: 0, paddingRight: '10px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--stm-foreground)', marginBottom: '2px', fontFamily: 'var(--stm-font-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {client.client_name}
+                    </div>
+                    {lastDate && (
+                      <div style={{ fontSize: '11px', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)' }}>
+                        Last project: {lastDate}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{
+                    width: '42px', height: '42px', borderRadius: '8px', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'var(--stm-muted)',
+                    fontSize: '16px', fontWeight: '800', color: 'var(--stm-primary)',
+                    fontFamily: 'var(--stm-font-body)', opacity: 0.85,
+                  }}>
+                    {client.client_name.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+
+                {/* Recent vendors */}
+                {vendorData.length > 0 && (
+                  <div style={{ marginBottom: '10px' }}>
+                    {vendorData.slice(0, 2).map((v, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                        <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--stm-primary)', flexShrink: 0, opacity: 0.5 }} />
+                        <span style={{ fontSize: '11px', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {v.vendorName} · {v.projects.length} {v.projects.length === 1 ? 'project' : 'projects'}
+                        </span>
+                      </div>
+                    ))}
+                    {vendorData.length > 2 && (
+                      <div style={{ fontSize: '10px', color: 'var(--stm-border)', fontFamily: 'var(--stm-font-body)', marginTop: '2px', marginLeft: '10px' }}>
+                        +{vendorData.length - 2} more
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Score row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--stm-border)' }}>
+                  <div>
+                    <div style={{ fontSize: '22px', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--stm-primary)', lineHeight: 1, fontFamily: 'var(--stm-font-body)' }}>
+                      {client.total_projects ?? 0}
+                    </div>
+                    <div style={{ fontSize: '10px', fontWeight: '600', color: 'var(--stm-muted-foreground)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '2px', fontFamily: 'var(--stm-font-body)' }}>
+                      Projects
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--stm-foreground)', fontFamily: 'var(--stm-font-body)' }}>
+                      {totalVendors}
+                    </div>
+                    <div style={{ fontSize: '10px', fontWeight: '600', color: 'var(--stm-muted-foreground)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '2px', fontFamily: 'var(--stm-font-body)' }}>
+                      {totalVendors === 1 ? 'Vendor' : 'Vendors'}
+                    </div>
+                  </div>
+                  {isAdmin && (
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        setSelectedClient(client);
+                        setIsProfileModalOpen(true);
+                      }}
+                      title="Edit client profile"
+                      style={{
+                        width: '32px', height: '32px', borderRadius: 'var(--stm-radius-md)',
+                        border: '1px solid var(--stm-border)', backgroundColor: 'var(--stm-background)',
+                        color: 'var(--stm-muted-foreground)', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0, transition: 'all 0.14s',
+                      }}
+                      onMouseEnter={e => {
+                        const el = e.currentTarget as HTMLElement;
+                        el.style.backgroundColor = 'var(--stm-muted)';
+                        el.style.color = 'var(--stm-foreground)';
+                        el.style.borderColor = 'var(--stm-primary)';
+                      }}
+                      onMouseLeave={e => {
+                        const el = e.currentTarget as HTMLElement;
+                        el.style.backgroundColor = 'var(--stm-background)';
+                        el.style.color = 'var(--stm-muted-foreground)';
+                        el.style.borderColor = 'var(--stm-border)';
+                      }}
+                    >
+                      <Edit style={{ width: '13px', height: '13px' }} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && filteredClients.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '64px 24px', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)', fontSize: '13px' }}>
+          No clients match your search.
+        </div>
+      )}
+
+      {/* Modals */}
       {selectedClient && (
         <ClientModal
           client={selectedClient}
           isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedClient(null);
-          }}
+          onClose={() => { setIsModalOpen(false); setSelectedClient(null); }}
           vendorData={clientVendors[selectedClient.client_name] || []}
         />
       )}
 
-      {/* Client Profile Modal */}
       {selectedClient && (
         <ClientProfileModal
           client={selectedClient}
           isOpen={isProfileModalOpen}
-          onClose={() => {
-            setIsProfileModalOpen(false);
-            setSelectedClient(null);
-          }}
-          onSave={(updatedClient) => {
-            // Update the client in the list
-            setClients(clients.map(c => 
-              c.client_key === updatedClient.client_key ? updatedClient : c
-            ));
+          onClose={() => { setIsProfileModalOpen(false); setSelectedClient(null); }}
+          onSave={updatedClient => {
+            setClients(prev => prev.map(c => c.client_key === updatedClient.client_key ? updatedClient : c));
             setIsProfileModalOpen(false);
             setSelectedClient(null);
           }}
         />
       )}
-
-      <style jsx>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

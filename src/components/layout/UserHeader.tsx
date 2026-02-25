@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useViRAAuth } from '@/hooks/useViRAAuth';
-import { getUserDisplayName, getRoleDisplayName, getRoleBadgeColor } from '@/lib/auth';
+import { getUserDisplayName, getRoleDisplayName } from '@/lib/auth';
 import { LogOut, User, ChevronDown } from 'lucide-react';
 
 export function UserHeader() {
@@ -23,54 +23,131 @@ export function UserHeader() {
   };
 
   return (
-    <div className="relative">
+    <div style={{ position: 'relative' }}>
       {/* User Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-700 rounded-lg transition-colors"
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--stm-space-3)',
+          padding: 'var(--stm-space-3) var(--stm-space-4)',
+          background: 'none',
+          border: 'none',
+          borderRadius: 'var(--stm-radius-md)',
+          cursor: 'pointer',
+          transition: 'background-color var(--stm-duration-fast)',
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')}
+        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
       >
-          <div className="flex-shrink-0 w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-            <User className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex-1 text-left min-w-0">
-            <p className="text-sm font-medium text-gray-100 truncate">
-              {getUserDisplayName(profile)}
-            </p>
-            <p className="text-xs text-gray-300 truncate">{profile.email}</p>
-          </div>
-          <ChevronDown
-            className={`w-4 h-4 text-gray-300 transition-transform ${
-              isOpen ? 'rotate-180' : ''
-            }`}
-          />
-        </button>
+        <div style={{
+          flexShrink: 0,
+          width: '36px',
+          height: '36px',
+          backgroundColor: 'var(--stm-primary)',
+          borderRadius: 'var(--stm-radius-full)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <User style={{ width: '16px', height: '16px', color: 'white' }} />
+        </div>
+        <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
+          <p style={{
+            fontSize: 'var(--stm-text-sm)',
+            fontWeight: 'var(--stm-font-medium)',
+            color: 'rgba(255,255,255,0.9)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            margin: 0,
+          }}>
+            {getUserDisplayName(profile)}
+          </p>
+          <p style={{
+            fontSize: 'var(--stm-text-xs)',
+            color: 'rgba(255,255,255,0.55)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            margin: 0,
+          }}>
+            {profile.email}
+          </p>
+        </div>
+        <ChevronDown style={{
+          width: '14px',
+          height: '14px',
+          color: 'rgba(255,255,255,0.55)',
+          transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform var(--stm-duration-fast)',
+          flexShrink: 0,
+        }} />
+      </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          left: 0,
+          right: 0,
+          marginBottom: 'var(--stm-space-2)',
+          backgroundColor: 'var(--stm-card)',
+          borderRadius: 'var(--stm-radius-md)',
+          boxShadow: 'var(--stm-shadow-lg)',
+          border: '1px solid var(--stm-border)',
+          overflow: 'hidden',
+          zIndex: 50,
+        }}>
           {/* User Info */}
-          <div className="px-4 py-3 border-b border-gray-200">
-            <p className="text-sm font-medium text-gray-900">
+          <div style={{
+            padding: 'var(--stm-space-3) var(--stm-space-4)',
+            borderBottom: '1px solid var(--stm-border)',
+          }}>
+            <p style={{ fontSize: 'var(--stm-text-sm)', fontWeight: 'var(--stm-font-medium)', color: 'var(--stm-foreground)', margin: 0 }}>
               {getUserDisplayName(profile)}
             </p>
-            <p className="text-xs text-gray-500 mt-1">{profile.email}</p>
-            <div className="mt-2">
-              <span
-                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(
-                  profile.role
-                )}`}
-              >
-                {getRoleDisplayName(profile.role)}
-              </span>
-            </div>
+            <p style={{ fontSize: 'var(--stm-text-xs)', color: 'var(--stm-muted-foreground)', marginTop: 'var(--stm-space-1)', marginBottom: 'var(--stm-space-2)' }}>
+              {profile.email}
+            </p>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: 'var(--stm-space-1) var(--stm-space-2)',
+              borderRadius: 'var(--stm-radius-full)',
+              fontSize: 'var(--stm-text-xs)',
+              fontWeight: 'var(--stm-font-medium)',
+              backgroundColor: 'color-mix(in srgb, var(--stm-primary) 12%, transparent)',
+              color: 'var(--stm-primary)',
+            }}>
+              {getRoleDisplayName(profile.role)}
+            </span>
           </div>
 
-          {/* Sign Out Button */}
+          {/* Sign Out */}
           <button
             onClick={handleSignOut}
-            className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+            style={{
+              width: '100%',
+              padding: 'var(--stm-space-3) var(--stm-space-4)',
+              textAlign: 'left',
+              fontSize: 'var(--stm-text-sm)',
+              color: 'var(--stm-error)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--stm-space-2)',
+              transition: 'background-color var(--stm-duration-fast)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--stm-error) 8%, transparent)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut style={{ width: '14px', height: '14px' }} />
             Sign Out
           </button>
         </div>
@@ -79,7 +156,7 @@ export function UserHeader() {
       {/* Click Outside to Close */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-[-1]"
+          style={{ position: 'fixed', inset: 0, zIndex: -1 }}
           onClick={() => setIsOpen(false)}
         />
       )}

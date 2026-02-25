@@ -1,6 +1,7 @@
+// [EPIC-002] Ratings — card grid matching vendor roster layout
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import RatingViewModal from '@/components/modals/RatingViewModal';
 import RatingSubmissionModal from '@/components/modals/RatingSubmissionModal';
 import { Project } from '@/types';
@@ -15,7 +16,6 @@ interface RatingData {
   overall_rating: number;
 }
 
-// This is now the single source of truth for the shape of our data
 type ProjectWithRating = Project & {
   rating: {
     rating_id: number;
@@ -28,285 +28,264 @@ type ProjectWithRating = Project & {
     rating_date: string;
   } | null;
   rating_status: 'Complete' | 'Incomplete' | 'Needs Review';
-  vendor: {
-    vendor_name: string;
-    service_categories?: string;
-  } | null;
-  client: {
-    client_name: string;
-  } | null;
+  vendor: { vendor_name: string; service_categories?: string } | null;
+  client: { client_name: string } | null;
 };
+
+function ratingColor(score: number | null | undefined): string {
+  if (!score) return 'var(--stm-muted-foreground)';
+  if (score >= 8.5) return 'var(--stm-success)';
+  if (score >= 7)   return 'var(--stm-primary)';
+  if (score >= 5.5) return 'var(--stm-warning)';
+  return 'var(--stm-error)';
+}
+
+const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; pulse: boolean }> = {
+  'Needs Review': { bg: 'color-mix(in srgb, var(--stm-error) 10%, transparent)', color: 'var(--stm-error)', border: 'color-mix(in srgb, var(--stm-error) 25%, transparent)', pulse: true },
+  Incomplete:     { bg: 'color-mix(in srgb, var(--stm-warning) 10%, transparent)', color: 'var(--stm-warning)', border: 'color-mix(in srgb, var(--stm-warning) 25%, transparent)', pulse: false },
+  Complete:       { bg: 'color-mix(in srgb, var(--stm-success) 10%, transparent)', color: 'var(--stm-success)', border: 'color-mix(in srgb, var(--stm-success) 25%, transparent)', pulse: false },
+};
+
+const FILTERS = ['All', 'Needs Review', 'Incomplete', 'Complete'];
 
 export default function RatingsPage() {
   const [projects, setProjects] = useState<ProjectWithRating[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Filter states
-  const [selectedFilter, setSelectedFilter] = useState<string>('Needs Review');
-
-  // Modal states
+  const [selectedFilter, setSelectedFilter] = useState('Needs Review');
   const [selectedProject, setSelectedProject] = useState<ProjectWithRating | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
 
-  // Fetch all projects with their ratings
   useEffect(() => {
-    async function fetchProjectsWithRatings() {
-      try {
-        const response = await fetch('/api/ratings');
-        const data = await response.json();
-        if (response.ok) {
-          setProjects(data);
-        } else {
-          throw new Error(data.error || 'Failed to fetch projects');
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchProjectsWithRatings();
+    fetch('/api/ratings')
+      .then(res => res.json().then(data => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (ok) setProjects(data);
+        else throw new Error(data.error || 'Failed to fetch ratings');
+      })
+      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load'))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Filter and sort projects based on selected filter
-  const filteredProjects = projects
-    .filter(project => {
-      if (selectedFilter === 'All') return true;
-      if (selectedFilter === 'Needs Review') return project.rating_status === 'Needs Review';
-      if (selectedFilter === 'Incomplete') return project.rating_status === 'Incomplete';
-      if (selectedFilter === 'Complete') return project.rating_status === 'Complete';
-      return true;
-    })
-    .sort((a, b) => {
-      // Sort "Needs Review" projects first, then "Rated" projects
+  const counts = useMemo(() => ({
+    'Needs Review': projects.filter(p => p.rating_status === 'Needs Review').length,
+    Incomplete:     projects.filter(p => p.rating_status === 'Incomplete').length,
+    Complete:       projects.filter(p => p.rating_status === 'Complete').length,
+  }), [projects]);
+
+  const filteredProjects = useMemo(() => {
+    const list = selectedFilter === 'All'
+      ? projects
+      : projects.filter(p => p.rating_status === selectedFilter);
+    return [...list].sort((a, b) => {
       if (a.rating_status === 'Needs Review' && b.rating_status !== 'Needs Review') return -1;
       if (a.rating_status !== 'Needs Review' && b.rating_status === 'Needs Review') return 1;
       return 0;
     });
+  }, [projects, selectedFilter]);
 
-  // Handle project card click
   const handleProjectClick = (project: ProjectWithRating) => {
     setSelectedProject(project);
-    if (project.rating_status === 'Complete') {
-      setIsViewModalOpen(true);
-    } else {
-      setIsSubmissionModalOpen(true);
-    }
+    if (project.rating_status === 'Complete') setIsViewModalOpen(true);
+    else setIsSubmissionModalOpen(true);
   };
 
-  // Handle rating submission
   const handleRatingSubmit = async (ratingData: RatingData) => {
-    try {
-      const response = await fetch('/api/rate-project', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ratingData)
-      });
-
-      if (!response.ok) throw new Error('Failed to submit rating');
-
-      // Refresh the projects list
-      window.location.reload();
-    } catch (error) {
-      console.error('Failed to submit rating:', error);
-      throw error;
-    }
+    const response = await fetch('/api/rate-project', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ratingData),
+    });
+    if (!response.ok) throw new Error('Failed to submit rating');
+    window.location.reload();
   };
 
   return (
-    <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
-      {/* Header */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ padding: '1.5rem' }}>
-          <h1 style={{
-            fontSize: '1.875rem',
-            fontFamily: 'var(--font-headline)',
-            fontWeight: 'bold',
-            color: '#1A5276'
-          }}>Project Ratings</h1>
-          <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
-            Review completed ratings and submit new project reviews
-          </p>
-        </div>
-      </div>
+    <div style={{ padding: 'var(--stm-space-8)', backgroundColor: 'var(--stm-page-background)', minHeight: '100%' }}>
 
-      {/* Filters */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ padding: '1rem 1.5rem' }}>
-          <div style={{ marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-              Filter by Status
-            </h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {['All', 'Needs Review', 'Incomplete', 'Complete'].map(filter => (
-                <button
-                  key={filter}
-                  onClick={() => setSelectedFilter(filter)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '9999px',
-                    border: '1px solid',
-                    borderColor: selectedFilter === filter ? '#1A5276' : '#d1d5db',
-                    backgroundColor: selectedFilter === filter ? '#1A5276' : 'white',
-                    color: selectedFilter === filter ? 'white' : '#374151',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
+      {/* Section Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 'var(--stm-space-5)' }}>
+        <div>
+          <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--stm-foreground)', lineHeight: 1, letterSpacing: '-0.01em', fontFamily: 'var(--stm-font-body)' }}>
+            Project Ratings
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--stm-muted-foreground)', marginTop: '4px', fontFamily: 'var(--stm-font-body)' }}>
+            {loading ? 'Loading...' : `${counts['Needs Review']} need review · ${counts['Incomplete']} incomplete · ${counts['Complete']} complete`}
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '1.5rem' }}>
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <div style={{
-              width: '2rem',
-              height: '2rem',
-              border: '2px solid #1A5276',
-              borderTop: '2px solid transparent',
-              borderRadius: '50%',
-              margin: '0 auto 1rem',
-              animation: 'spin 1s linear infinite'
-            }}></div>
-            <p style={{ color: '#6b7280' }}>Loading projects...</p>
-          </div>
-        )}
+      {/* Status Filter Pills */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: 'var(--stm-space-6)' }}>
+        {FILTERS.map(f => {
+          const isActive = selectedFilter === f;
+          const count = f === 'All' ? projects.length : counts[f as keyof typeof counts];
+          return (
+            <button
+              key={f}
+              onClick={() => setSelectedFilter(f)}
+              style={{
+                padding: '4px 12px', fontFamily: 'var(--stm-font-body)', fontSize: '11px', fontWeight: '600',
+                border: `1px solid ${isActive ? 'var(--stm-primary)' : 'var(--stm-border)'}`,
+                borderRadius: '20px', cursor: 'pointer', transition: 'all 0.14s',
+                backgroundColor: isActive ? 'color-mix(in srgb, var(--stm-primary) 10%, transparent)' : 'var(--stm-card)',
+                color: isActive ? 'var(--stm-primary)' : 'var(--stm-muted-foreground)',
+              }}
+            >
+              {f}{count != null ? ` (${count})` : ''}
+            </button>
+          );
+        })}
+      </div>
 
-        {error && (
-          <div style={{
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: '0.5rem',
-            padding: '1rem',
-            textAlign: 'center'
-          }}>
-            <p style={{ color: '#dc2626' }}>Error: {error}</p>
+      {/* Loading */}
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+          <div className="stm-loader stm-loader-lg" style={{ justifyContent: 'center', marginBottom: '16px' }}>
+            <span className="stm-loader-capsule stm-loader-dot" />
+            <span className="stm-loader-capsule stm-loader-dot" />
+            <span className="stm-loader-capsule stm-loader-dot" />
+            <span className="stm-loader-capsule stm-loader-dash" />
+            <span className="stm-loader-capsule stm-loader-dash" />
+            <span className="stm-loader-capsule stm-loader-dash" />
           </div>
-        )}
+          <div style={{ fontSize: '12px', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)' }}>Loading ratings...</div>
+        </div>
+      )}
 
-        {!loading && !error && filteredProjects.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <p style={{ color: '#6b7280' }}>No projects found matching your criteria.</p>
-          </div>
-        )}
+      {/* Error */}
+      {error && (
+        <div style={{ padding: '12px 16px', backgroundColor: 'color-mix(in srgb, var(--stm-error) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--stm-error) 20%, transparent)', borderRadius: 'var(--stm-radius-lg)', color: 'var(--stm-error)', fontSize: '13px', fontFamily: 'var(--stm-font-body)' }}>
+          {error}
+        </div>
+      )}
 
-        {/* Project List - 2 Column Layout */}
-        {!loading && !error && filteredProjects.length > 0 && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '1rem',
-            maxWidth: '1600px',
-            margin: '0 auto'
-          }}>
-            {filteredProjects.map((project) => (
+      {/* Card Grid */}
+      {!loading && !error && filteredProjects.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
+          {filteredProjects.map((project, idx) => {
+            const rating = project.project_overall_rating_calc ? Number(project.project_overall_rating_calc) : null;
+            const statusStyle = STATUS_STYLE[project.rating_status] ?? STATUS_STYLE['Incomplete'];
+            const vendorName = project.vendor_name || project.vendor?.vendor_name;
+
+            return (
               <div
                 key={project.project_id}
-                className="professional-card"
                 onClick={() => handleProjectClick(project)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '1rem 1.5rem',
-                  minHeight: '5rem',
+                  backgroundColor: 'var(--stm-card)',
+                  border: '1px solid var(--stm-border)',
+                  borderRadius: 'var(--stm-radius-lg)',
+                  padding: '18px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.18s ease',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  zIndex: 3,
+                  animationDelay: `${idx * 0.03}s`,
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.15)';
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.borderColor = 'var(--stm-primary)';
+                  el.style.boxShadow = '0 6px 24px rgba(26,82,118,0.12)';
+                  el.style.transform = 'translateY(-2px)';
+                  const bar = el.querySelector('.rt-accent-bar') as HTMLElement;
+                  if (bar) bar.style.opacity = '1';
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.borderColor = 'var(--stm-border)';
+                  el.style.boxShadow = 'none';
+                  el.style.transform = 'translateY(0)';
+                  const bar = el.querySelector('.rt-accent-bar') as HTMLElement;
+                  if (bar) bar.style.opacity = '0';
                 }}
               >
-                {/* Project Avatar */}
-                <div style={{
-                  width: '3rem',
-                  height: '3rem',
-                  backgroundColor: project.rating_status === 'Complete' ? '#1A5276' :
-                    project.rating_status === 'Incomplete' ? '#F59E0B' : '#EF4444',
-                  borderRadius: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '1rem',
-                  flexShrink: 0
-                }}>
-                  <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'white' }}>
-                    {project.project_title.charAt(0)}
-                  </span>
-                </div>
+                {/* Accent bar */}
+                <div className="rt-accent-bar" style={{
+                  position: 'absolute', top: 0, bottom: 0, left: 0, width: '3px',
+                  background: 'linear-gradient(180deg, var(--stm-primary), var(--stm-accent))',
+                  opacity: 0, transition: 'opacity 0.18s', borderRadius: '3px 0 0 3px',
+                }} />
 
-                {/* Main Project Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                    <h3 style={{
-                      fontSize: '1.125rem',
-                      fontWeight: '600',
-                      color: '#111827',
-                      margin: 0
-                    }}>
+                {/* Top: title + initial */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div style={{ flex: 1, minWidth: 0, paddingRight: '10px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--stm-foreground)', marginBottom: '2px', fontFamily: 'var(--stm-font-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {project.project_title}
-                    </h3>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                    <span style={{ fontWeight: '500', color: '#1A5276' }}>
-                      {project.project_overall_rating_calc || 'N/A'}
-                    </span>
-
-                    {/* Status Badge */}
-                    <div style={{
-                      padding: '0.125rem 0.5rem',
-                      backgroundColor: project.rating_status === 'Complete' ? '#dcfce7' :
-                        project.rating_status === 'Incomplete' ? '#fef9c3' : '#fef2f2',
-                      color: project.rating_status === 'Complete' ? '#166534' :
-                        project.rating_status === 'Incomplete' ? '#92400e' : '#dc2626',
-                      borderRadius: '9999px',
-                      fontSize: '0.75rem',
-                      fontWeight: '500'
-                    }}>
-                      {project.rating_status}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {project.client_name || project.client?.client_name || 'No client'}
                     </div>
                   </div>
+                  <div style={{
+                    width: '42px', height: '42px', borderRadius: '8px', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'var(--stm-muted)',
+                    fontSize: '16px', fontWeight: '800', color: 'var(--stm-primary)',
+                    fontFamily: 'var(--stm-font-body)', opacity: 0.85,
+                  }}>
+                    {project.project_title.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+
+                {/* Status badge */}
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '5px',
+                  padding: '3px 8px', borderRadius: '20px', marginBottom: '10px',
+                  fontSize: '11px', fontWeight: '600', fontFamily: 'var(--stm-font-body)',
+                  backgroundColor: statusStyle.bg, color: statusStyle.color,
+                  border: `1px solid ${statusStyle.border}`,
+                }}>
+                  <span style={{
+                    width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
+                    backgroundColor: 'currentColor',
+                    boxShadow: statusStyle.pulse ? '0 0 5px currentColor' : 'none',
+                  }} />
+                  {project.rating_status}
+                </div>
+
+                {/* Score row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--stm-border)' }}>
+                  <div>
+                    <div style={{ fontSize: '22px', fontWeight: '800', letterSpacing: '-0.02em', color: ratingColor(rating), lineHeight: 1, fontFamily: 'var(--stm-font-body)' }}>
+                      {rating ? rating.toFixed(1) : '—'}
+                    </div>
+                    <div style={{ fontSize: '10px', fontWeight: '600', color: 'var(--stm-muted-foreground)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '2px', fontFamily: 'var(--stm-font-body)' }}>
+                      Rating
+                    </div>
+                  </div>
+                  {vendorName && (
+                    <div style={{ textAlign: 'right', maxWidth: '120px' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {vendorName}
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--stm-border)', fontFamily: 'var(--stm-font-body)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        Vendor
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
+      )}
 
-        {/* Summary */}
-        {!loading && !error && filteredProjects.length > 0 && (
-          <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-              Showing {filteredProjects.length} projects
-            </p>
-          </div>
-        )}
-      </div>
+      {/* Empty State */}
+      {!loading && !error && filteredProjects.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '64px 24px', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)', fontSize: '13px' }}>
+          No projects match this filter.
+        </div>
+      )}
 
       {/* Modals */}
       {selectedProject && selectedProject.rating && (
         <RatingViewModal
           project={selectedProject}
           isOpen={isViewModalOpen}
-          onClose={() => {
-            setIsViewModalOpen(false);
-            setSelectedProject(null);
-          }}
+          onClose={() => { setIsViewModalOpen(false); setSelectedProject(null); }}
         />
       )}
 
@@ -314,20 +293,10 @@ export default function RatingsPage() {
         <RatingSubmissionModal
           project={selectedProject}
           isOpen={isSubmissionModalOpen}
-          onClose={() => {
-            setIsSubmissionModalOpen(false);
-            setSelectedProject(null);
-          }}
+          onClose={() => { setIsSubmissionModalOpen(false); setSelectedProject(null); }}
           onSubmit={handleRatingSubmit}
         />
       )}
-
-      <style jsx>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

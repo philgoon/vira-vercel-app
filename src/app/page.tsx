@@ -1,419 +1,333 @@
-// [R2.1] ViRA Dashboard - Main dashboard with navigation and system overview
-// [C1] Sprint 4: Added vendor redirect - vendors see /vendor-portal instead
+// [R2.1] ViRA Dashboard - Prototype layout: KPI cards + performance bars + review queue
+// [EPIC-002 M3] Dashboard redesign matching prototype spec exactly
+// [C1] Sprint 4: vendors redirect to /vendor-portal
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-  Users,
-  Briefcase,
-  Building,
-  Star,
-  Search,
-  TrendingUp
-} from 'lucide-react';
+import { RotateCcw, ExternalLink } from 'lucide-react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useViRAAuth } from '@/hooks/useViRAAuth';
 
-interface DatabaseStats {
-  vendors: number;
-  projects: number;
-  clients: number;
-  ratings: number;
+interface DashboardData {
+  stats: { vendors: number; projects: number; clients: number; ratings: number };
+  topVendors: Array<{ vendor_id: string; vendor_name: string; avg_overall_rating: number; total_projects: number; rated_projects: number; recommendation_pct?: number; service_categories?: string[]; availability_status?: string }>;
+  reviewStats: { total: number; completed: number; pending: number; completionRate: number };
+  recentActivity: Array<{ project_id: string; project_title: string; vendor_name: string; project_overall_rating_calc: number; updated_at: string }>;
 }
 
-interface TopVendor {
-  vendor_id: string;
-  vendor_name: string;
-  avg_overall_rating: number;
-  total_projects: number;
-  rated_projects: number;
+function daysSince(dateStr: string): number {
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
 }
 
-interface ReviewStats {
-  total: number;
-  completed: number;
-  pending: number;
-  completionRate: number;
+function dotUrgency(days: number): 'urgent' | 'pending' | 'new' {
+  if (days > 10) return 'urgent';
+  if (days > 3) return 'pending';
+  return 'new';
 }
 
-interface AnalyticsData {
-  topVendors: TopVendor[];
-  reviewStats: ReviewStats;
-  recentActivity: Array<{
-    project_id: string;
-    project_title: string;
-    vendor_name: string;
-    project_overall_rating_calc: number;
-    updated_at: string;
-  }>;
-}
+const DOT_STYLES = {
+  urgent:  { backgroundColor: 'var(--stm-error)',   boxShadow: '0 0 5px rgba(244,0,0,0.5)' },
+  pending: { backgroundColor: 'var(--stm-warning)',  boxShadow: 'none' },
+  new:     { backgroundColor: 'var(--stm-accent)',   boxShadow: 'none' },
+} as const;
+
+const AVAIL_COLOR: Record<string, string> = {
+  Available:   'var(--stm-success)',
+  Limited:     'var(--stm-warning)',
+  'On Leave':  'var(--stm-warning)',
+  Unavailable: 'var(--stm-error)',
+};
 
 export default function DashboardPage() {
   const router = useRouter();
   const { profile, isLoading: authLoading } = useViRAAuth();
-  const [stats, setStats] = useState<DatabaseStats | null>(null);
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [hoveredKpi, setHoveredKpi] = useState<string | null>(null);
 
   // [C1] Redirect vendors to their portal
   useEffect(() => {
-    if (!authLoading && profile?.role === 'vendor') {
-      router.push('/vendor-portal');
-    }
+    if (!authLoading && profile?.role === 'vendor') router.push('/vendor-portal');
   }, [profile, authLoading, router]);
 
-  useEffect(() => {
-    async function loadDashboardData() {
-      try {
-        const res = await fetch('/api/dashboard');
-        if (!res.ok) throw new Error('Failed to load dashboard data');
-        const data = await res.json();
-
-        setStats(data.stats);
-        setAnalytics(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error occurred');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadDashboardData();
+  const loadData = useCallback(() => {
+    setLoading(true);
+    fetch('/api/dashboard')
+      .then(res => { if (!res.ok) throw new Error('Failed to load'); return res.json(); })
+      .then(d => { setData(d); setError(null); })
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const avgScore = data?.topVendors?.length
+    ? data.topVendors.reduce((s, v) => s + v.avg_overall_rating, 0) / data.topVendors.length
+    : null;
+
+  const kpiCards = data ? [
+    { id: 'vendors',  label: 'Active Vendors',  value: String(data.stats.vendors),  color: 'var(--stm-primary)',    href: '/vendors' },
+    { id: 'projects', label: 'Projects Rated',  value: String(data.stats.ratings),  color: 'var(--stm-foreground)', href: '/projects' },
+    { id: 'score',    label: 'Avg Vendor Score', value: avgScore ? avgScore.toFixed(1) : '—', color: 'var(--stm-success)', href: '/vendors' },
+    { id: 'pending',  label: 'Pending Reviews', value: String(data.reviewStats.pending), color: 'var(--stm-warning)', href: '/ratings' },
+  ] : [];
+
+  const btnGhost: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', gap: '6px',
+    padding: '7px 14px', borderRadius: 'var(--stm-radius)',
+    fontFamily: 'var(--stm-font-body)', fontSize: 'var(--stm-text-xs)',
+    fontWeight: 'var(--stm-font-semibold)', cursor: 'pointer',
+    border: '1px solid var(--stm-border)', background: 'var(--stm-background)',
+    color: 'var(--stm-muted-foreground)', transition: 'all 0.14s',
+  };
+
+  const panel: React.CSSProperties = {
+    backgroundColor: 'var(--stm-card)',
+    border: '1px solid var(--stm-border)',
+    borderRadius: 'var(--stm-radius-lg)',
+    overflow: 'hidden',
+    position: 'relative',
+    zIndex: 3,
+  };
 
   return (
     <ProtectedRoute>
-      <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
-      {/* Header */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h1 style={{
-                fontSize: '1.875rem',
-                fontFamily: 'var(--font-headline)',
-                fontWeight: 'bold',
-                color: '#1A5276'
-              }}>ViRA Dashboard</h1>
-              <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
-                Vendor Intelligence & Recommendation Assistant
-              </p>
+      <div style={{ padding: 'var(--stm-space-8)', backgroundColor: 'var(--stm-page-background)', minHeight: '100%' }}>
+
+        {/* Section Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 'var(--stm-space-5)' }}>
+          <div>
+            <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--stm-foreground)', lineHeight: 1, letterSpacing: '-0.01em' }}>
+              Dashboard
             </div>
-            <Link
-              href="/vira-match"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#1A5276',
-                color: 'white',
-                textDecoration: 'none',
-                borderRadius: '0.5rem',
-                fontWeight: '500',
-                transition: 'background-color 150ms'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#154466';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#1A5276';
-              }}
-            >
-              <Search style={{ width: '1rem', height: '1rem' }} />
-              ViRA Match
-            </Link>
+            <div style={{ fontSize: '12px', fontWeight: '400', color: 'var(--stm-muted-foreground)', marginTop: '4px' }}>
+              Performance overview across all vendors and projects
+            </div>
           </div>
+          <button onClick={loadData} style={btnGhost}>
+            <RotateCcw style={{ width: '13px', height: '13px' }} />
+            Refresh
+          </button>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div style={{ padding: '2rem 1.5rem' }}>
-        <div style={{ maxWidth: '80rem', margin: '0 auto' }}>
-
-          {/* System Status */}
-          {loading && (
-            <div className="professional-card" style={{ padding: '2rem', textAlign: 'center', marginBottom: '2rem' }}>
-              <div style={{
-                width: '2rem',
-                height: '2rem',
-                border: '2px solid #1A5276',
-                borderTop: '2px solid transparent',
-                borderRadius: '50%',
-                margin: '0 auto 1rem',
-                animation: 'spin 1s linear infinite'
-              }}></div>
-              <p style={{ color: '#6b7280' }}>Loading dashboard data...</p>
+        {/* Loading */}
+        {loading && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--stm-space-16)' }}>
+            <div className="stm-loader stm-loader-lg" style={{ justifyContent: 'center' }}>
+              <span className="stm-loader-capsule stm-loader-dot" />
+              <span className="stm-loader-capsule stm-loader-dot" />
+              <span className="stm-loader-capsule stm-loader-dot" />
+              <span className="stm-loader-capsule stm-loader-dash" />
+              <span className="stm-loader-capsule stm-loader-dash" />
+              <span className="stm-loader-capsule stm-loader-dash" />
             </div>
-          )}
+          </div>
+        )}
 
-          {error && (
-            <div style={{
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
-              borderRadius: '0.5rem',
-              padding: '1rem',
-              marginBottom: '2rem'
-            }}>
-              <h3 style={{ color: '#dc2626', fontWeight: '600', marginBottom: '0.5rem' }}>
-                ❌ System Error
-              </h3>
-              <p style={{ color: '#b91c1c', fontSize: '0.875rem' }}>{error}</p>
+        {/* Error */}
+        {error && (
+          <div style={{ padding: 'var(--stm-space-4)', backgroundColor: 'color-mix(in srgb, var(--stm-error) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--stm-error) 25%, transparent)', borderRadius: 'var(--stm-radius-md)', marginBottom: 'var(--stm-space-6)' }}>
+            <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-error)', margin: 0 }}>{error}</p>
+          </div>
+        )}
+
+        {data && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+            {/* KPI Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
+              {kpiCards.map(({ id, label, value, color, href }) => {
+                const isHovered = hoveredKpi === id;
+                return (
+                  <Link key={id} href={href} style={{ textDecoration: 'none' }}>
+                    <div
+                      style={{
+                        backgroundColor: 'var(--stm-card)',
+                        border: `1px solid ${isHovered ? 'var(--stm-primary)' : 'var(--stm-border)'}`,
+                        borderRadius: 'var(--stm-radius-lg)',
+                        padding: '18px 20px',
+                        position: 'relative',
+                        zIndex: 3,
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        transition: 'all 0.18s ease',
+                        transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
+                        boxShadow: isHovered ? '0 4px 20px rgba(26, 82, 118, 0.1)' : 'none',
+                      }}
+                      onMouseEnter={() => setHoveredKpi(id)}
+                      onMouseLeave={() => setHoveredKpi(null)}
+                    >
+                      <div style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+                        background: 'linear-gradient(90deg, var(--stm-primary), var(--stm-accent))',
+                        opacity: isHovered ? 1 : 0,
+                        transition: 'opacity 0.18s',
+                      }} />
+                      <p style={{ fontSize: '10px', fontWeight: '700', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--stm-muted-foreground)', margin: '0 0 12px' }}>
+                        {label}
+                      </p>
+                      <p style={{ fontSize: '34px', fontWeight: '800', color, lineHeight: 1, letterSpacing: '-0.02em', margin: 0 }}>
+                        {value}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
-          )}
 
-          {stats && (
-            <>
-              {/* Stats Overview - Dashboard Metrics */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '1.5rem',
-                marginBottom: '3rem'
-              }}>
-                <Link href="/vendors" style={{ textDecoration: 'none' }}>
-                  <div className="professional-card" style={{
-                    padding: '1.5rem',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'transform 150ms, box-shadow 150ms'
-                  }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 10px 25px -3px rgb(0 0 0 / 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
-                    }}
-                  >
-                    <div style={{
-                      width: '3rem',
-                      height: '3rem',
-                      backgroundColor: '#E8F4F8',
-                      borderRadius: '0.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 1rem'
-                    }}>
-                      <Users style={{ width: '1.5rem', height: '1.5rem', color: '#1A5276' }} />
-                    </div>
-                    <h3 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1A5276', marginBottom: '0.5rem' }}>
-                      {stats.vendors}
-                    </h3>
-                    <p style={{ color: '#6b7280', fontWeight: '500', marginBottom: '0.5rem' }}>Vendors</p>
-                    <p style={{ color: '#1A5276', fontSize: '0.875rem', fontWeight: '500' }}>Manage →</p>
-                  </div>
-                </Link>
+            {/* Lower Grid — 1fr 320px matching prototype */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '14px' }}>
 
-                <Link href="/projects" style={{ textDecoration: 'none' }}>
-                  <div className="professional-card" style={{
-                    padding: '1.5rem',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'transform 150ms, box-shadow 150ms'
-                  }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 10px 25px -3px rgb(0 0 0 / 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
-                    }}
-                  >
-                    <div style={{
-                      width: '3rem',
-                      height: '3rem',
-                      backgroundColor: '#F0F4F1',
-                      borderRadius: '0.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 1rem'
-                    }}>
-                      <Briefcase style={{ width: '1.5rem', height: '1.5rem', color: '#6B8F71' }} />
-                    </div>
-                    <h3 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#6B8F71', marginBottom: '0.5rem' }}>
-                      {stats.projects}
-                    </h3>
-                    <p style={{ color: '#6b7280', fontWeight: '500', marginBottom: '0.5rem' }}>Projects</p>
-                    <p style={{ color: '#6B8F71', fontSize: '0.875rem', fontWeight: '500' }}>Manage →</p>
-                  </div>
-                </Link>
-
-                <Link href="/clients" style={{ textDecoration: 'none' }}>
-                  <div className="professional-card" style={{
-                    padding: '1.5rem',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'transform 150ms, box-shadow 150ms'
-                  }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 10px 25px -3px rgb(0 0 0 / 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
-                    }}
-                  >
-                    <div style={{
-                      width: '3rem',
-                      height: '3rem',
-                      backgroundColor: '#F1F1F1',
-                      borderRadius: '0.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 1rem'
-                    }}>
-                      <Building style={{ width: '1.5rem', height: '1.5rem', color: '#6E6F71' }} />
-                    </div>
-                    <h3 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#6E6F71', marginBottom: '0.5rem' }}>
-                      {stats.clients}
-                    </h3>
-                    <p style={{ color: '#6b7280', fontWeight: '500', marginBottom: '0.5rem' }}>Clients</p>
-                    <p style={{ color: '#6E6F71', fontSize: '0.875rem', fontWeight: '500' }}>Manage →</p>
-                  </div>
-                </Link>
-
-                <Link href="/rate-project" style={{ textDecoration: 'none' }}>
-                  <div className="professional-card" style={{
-                    padding: '1.5rem',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'transform 150ms, box-shadow 150ms'
-                  }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 10px 25px -3px rgb(0 0 0 / 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
-                    }}
-                  >
-                    <div style={{
-                      width: '3rem',
-                      height: '3rem',
-                      backgroundColor: '#FEF3C7',
-                      borderRadius: '0.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 1rem'
-                    }}>
-                      <Star style={{ width: '1.5rem', height: '1.5rem', color: '#D97706' }} />
-                    </div>
-                    <h3 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#D97706', marginBottom: '0.5rem' }}>
-                      {stats.ratings}
-                    </h3>
-                    <p style={{ color: '#6b7280', fontWeight: '500', marginBottom: '0.5rem' }}>Ratings</p>
-                    <p style={{ color: '#D97706', fontSize: '0.875rem', fontWeight: '500' }}>Rate →</p>
-                  </div>
-                </Link>
+              {/* Vendor Performance */}
+              <div style={panel}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--stm-border)' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--stm-foreground)', letterSpacing: '0.01em' }}>Top Vendor Performance</span>
+                  <span style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--stm-muted-foreground)' }}>6-Month Average</span>
+                </div>
+                <div style={{ padding: '18px' }}>
+                  {data.topVendors.length === 0 ? (
+                    <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', textAlign: 'center', padding: 'var(--stm-space-8) 0', margin: 0 }}>No rated vendors yet</p>
+                  ) : (
+                    data.topVendors.map((vendor, i) => {
+                      const pct = (vendor.avg_overall_rating / 10) * 100;
+                      return (
+                        <Link key={vendor.vendor_id} href={`/vendors/${vendor.vendor_id}`} style={{ textDecoration: 'none' }}>
+                          <div
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: i === data.topVendors.length - 1 ? 0 : '12px', borderRadius: 'var(--stm-radius-sm)', transition: 'background 0.12s', padding: '3px 4px' }}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--stm-muted)')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                          >
+                            <span style={{ width: '120px', fontSize: '12px', fontWeight: '500', color: 'var(--stm-muted-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 0 }}>
+                              {vendor.vendor_name}
+                            </span>
+                            <div style={{ flex: 1, height: '5px', backgroundColor: 'var(--stm-muted)', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, var(--stm-primary), var(--stm-accent))', borderRadius: '3px', transition: 'width 0.7s cubic-bezier(0.4, 0, 0.2, 1)' }} />
+                            </div>
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--stm-primary)', width: '30px', textAlign: 'right', flexShrink: 0 }}>
+                              {vendor.avg_overall_rating.toFixed(1)}
+                            </span>
+                          </div>
+                        </Link>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
-              {/* Analytics Sections */}
-              {analytics && (
-                <div style={{ marginBottom: '3rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
-                  
-                  {/* Review Progress */}
-                  {analytics.reviewStats.total > 0 && (
-                    <div className="bg-card border rounded-lg p-6 shadow-sm">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-foreground">Review Progress</h3>
-                        <Link href="/admin?tab=reviews" className="text-primary hover:underline text-sm font-medium">
-                          Manage →
-                        </Link>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Completion Rate</span>
-                          <span className="font-bold text-foreground">{analytics.reviewStats.completionRate}%</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-                          <div 
-                            className="bg-success h-full rounded-full transition-all duration-500"
-                            style={{ width: `${analytics.reviewStats.completionRate}%` }}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between text-sm pt-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-success rounded-full" />
-                            <span className="text-muted-foreground">{analytics.reviewStats.completed} Complete</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-warning rounded-full" />
-                            <span className="text-muted-foreground">{analytics.reviewStats.pending} Pending</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Top Performers */}
-                  {analytics.topVendors.length > 0 && (
-                    <div className="bg-card border rounded-lg p-6 shadow-sm">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                          <TrendingUp className="w-5 h-5 text-primary" />
-                          Top Performers
-                        </h3>
-                        <Link href="/vendors" className="text-primary hover:underline text-sm font-medium">
-                          View All →
-                        </Link>
-                      </div>
-                      <div className="space-y-3">
-                        {analytics.topVendors.slice(0, 5).map((vendor, index) => (
-                          <Link
-                            key={vendor.vendor_id}
-                            href={`/vendors/${vendor.vendor_id}`}
-                            className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors group"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                                {index + 1}
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-foreground text-sm group-hover:text-primary transition-colors">
-                                  {vendor.vendor_name}
-                                </h4>
-                                <p className="text-xs text-muted-foreground">
-                                  {vendor.rated_projects} rated project{vendor.rated_projects !== 1 ? 's' : ''}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Star className="w-4 h-4 text-warning fill-warning" />
-                              <span className="font-bold text-foreground">{vendor.avg_overall_rating.toFixed(1)}</span>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
+              {/* Review Queue */}
+              <div style={panel}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--stm-border)' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--stm-foreground)', letterSpacing: '0.01em' }}>Review Queue</span>
+                  <span style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--stm-muted-foreground)' }}>
+                    {data.reviewStats.pending > 0 ? `${data.reviewStats.pending} Pending` : 'All Clear'}
+                  </span>
                 </div>
-              )}
+                {data.recentActivity.length === 0 ? (
+                  <div style={{ padding: 'var(--stm-space-8)', textAlign: 'center' }}>
+                    <p style={{ fontSize: 'var(--stm-text-sm)', color: 'var(--stm-muted-foreground)', margin: 0 }}>No recent activity</p>
+                  </div>
+                ) : (
+                  data.recentActivity.map((item, i) => {
+                    const days = daysSince(item.updated_at);
+                    const urgency = dotUrgency(days);
+                    const dot = DOT_STYLES[urgency];
+                    const ageLabel = days === 0 ? 'Today' : `${days}d`;
+                    return (
+                      <Link key={item.project_id} href="/ratings" style={{ textDecoration: 'none' }}>
+                        <div
+                          style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderBottom: i === data.recentActivity.length - 1 ? 'none' : '1px solid var(--stm-border)', cursor: 'pointer', transition: 'background 0.12s' }}
+                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--stm-muted)')}
+                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          <div style={{ width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, ...dot }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--stm-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {item.project_title}
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'var(--stm-muted-foreground)', marginTop: '1px' }}>
+                              {item.vendor_name}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '10px', fontWeight: '600', color: 'var(--stm-muted-foreground)', flexShrink: 0, letterSpacing: '0.04em' }}>
+                            {ageLabel}
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })
+                )}
+              </div>
 
-            </>
-          )}
-        </div>
+            </div>
+
+            {/* Vendor Directory Table */}
+            {data.topVendors.length > 0 && (
+              <div style={panel}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--stm-border)' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--stm-foreground)', letterSpacing: '0.01em' }}>Vendor Directory — Top Performers</span>
+                  <Link href="/vendors" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '600', color: 'var(--stm-muted-foreground)', textDecoration: 'none', padding: '7px 14px', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius)', background: 'var(--stm-background)', transition: 'all 0.14s' }}>
+                    <ExternalLink style={{ width: '12px', height: '12px' }} />
+                    View Full Roster
+                  </Link>
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--stm-border)' }}>
+                      {['Vendor', 'Category', 'Score', 'Projects', 'Recommend', 'Availability'].map(h => (
+                        <th key={h} style={{ padding: '10px 16px', fontSize: '10px', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--stm-muted-foreground)', textAlign: h === 'Score' || h === 'Projects' || h === 'Recommend' ? 'center' : 'left' }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.topVendors.map((vendor, i) => {
+                      const initials = vendor.vendor_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                      const category = vendor.service_categories?.length ? vendor.service_categories[0] : '—';
+                      const avail = vendor.availability_status ?? '—';
+                      const availColor = AVAIL_COLOR[avail] ?? 'var(--stm-muted-foreground)';
+                      const recPct = vendor.recommendation_pct != null ? `${Math.round(vendor.recommendation_pct)}%` : '—';
+                      return (
+                        <tr
+                          key={vendor.vendor_id}
+                          style={{ borderBottom: i === data.topVendors.length - 1 ? 'none' : '1px solid var(--stm-border)', cursor: 'pointer', transition: 'background 0.12s' }}
+                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--stm-muted)')}
+                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                          onClick={() => router.push(`/vendors/${vendor.vendor_id}`)}
+                        >
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ width: '30px', height: '30px', borderRadius: 'var(--stm-radius-full)', background: 'linear-gradient(135deg, var(--stm-primary), var(--stm-accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <span style={{ fontSize: '11px', fontWeight: '700', color: 'white' }}>{initials}</span>
+                              </div>
+                              <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--stm-foreground)' }}>{vendor.vendor_name}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--stm-muted-foreground)' }}>{category}</td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--stm-primary)' }}>{vendor.avg_overall_rating.toFixed(1)}</span>
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', color: 'var(--stm-muted-foreground)' }}>{vendor.total_projects}</td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--stm-foreground)' }}>{recPct}</td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '600', color: availColor, padding: '3px 8px', backgroundColor: `color-mix(in srgb, ${availColor} 12%, transparent)`, borderRadius: 'var(--stm-radius-full)' }}>
+                              {avail}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+          </div>
+        )}
       </div>
-
-      <style jsx>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
     </ProtectedRoute>
   );
 }

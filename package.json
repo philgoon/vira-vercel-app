@@ -13,6 +13,7 @@
     "migrate": "ts-node src/scripts/migrate-data.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@clerk/nextjs": "^6.38.0",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",

@@ -1,537 +1,406 @@
-// [R5.3] Updated projects page with workflow-based action buttons
+// [EPIC-002] Projects — card grid matching vendor roster layout
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Building, Filter } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search } from 'lucide-react';
 import { Project, ProjectsApiResponse } from '@/types';
 import ProjectModal from '../../components/modals/ProjectModal';
 
+function ratingColor(score: number | null | undefined): string {
+  if (!score) return 'var(--stm-muted-foreground)';
+  if (score >= 8.5) return 'var(--stm-success)';
+  if (score >= 7)   return 'var(--stm-primary)';
+  if (score >= 5.5) return 'var(--stm-warning)';
+  return 'var(--stm-error)';
+}
+
+const TIMELINE_STYLE: Record<string, { bg: string; color: string; border: string }> = {
+  Early:     { bg: 'color-mix(in srgb, var(--stm-success) 10%, transparent)', color: 'var(--stm-success)', border: 'color-mix(in srgb, var(--stm-success) 25%, transparent)' },
+  'On-Time': { bg: 'color-mix(in srgb, var(--stm-primary) 10%, transparent)', color: 'var(--stm-primary)', border: 'color-mix(in srgb, var(--stm-primary) 25%, transparent)' },
+  Late:      { bg: 'color-mix(in srgb, var(--stm-error) 10%, transparent)', color: 'var(--stm-error)', border: 'color-mix(in srgb, var(--stm-error) 25%, transparent)' },
+};
+
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Modal state
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [selectedVendor, setSelectedVendor] = useState('');
+  const [selectedClient, setSelectedClient] = useState('');
+  const [filterTab, setFilterTab] = useState<'vendor' | 'client'>('vendor');
 
-  // [R4] Enhanced filtering states - vendor and client filtering
-  const [allVendorNames, setAllVendorNames] = useState<string[]>([]);
-  const [selectedVendorNames, setSelectedVendorNames] = useState<string[]>([]);
-  const [allClientNames, setAllClientNames] = useState<string[]>([]);
-  const [selectedClientNames, setSelectedClientNames] = useState<string[]>([]);
-  const [activeFilterTab, setActiveFilterTab] = useState<'vendors' | 'clients'>('vendors');
-
-  // [R7.5] Fetch projects from Supabase API with enhanced filtering
   useEffect(() => {
-    async function fetchProjects() {
-      try {
-        const response = await fetch('/api/projects');
-        if (!response.ok) throw new Error('Failed to fetch projects');
-
-        const data: ProjectsApiResponse = await response.json();
-        let projectList = data.projects || [];
-
-        // Client-side filtering for vendor names
-        if (selectedVendorNames.length > 0) {
-          projectList = projectList.filter(project => {
-            const vendorName = project.vendor_name;
-            return vendorName && selectedVendorNames.some(selectedName =>
-              vendorName.toLowerCase().includes(selectedName.toLowerCase())
-            );
-          });
-        }
-
-        // [R4] Client-side filtering for client names
-        if (selectedClientNames.length > 0) {
-          projectList = projectList.filter(project => {
-            const clientName = project.client_name;
-            return clientName && selectedClientNames.some(selectedName =>
-              clientName.toLowerCase().includes(selectedName.toLowerCase())
-            );
-          });
-        }
-
-        setProjects(projectList);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch projects');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchProjects();
-  }, [selectedVendorNames, selectedClientNames]);
-
-  // [R5.3] Clear error after some time
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => setError(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
-
-  // [R4] Fetch all vendor and client names from projects on component mount
-  useEffect(() => {
-    async function fetchAllFilterOptions() {
-      try {
-        const response = await fetch('/api/projects');
-        if (response.ok) {
-          const data: ProjectsApiResponse = await response.json();
-          const allProjects = data.projects || [];
-
-          // Extract vendor names
-          const vendorNameSet = new Set<string>();
-          const clientNameSet = new Set<string>();
-
-          allProjects.forEach(project => {
-            if (project.vendor_name && typeof project.vendor_name === 'string' && project.vendor_name.trim()) {
-              vendorNameSet.add(project.vendor_name.trim());
-            }
-            if (project.client_name && typeof project.client_name === 'string' && project.client_name.trim()) {
-              clientNameSet.add(project.client_name.trim());
-            }
-          });
-
-          setAllVendorNames(Array.from(vendorNameSet).sort());
-          setAllClientNames(Array.from(clientNameSet).sort());
-        }
-      } catch (err) {
-        console.error('Failed to fetch filter options:', err);
-      }
-    }
-
-    fetchAllFilterOptions();
+    fetch('/api/projects')
+      .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch projects'))
+      .then((data: ProjectsApiResponse) => setAllProjects(data.projects || []))
+      .catch(err => setError(typeof err === 'string' ? err : 'Failed to load projects'))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Toggle vendor name selection
-  const toggleVendorName = (vendorName: string) => {
-    setSelectedVendorNames(prev =>
-      prev.includes(vendorName)
-        ? prev.filter(name => name !== vendorName)
-        : [...prev, vendorName]
-    );
-  };
+  const allVendors = useMemo(() => {
+    const set = new Set<string>();
+    allProjects.forEach(p => { if (p.vendor_name) set.add(p.vendor_name); });
+    return [...set].sort();
+  }, [allProjects]);
 
-  // [R4] Toggle client name selection
-  const toggleClientName = (clientName: string) => {
-    setSelectedClientNames(prev =>
-      prev.includes(clientName)
-        ? prev.filter(name => name !== clientName)
-        : [...prev, clientName]
-    );
-  };
+  const allClients = useMemo(() => {
+    const set = new Set<string>();
+    allProjects.forEach(p => { if (p.client_name) set.add(p.client_name); });
+    return [...set].sort();
+  }, [allProjects]);
 
-  // [R4] Clear all filters
-  const clearAllFilters = () => {
-    setSelectedVendorNames([]);
-    setSelectedClientNames([]);
-  };
+  const projects = useMemo(() => {
+    let list = allProjects;
+    if (selectedVendor) list = list.filter(p => p.vendor_name === selectedVendor);
+    if (selectedClient) list = list.filter(p => p.client_name === selectedClient);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(p =>
+        p.project_title.toLowerCase().includes(q) ||
+        p.vendor_name?.toLowerCase().includes(q) ||
+        p.client_name?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [allProjects, selectedVendor, selectedClient, search]);
 
   const handleSaveProject = async (updatedProject: Partial<Project>) => {
     if (!selectedProject) return;
-
-    try {
-      const response = await fetch('/api/admin/update-record', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tableName: 'projects',
-          idField: 'project_id',
-          idValue: selectedProject.project_id,
-          updates: updatedProject
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save project');
-      }
-
-      // Optimistic update
-      setProjects(prev => prev.map(p => p.project_id === selectedProject.project_id ? { ...p, ...updatedProject } : p));
-      setIsModalOpen(false);
-      setSelectedProject(null);
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    const response = await fetch('/api/admin/update-record', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tableName: 'projects', idField: 'project_id', idValue: selectedProject.project_id, updates: updatedProject }),
+    });
+    if (!response.ok) {
+      const d = await response.json();
+      throw new Error(d.error || 'Failed to save project');
     }
+    setAllProjects(prev => prev.map(p => p.project_id === selectedProject.project_id ? { ...p, ...updatedProject } : p));
+    setIsModalOpen(false);
+    setSelectedProject(null);
   };
 
   const handleDeleteProject = async (projectId: string) => {
-    try {
-      const response = await fetch('/api/admin/delete-record', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tableName: 'projects',
-          idField: 'project_id',
-          idValue: projectId
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete project');
-      }
-
-      // Optimistic update
-      setProjects(prev => prev.filter(p => p.project_id !== projectId));
-      setIsModalOpen(false);
-      setSelectedProject(null);
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    const response = await fetch('/api/admin/delete-record', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tableName: 'projects', idField: 'project_id', idValue: projectId }),
+    });
+    if (!response.ok) {
+      const d = await response.json();
+      throw new Error(d.error || 'Failed to delete project');
     }
+    setAllProjects(prev => prev.filter(p => p.project_id !== projectId));
+    setIsModalOpen(false);
+    setSelectedProject(null);
   };
 
-  const handleProjectClick = (project: Project) => {
-    setSelectedProject(project);
-    setIsModalOpen(true);
-  };
-
-  // [R4] Calculate filter summary
-  const hasActiveFilters = selectedVendorNames.length > 0 || selectedClientNames.length > 0;
-  const filterCount = selectedVendorNames.length + selectedClientNames.length;
+  const hasFilters = !!selectedVendor || !!selectedClient;
 
   return (
-    <div style={{ minHeight: '100%', backgroundColor: '#f9fafb' }}>
-      {/* Header */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ padding: '1.5rem' }}>
-          <div>
-            <h1 style={{
-              fontSize: '1.875rem',
-              fontFamily: 'var(--font-headline)',
-              fontWeight: 'bold',
-              color: '#1A5276'
-            }}>Projects</h1>
-            <p style={{ marginTop: '0.5rem', color: '#6b7280' }}>
-              View completed project details, ratings, and work samples
-            </p>
+    <div style={{ padding: 'var(--stm-space-8)', backgroundColor: 'var(--stm-page-background)', minHeight: '100%' }}>
+
+      {/* Section Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 'var(--stm-space-5)' }}>
+        <div>
+          <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--stm-foreground)', lineHeight: 1, letterSpacing: '-0.01em', fontFamily: 'var(--stm-font-body)' }}>
+            Projects
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--stm-muted-foreground)', marginTop: '4px', fontFamily: 'var(--stm-font-body)' }}>
+            {loading ? 'Loading...' : `${projects.length} project${projects.length !== 1 ? 's' : ''}${hasFilters ? ' matching filters' : ' across all clients'}`}
           </div>
         </div>
       </div>
 
-      {/* Enhanced Filters */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ padding: '1rem 1.5rem' }}>
-          {/* Filter Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'between', marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Filter style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
-              <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', margin: 0 }}>
-                Filter Projects
-              </h3>
-              {hasActiveFilters && (
-                <span style={{
-                  backgroundColor: '#1A5276',
-                  color: 'white',
-                  padding: '0.125rem 0.5rem',
-                  borderRadius: '9999px',
-                  fontSize: '0.75rem',
-                  fontWeight: '500'
-                }}>
-                  {filterCount} active
-                </span>
-              )}
-            </div>
-            {hasActiveFilters && (
-              <button
-                onClick={clearAllFilters}
-                style={{
-                  color: '#dc2626',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                Clear all filters
-              </button>
-            )}
-          </div>
+      {/* Search + Filter Panel */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: 'var(--stm-space-6)' }}>
 
-          {/* Filter Tabs */}
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+        {/* Search */}
+        <div style={{ position: 'relative', maxWidth: '320px' }}>
+          <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '13px', height: '13px', color: 'var(--stm-muted-foreground)', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="Search projects..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              width: '100%', padding: '8px 12px 8px 32px', fontFamily: 'var(--stm-font-body)',
+              fontSize: '12px', border: '1px solid var(--stm-border)', borderRadius: 'var(--stm-radius-md)',
+              backgroundColor: 'var(--stm-card)', color: 'var(--stm-foreground)', outline: 'none',
+            }}
+          />
+        </div>
+
+        {/* Filter Tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={() => setFilterTab('vendor')}
+            style={{
+              padding: '4px 12px', fontFamily: 'var(--stm-font-body)', fontSize: '11px', fontWeight: '600',
+              border: `1px solid ${filterTab === 'vendor' ? 'var(--stm-primary)' : 'var(--stm-border)'}`,
+              borderRadius: '20px', cursor: 'pointer', transition: 'all 0.14s',
+              backgroundColor: filterTab === 'vendor' ? 'color-mix(in srgb, var(--stm-primary) 10%, transparent)' : 'var(--stm-card)',
+              color: filterTab === 'vendor' ? 'var(--stm-primary)' : 'var(--stm-muted-foreground)',
+            }}
+          >
+            Vendor {selectedVendor ? '·' : ''}
+          </button>
+          <button
+            onClick={() => setFilterTab('client')}
+            style={{
+              padding: '4px 12px', fontFamily: 'var(--stm-font-body)', fontSize: '11px', fontWeight: '600',
+              border: `1px solid ${filterTab === 'client' ? 'var(--stm-primary)' : 'var(--stm-border)'}`,
+              borderRadius: '20px', cursor: 'pointer', transition: 'all 0.14s',
+              backgroundColor: filterTab === 'client' ? 'color-mix(in srgb, var(--stm-primary) 10%, transparent)' : 'var(--stm-card)',
+              color: filterTab === 'client' ? 'var(--stm-primary)' : 'var(--stm-muted-foreground)',
+            }}
+          >
+            Client {selectedClient ? '·' : ''}
+          </button>
+          {hasFilters && (
             <button
-              onClick={() => setActiveFilterTab('vendors')}
+              onClick={() => { setSelectedVendor(''); setSelectedClient(''); }}
               style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '0.5rem',
-                border: '1px solid',
-                borderColor: activeFilterTab === 'vendors' ? '#1A5276' : '#d1d5db',
-                backgroundColor: activeFilterTab === 'vendors' ? '#1A5276' : 'white',
-                color: activeFilterTab === 'vendors' ? 'white' : '#374151',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                transition: 'all 0.2s ease'
+                padding: '4px 10px', fontFamily: 'var(--stm-font-body)', fontSize: '11px', fontWeight: '600',
+                border: '1px solid color-mix(in srgb, var(--stm-error) 30%, transparent)',
+                borderRadius: '20px', cursor: 'pointer', transition: 'all 0.14s',
+                backgroundColor: 'color-mix(in srgb, var(--stm-error) 8%, transparent)',
+                color: 'var(--stm-error)',
               }}
             >
-              Filter by Vendor ({allVendorNames.length})
+              Clear
             </button>
-            <button
-              onClick={() => setActiveFilterTab('clients')}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '0.5rem',
-                border: '1px solid',
-                borderColor: activeFilterTab === 'clients' ? '#1A5276' : '#d1d5db',
-                backgroundColor: activeFilterTab === 'clients' ? '#1A5276' : 'white',
-                color: activeFilterTab === 'clients' ? 'white' : '#374151',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Filter by Client ({allClientNames.length})
-            </button>
-          </div>
-
-          {/* Vendor Name Filter Buttons */}
-          {activeFilterTab === 'vendors' && allVendorNames.length > 0 && (
-            <div className="filter-group">
-              <div className="filter-buttons">
-                <button
-                  onClick={() => setSelectedVendorNames([])}
-                  className={`filter-btn ${selectedVendorNames.length === 0 ? 'active' : ''}`}
-                >
-                  All Vendors
-                </button>
-                {allVendorNames.map(vendorName => (
-                  <button
-                    key={vendorName}
-                    onClick={() => toggleVendorName(vendorName)}
-                    className={`filter-btn ${selectedVendorNames.includes(vendorName) ? 'active' : ''}`}
-                  >
-                    {vendorName}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Client Name Filter Buttons */}
-          {activeFilterTab === 'clients' && allClientNames.length > 0 && (
-            <div className="filter-group">
-              <div className="filter-buttons">
-                <button
-                  onClick={() => setSelectedClientNames([])}
-                  className={`filter-btn ${selectedClientNames.length === 0 ? 'active' : ''}`}
-                >
-                  All Clients
-                </button>
-                {allClientNames.map(clientName => (
-                  <button
-                    key={clientName}
-                    onClick={() => toggleClientName(clientName)}
-                    className={`filter-btn ${selectedClientNames.includes(clientName) ? 'active' : ''}`}
-                  >
-                    {clientName}
-                  </button>
-                ))}
-              </div>
-            </div>
           )}
         </div>
-      </div>
 
-      {/* Content */}
-      <div style={{ padding: '1.5rem' }}>
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <div style={{
-              width: '2rem',
-              height: '2rem',
-              border: '2px solid #1A5276',
-              borderTop: '2px solid transparent',
-              borderRadius: '50%',
-              margin: '0 auto 1rem',
-              animation: 'spin 1s linear infinite'
-            }}></div>
-            <p style={{ color: '#6b7280' }}>Loading projects...</p>
-          </div>
-        )}
-
-        {error && (
-          <div style={{
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: '0.5rem',
-            padding: '1rem',
-            textAlign: 'center'
-          }}>
-            <p style={{ color: '#dc2626' }}>Error: {error}</p>
-          </div>
-        )}
-
-        {!loading && !error && projects.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{
-              width: '4rem',
-              height: '4rem',
-              backgroundColor: '#f3f4f6',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1rem'
-            }}>
-              <Building style={{ width: '2rem', height: '2rem', color: '#9ca3af' }} />
-            </div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '0.5rem' }}>
-              No projects found
-            </h3>
-            <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
-              {hasActiveFilters
-                ? `No projects found for selected filters.`
-                : 'No projects exist yet.'}
-            </p>
-            {hasActiveFilters && (
-              <button
-                onClick={clearAllFilters}
-                className="btn-success"
-                style={{ fontSize: '0.875rem', marginRight: '0.5rem' }}
-              >
-                Clear Filters
-              </button>
-            )}
-            <button className="btn-success" style={{ fontSize: '0.875rem' }}>
-              Create New Project
-            </button>
-          </div>
-        )}
-
-        {/* Enhanced Project List */}
-        {!loading && !error && projects.length > 0 && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '1rem',
-            maxWidth: '1600px',
-            margin: '0 auto'
-          }}>
-            {projects.map((project) => (
-              <div
-                key={project.project_id}
-                className="list-card list-card-horizontal"
-                onClick={() => handleProjectClick(project)}
-              >
-                {/* Project Avatar */}
-                <div className="list-card-avatar">
-                  <span className="list-card-avatar-text">
-                    {project.project_title.charAt(0)}
-                  </span>
-                </div>
-
-                {/* Main Project Info */}
-                <div className="list-card-content">
-                  <h3 className="list-card-title">
-                    {project.project_title}
-                  </h3>
-
-                  {/* Line 2: Client + Vendor + Rating + Work Samples indicator */}
-                  <div className="list-card-meta">
-                    {/* Client Name */}
-                    <span className="list-card-meta-primary">
-                      {project.client_name || 'No Client'}
-                    </span>
-
-                    {/* Vendor Name */}
-                    <span className="list-card-meta-item">
-                      {project.vendor_name || 'Unassigned'}
-                    </span>
-
-                    {/* Project Rating */}
-                    <div style={{
-                      padding: '0.125rem 0.5rem',
-                      backgroundColor: project.project_overall_rating_calc ? '#dcfce7' : '#f3f4f6',
-                      color: project.project_overall_rating_calc ? '#166534' : '#6b7280',
-                      borderRadius: '9999px',
-                      fontSize: '0.75rem',
-                      fontWeight: '500'
-                    }}>
-                      {project.project_overall_rating_calc ?
-                        `${Number(project.project_overall_rating_calc).toFixed(1)}/10` :
-                        'No rating'}
-                    </div>
-
-                    {/* Work Samples Indicator */}
-                    {(project.what_went_well || project.areas_for_improvement) && (
-                      <div style={{
-                        padding: '0.125rem 0.5rem',
-                        backgroundColor: '#eff6ff',
-                        color: '#1d4ed8',
-                        borderRadius: '9999px',
-                        fontSize: '0.75rem',
-                        fontWeight: '500'
-                      }}>
-                        Has feedback
-                      </div>
-                    )}
-
-                    {/* [R-QW1] Timeline Status Badge */}
-                    {project.timeline_status && (
-                      <div style={{
-                        padding: '0.125rem 0.5rem',
-                        backgroundColor:
-                          project.timeline_status === 'Early' ? '#d1fae5' :
-                          project.timeline_status === 'On-Time' ? '#dbeafe' :
-                          '#fee2e2',
-                        color:
-                          project.timeline_status === 'Early' ? '#065f46' :
-                          project.timeline_status === 'On-Time' ? '#1e40af' :
-                          '#991b1b',
-                        borderRadius: '9999px',
-                        fontSize: '0.75rem',
-                        fontWeight: '500'
-                      }}>
-                        {project.timeline_status}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+        {/* Vendor Pills */}
+        {filterTab === 'vendor' && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            <button
+              onClick={() => setSelectedVendor('')}
+              style={{
+                padding: '4px 12px', fontFamily: 'var(--stm-font-body)', fontSize: '11px', fontWeight: '600',
+                border: `1px solid ${selectedVendor === '' ? 'var(--stm-primary)' : 'var(--stm-border)'}`,
+                borderRadius: '20px', cursor: 'pointer', transition: 'all 0.14s',
+                backgroundColor: selectedVendor === '' ? 'color-mix(in srgb, var(--stm-primary) 10%, transparent)' : 'var(--stm-card)',
+                color: selectedVendor === '' ? 'var(--stm-primary)' : 'var(--stm-muted-foreground)',
+              }}
+            >All</button>
+            {allVendors.map(v => (
+              <button key={v} onClick={() => setSelectedVendor(v === selectedVendor ? '' : v)} style={{
+                padding: '4px 12px', fontFamily: 'var(--stm-font-body)', fontSize: '11px', fontWeight: '600',
+                border: `1px solid ${selectedVendor === v ? 'var(--stm-primary)' : 'var(--stm-border)'}`,
+                borderRadius: '20px', cursor: 'pointer', transition: 'all 0.14s',
+                backgroundColor: selectedVendor === v ? 'color-mix(in srgb, var(--stm-primary) 10%, transparent)' : 'var(--stm-card)',
+                color: selectedVendor === v ? 'var(--stm-primary)' : 'var(--stm-muted-foreground)',
+              }}>{v}</button>
             ))}
           </div>
         )}
 
-        {/* Enhanced Project Summary */}
-        {!loading && !error && projects.length > 0 && (
-          <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-              Showing {projects.length} projects
-              {hasActiveFilters && ` with active filters`}
-              {selectedVendorNames.length > 0 && ` • Vendors: ${selectedVendorNames.join(', ')}`}
-              {selectedClientNames.length > 0 && ` • Clients: ${selectedClientNames.join(', ')}`}
-            </p>
+        {/* Client Pills */}
+        {filterTab === 'client' && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            <button
+              onClick={() => setSelectedClient('')}
+              style={{
+                padding: '4px 12px', fontFamily: 'var(--stm-font-body)', fontSize: '11px', fontWeight: '600',
+                border: `1px solid ${selectedClient === '' ? 'var(--stm-primary)' : 'var(--stm-border)'}`,
+                borderRadius: '20px', cursor: 'pointer', transition: 'all 0.14s',
+                backgroundColor: selectedClient === '' ? 'color-mix(in srgb, var(--stm-primary) 10%, transparent)' : 'var(--stm-card)',
+                color: selectedClient === '' ? 'var(--stm-primary)' : 'var(--stm-muted-foreground)',
+              }}
+            >All</button>
+            {allClients.map(c => (
+              <button key={c} onClick={() => setSelectedClient(c === selectedClient ? '' : c)} style={{
+                padding: '4px 12px', fontFamily: 'var(--stm-font-body)', fontSize: '11px', fontWeight: '600',
+                border: `1px solid ${selectedClient === c ? 'var(--stm-primary)' : 'var(--stm-border)'}`,
+                borderRadius: '20px', cursor: 'pointer', transition: 'all 0.14s',
+                backgroundColor: selectedClient === c ? 'color-mix(in srgb, var(--stm-primary) 10%, transparent)' : 'var(--stm-card)',
+                color: selectedClient === c ? 'var(--stm-primary)' : 'var(--stm-muted-foreground)',
+              }}>{c}</button>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Enhanced Project Modal - Now Read-Only for Completed Projects */}
+      {/* Loading */}
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+          <div className="stm-loader stm-loader-lg" style={{ justifyContent: 'center', marginBottom: '16px' }}>
+            <span className="stm-loader-capsule stm-loader-dot" />
+            <span className="stm-loader-capsule stm-loader-dot" />
+            <span className="stm-loader-capsule stm-loader-dot" />
+            <span className="stm-loader-capsule stm-loader-dash" />
+            <span className="stm-loader-capsule stm-loader-dash" />
+            <span className="stm-loader-capsule stm-loader-dash" />
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)' }}>Loading projects...</div>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div style={{ padding: '12px 16px', backgroundColor: 'color-mix(in srgb, var(--stm-error) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--stm-error) 20%, transparent)', borderRadius: 'var(--stm-radius-lg)', color: 'var(--stm-error)', fontSize: '13px', fontFamily: 'var(--stm-font-body)' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Project Grid */}
+      {!loading && !error && projects.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
+          {projects.map((project, idx) => {
+            const rating = project.project_overall_rating_calc ? Number(project.project_overall_rating_calc) : null;
+            const timelineStyle = project.timeline_status ? TIMELINE_STYLE[project.timeline_status] : null;
+            const hasFeedback = !!(project.what_went_well || project.areas_for_improvement);
+
+            return (
+              <div
+                key={project.project_id}
+                onClick={() => { setSelectedProject(project); setIsModalOpen(true); }}
+                style={{
+                  backgroundColor: 'var(--stm-card)',
+                  border: '1px solid var(--stm-border)',
+                  borderRadius: 'var(--stm-radius-lg)',
+                  padding: '18px',
+                  cursor: 'pointer',
+                  transition: 'all 0.18s ease',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  zIndex: 3,
+                  animationDelay: `${idx * 0.03}s`,
+                }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.borderColor = 'var(--stm-primary)';
+                  el.style.boxShadow = '0 6px 24px rgba(26,82,118,0.12)';
+                  el.style.transform = 'translateY(-2px)';
+                  const bar = el.querySelector('.pc-accent-bar') as HTMLElement;
+                  if (bar) bar.style.opacity = '1';
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.borderColor = 'var(--stm-border)';
+                  el.style.boxShadow = 'none';
+                  el.style.transform = 'translateY(0)';
+                  const bar = el.querySelector('.pc-accent-bar') as HTMLElement;
+                  if (bar) bar.style.opacity = '0';
+                }}
+              >
+                {/* Left accent bar on hover */}
+                <div
+                  className="pc-accent-bar"
+                  style={{
+                    position: 'absolute', top: 0, bottom: 0, left: 0, width: '3px',
+                    background: 'linear-gradient(180deg, var(--stm-primary), var(--stm-accent))',
+                    opacity: 0, transition: 'opacity 0.18s', borderRadius: '3px 0 0 3px',
+                  }}
+                />
+
+                {/* Top: initial circle + title + client */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div style={{ flex: 1, minWidth: 0, paddingRight: '10px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--stm-foreground)', marginBottom: '2px', fontFamily: 'var(--stm-font-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {project.project_title}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {project.client_name || 'No client'}
+                    </div>
+                  </div>
+                  {/* Initial circle */}
+                  <div style={{
+                    width: '42px', height: '42px', borderRadius: '8px', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'var(--stm-muted)',
+                    fontSize: '16px', fontWeight: '800', color: 'var(--stm-primary)',
+                    fontFamily: 'var(--stm-font-body)', opacity: 0.85,
+                  }}>
+                    {project.project_title.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+
+                {/* Badges row */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '10px' }}>
+                  {project.vendor_name && (
+                    <div style={{
+                      padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '600',
+                      fontFamily: 'var(--stm-font-body)',
+                      backgroundColor: 'var(--stm-muted)', color: 'var(--stm-muted-foreground)',
+                      border: '1px solid var(--stm-border)',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px',
+                    }}>
+                      {project.vendor_name}
+                    </div>
+                  )}
+                  {timelineStyle && (
+                    <div style={{
+                      padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '600',
+                      fontFamily: 'var(--stm-font-body)',
+                      backgroundColor: timelineStyle.bg, color: timelineStyle.color,
+                      border: `1px solid ${timelineStyle.border}`,
+                    }}>
+                      {project.timeline_status}
+                    </div>
+                  )}
+                  {hasFeedback && (
+                    <div style={{
+                      padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '600',
+                      fontFamily: 'var(--stm-font-body)',
+                      backgroundColor: 'color-mix(in srgb, var(--stm-accent) 10%, transparent)',
+                      color: 'var(--stm-accent)',
+                      border: '1px solid color-mix(in srgb, var(--stm-accent) 25%, transparent)',
+                    }}>
+                      Feedback
+                    </div>
+                  )}
+                </div>
+
+                {/* Score row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--stm-border)' }}>
+                  <div>
+                    <div style={{ fontSize: '22px', fontWeight: '800', letterSpacing: '-0.02em', color: ratingColor(rating), lineHeight: 1, fontFamily: 'var(--stm-font-body)' }}>
+                      {rating ? rating.toFixed(1) : '—'}
+                    </div>
+                    <div style={{ fontSize: '10px', fontWeight: '600', color: 'var(--stm-muted-foreground)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '2px', fontFamily: 'var(--stm-font-body)' }}>
+                      Rating
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    {project.recommend_again != null && (
+                      <div style={{ fontSize: '11px', fontWeight: '600', fontFamily: 'var(--stm-font-body)', color: project.recommend_again ? 'var(--stm-success)' : 'var(--stm-error)' }}>
+                        {project.recommend_again ? 'Recommended' : 'Not Recommended'}
+                      </div>
+                    )}
+                    <div style={{ fontSize: '10px', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {project.status || 'active'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && projects.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '64px 24px', color: 'var(--stm-muted-foreground)', fontFamily: 'var(--stm-font-body)', fontSize: '13px' }}>
+          No projects match your filters.
+        </div>
+      )}
+
+      {/* Project Modal */}
       {selectedProject && (
         <ProjectModal
           project={selectedProject}
           isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedProject(null);
-          }}
+          onClose={() => { setIsModalOpen(false); setSelectedProject(null); }}
           onSave={selectedProject.status === 'closed' ? undefined : handleSaveProject}
           onDelete={selectedProject.status === 'closed' ? undefined : handleDeleteProject}
         />
       )}
-
-      <style jsx>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }
